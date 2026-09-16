@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDeskDecision } from "@/lib/market/use-board";
 import {
@@ -268,8 +268,8 @@ function ParlayTicketView({
   const navigate = useNavigate();
   const [locked, setLocked] = useState<PaperTicket | null>(null);
     const [lockError, setLockError] = useState<string | null>(null);
-  const [stake, setStake] = useState(5);
-  const [price, setPrice] = useState(() => {
+  const [stake, setStake] = React.useState(5);
+  const [price, setPrice] = React.useState(() => {
     let decimal = 1;
     for (const leg of parlay.legs) {
       const p = leg.price || -110;
