@@ -1,4 +1,4 @@
-import { clip } from "./math.ts";
+import { clip, clip01 } from "./math.ts";
 import type { MarketType, PublicSplit, ScanRow, TapeLean } from "./types.ts";
 
 export type TapeRead = {
@@ -317,5 +317,6 @@ export const AN_SPORT: Record<string, string> = {
   NCAAF: "ncaaf",
   NCAAB: "ncaab",
 };
+
 
 
