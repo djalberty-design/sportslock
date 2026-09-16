@@ -58,7 +58,7 @@ export function FastLogModal({
         <div className="space-y-4 mb-8">
           <div className="flex justify-between items-end border-b border-panel-border pb-2">
             <div>
-              <p className="text-xs text-muted font-bold uppercase">{sport} • {marketType}</p>
+              <p className="text-xs text-muted font-bold uppercase">{sport} ï¿½ {marketType}</p>
               <p className="text-lg font-bold">{selection}</p>
             </div>
             <div className="text-right">
