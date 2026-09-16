@@ -45,12 +45,14 @@ export function BoardPage() {
       const picksArray = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks);
 
       for (const eventId of comboLegs) {
-        const pick = picksArray.find(p => p.eventId === eventId || p.row?.eventId === eventId || p.id?.includes(eventId));
+        // Added optional chaining (p?.) to prevent null pointer crashes
+        const pick = picksArray.find(p => p?.eventId === eventId || p?.row?.eventId === eventId || p?.id?.includes(eventId));
         
         if (pick && pick.row) {
           legs.push(rowToPick(pick.row));
         } else {
-          const fallbackRow = allRows.find(r => r.eventId === eventId && (r.marketType === "moneyline" || r.marketType === "spread"));
+          // Added optional chaining (r?.) to prevent null pointer crashes
+          const fallbackRow = allRows.find(r => r?.eventId === eventId && (r?.marketType === "moneyline" || r?.marketType === "spread"));
           if (fallbackRow) {
             legs.push(rowToPick(fallbackRow));
           }
