@@ -14,7 +14,7 @@ export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async 
       asOf: "",
       delayed: false,
       sample: false,
-      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: "ERROR" },
+      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: undefined },
       quotes: [],
       news: [],
       publicSplits: [],
@@ -194,4 +194,5 @@ Rules: ticket = Hard Rock / DraftKings odds. slate = player salary list. contest
       return { ok: false, error: "Could not parse the model JSON. Enter fields by hand." };
     }
   });
+
 
