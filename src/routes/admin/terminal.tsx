@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPredictionLogs } from "@/lib/market/server";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -11,6 +12,8 @@ export const Route = createFileRoute("/admin/terminal")({
 
 function QuantitativeTerminal() {
   const logs = Route.useLoaderData() as any[];
+  const [report, setReport] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const chronologicalLogs = [...logs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   
@@ -52,6 +55,20 @@ function QuantitativeTerminal() {
   const overallWinRate = totalGraded > 0 ? ((totalWins / totalGraded) * 100).toFixed(1) : 0;
   const activeSweeperVolume = logs.filter(l => l.snapshot?.isPaperTrade).length;
 
+  async function handleGenerateReport() {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/strategy');
+      const data = await res.json();
+      setReport(data.report);
+    } catch (err) {
+      console.error(err);
+      setReport("[ERROR] Failed to fetch strategy report.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 md:p-12 font-mono">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -66,10 +83,26 @@ function QuantitativeTerminal() {
               Macro algorithmic performance and portfolio telemetry.
             </p>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors cursor-pointer">
-            Generate AI Strategy Report
+          <button 
+            onClick={handleGenerateReport} 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Generating..." : "Generate AI Strategy Report"}
           </button>
         </header>
+
+        {/* AI Strategy Report Block */}
+        {report && (
+          <div className="bg-indigo-950/20 border border-indigo-500/30 p-6 rounded-xl text-indigo-100 whitespace-pre-wrap mt-6">
+            <h2 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2">
+              <span>✦</span> CHIEF RISK OFFICER REPORT
+            </h2>
+            <div className="prose prose-invert prose-indigo max-w-none text-sm leading-relaxed">
+              {report}
+            </div>
+          </div>
+        )}
 
         {/* Top Row: Summary Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
