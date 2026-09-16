@@ -441,7 +441,12 @@ function ParlayTicketView({
             <div className="space-y-2">
               {parlay.legs.map((leg, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 rounded-md bg-obsidian p-2 border border-panel-border">
-                  <span className="text-sm text-ink/90 truncate flex-1" title={leg.selection}>{leg.selection}</span>
+                                    <div className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-sm text-ink/90 truncate font-medium" title={leg.selection}>{leg.selection}</span>
+                    <span className="text-xs text-muted uppercase truncate">
+                      {leg.marketType} {leg.side} {leg.line != null ? (leg.line > 0 ? "+" + leg.line : leg.line) : ""}
+                    </span>
+                  </div>
                   <div className="w-24 shrink-0">
                     <input 
                       type="number" 
