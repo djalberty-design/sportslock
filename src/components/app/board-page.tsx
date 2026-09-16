@@ -34,6 +34,8 @@ export function BoardPage() {
   const allGames = uniqueUpcomingGames(rows);
 
   const handleBuildCombo = () => {
+    const rows = scan?.rows || [];
+    const allGames = uniqueUpcomingGames(rows);
     const legs = [];
     for (const eventId of comboLegs) {
       const gameRows = rows.filter((r) => r.eventId === eventId);
