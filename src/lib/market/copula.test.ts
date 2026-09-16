@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { growthScore, jointFromLegs, sameGameRho } from "./copula.ts";
+import { frechetBounds, frechetJoint, growthScore, jointFromLegs, sameGameRho } from "./copula.ts";
 
-
+test("Fréchet bounds sandwich the independent product", () => {
+  const { lo, hi, indep } = frechetBounds(0.6, 0.55);
   assert.ok(lo <= indep && indep <= hi);
   assert.ok(Math.abs(lo - 0.15) < 1e-9);
   assert.ok(Math.abs(hi - 0.55) < 1e-9);
 });
 
-
+test("positive rho lifts same-game joint above the product", () => {
+  const indep = 0.6 * 0.55;
+  const j = frechetJoint(0.6, 0.55, 0.42);
   assert.ok(j > indep);
   assert.ok(j <= 0.55);
 });
@@ -37,4 +40,3 @@ test("Kelly multiplier scales growth without changing the zero-edge floor", () =
   assert.ok(full > 0);
   assert.ok(Math.abs(quarter - full * 0.25) < 1e-9);
 });
-

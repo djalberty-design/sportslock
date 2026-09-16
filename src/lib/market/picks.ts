@@ -559,6 +559,13 @@ function totalWithUnit(selection: string, sport: string, marketType?: string): s
   return selection;
 }
 
+function marketKey(p: DeskPick): string {
+  if (p.row) {
+    return [p.eventId, p.row.marketType, p.row.side, p.row.point ?? "", p.row.player ?? ""].join("|");
+  }
+  return p.id;
+}
+
 function rowKey(row: ScanRow): string {
   return [row.eventId, row.marketType, row.side, row.point ?? "", row.player ?? "", row.selection].join("|");
 }
@@ -1292,5 +1299,3 @@ export function buildRibbon(list: DeskPick[]): DeskPick[] {
   }
   return out;
 }
-
-

@@ -15,10 +15,10 @@ import type {
   ScanTag,
 } from "./types.ts";
 import { deskScore, parlayScore, stampRows } from "./tape.ts";
-import { correlationOf, typicalParlayJuice } from "./parlays.ts";
-import { growthScore, sameGameRho } from "./copula.ts";
+import { correlationOf, sgpHaircut, typicalParlayJuice } from "./parlays.ts";
+import { growthScore, jointFromLegs, sameGameRho } from "./copula.ts";
 import { combineParlayFair } from "./joint-grade.ts";
-import { drawPaths, simCover, simOver, simWin } from "./sim.ts";
+import { drawPaths, latentFromScores, simCover, simOver, simWin } from "./sim.ts";
 import { leftoverOverProb } from "./live-state.ts";
 import { buildLatents } from "./latents.ts";
 import { buildUsage, usageOf } from "./usage.ts";
@@ -1052,4 +1052,3 @@ export function canPlacePaper(opts: {
   }
   return { ok: true };
 }
-

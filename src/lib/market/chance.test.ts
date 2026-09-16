@@ -3,13 +3,14 @@ import { test } from "node:test";
 import {
   buildChance,
   homeFieldLogit,
+  invLogit,
   log5,
   logit,
+  normalCdf,
   parseRecord,
   pythagoreanWp,
   spreadToWinProb,
 } from "./chance.ts";
-import { invLogit, normalCdf } from "./math.ts";
 
 test("logit / invLogit round-trip near 0.6", () => {
   const p = 0.6;
@@ -494,4 +495,3 @@ test("Early-season NFL damping cuts form precision under 6 games", () => {
   assert.ok(form!.precision < 1.3, `form precision ${form!.precision} was not damped`);
   assert.match(form!.note, /Early-season damping/);
 });
-
