@@ -6,7 +6,23 @@ import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";
 import { resolveVisionKey, VISION_MODELS, VISION_UNAVAILABLE } from "./vision-key";
 
 export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
-  return buildLiveSnapshot();
+  try {
+    return await buildLiveSnapshot();
+  } catch (err: any) {
+    console.error("SERVER_SNAPSHOT_FATAL_ERROR:", err);
+    return {
+      asOf: "",
+      delayed: false,
+      sample: false,
+      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: "ERROR" },
+      quotes: [],
+      news: [],
+      publicSplits: [],
+      briefs: [],
+      predict: [],
+      sourceNote: "FATAL SERVER ERROR: " + (err?.stack || err?.message || String(err)),
+    };
+  }
 });
 
 export const getEventResearch = createServerFn({ method: "GET" })
@@ -178,3 +194,4 @@ Rules: ticket = Hard Rock / DraftKings odds. slate = player salary list. contest
       return { ok: false, error: "Could not parse the model JSON. Enter fields by hand." };
     }
   });
+
