@@ -89,7 +89,7 @@ export function CollapsibleParlayPill() {
           ) : null}
         </span>
         <span className="shrink-0 text-sm font-semibold underline-offset-4">
-          {onTicket ? "Photograph to lock this price" : "Open ticket"}
+          {onTicket ? "Fast Log to lock this price" : "Open ticket"}
         </span>
       </Link>
     </div>

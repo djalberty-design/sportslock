@@ -26,7 +26,7 @@ import { LiveStamp } from "./live-stamp";
 import type { EventBrief, ParlayCandidate, ParlayMix, ScanRow } from "@/lib/market/types";
 import { formatKickoff } from "@/lib/utils";
 import { formatBetUsd, shortPick, sportLabel } from "@/lib/copy";
-import { ScreenshotIngest, PhotoFirstNote } from "./screenshot-ingest";
+import { ScreenshotIngest } from "./screenshot-ingest";
 import { SportFilter, applySportFilter, SportSeasonNote } from "./sport-filter";
 import { WagerMeter } from "./wager-meter";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export function ParlayPage() {
     return ready;
   }
 
-  function loadFromPhotos() {
+  function loadFromUploads() {
     if (!confirmed.length || !scan) return;
     const next = applyTicket(matchParsedToRows(confirmed, scan.rows));
     if (next && next.length >= 2) {
@@ -103,13 +103,10 @@ export function ParlayPage() {
         <p className="text-sm text-gold">Two or more picks. They all have to hit.</p>
         <h1 className="font-display mt-2 text-3xl text-ink md:text-5xl">Parlay</h1>
         <p className="mt-3 text-base text-ink/80">
-          We list 2- and 3-leg tickets with the best chance they all hit. You can also build your own. Photograph the slip.
+          We list 2- and 3-leg tickets with the best chance they all hit. You can also build your own. Fast Log the slip.
         </p>
       </header>
-
-      <PhotoFirstNote venue="Hard Rock Bet Florida" />
-
-      <SportFilter sports={sports} />
+<SportFilter sports={sports} />
 
       {ranking ? (
         <p className="rounded-md bg-wash px-4 py-3 text-sm text-muted">
@@ -154,10 +151,10 @@ export function ParlayPage() {
         }
       />
 
-      <ScreenshotIngest kind="ticket" heading="Upload a screenshot of the parlay you're considering" />
+      <div className="rounded-lg border border-panel-border bg-obsidian p-4"><ScreenshotIngest kind="ticket" heading="Upload a Custom Parlay" /><p className="mt-2 text-xs text-muted">Only use this to upload a screenshot of a custom parlay that cannot be built on SportsLock.</p></div>
 
       {confirmed.length >= 2 ? (
-        <Button type="button" variant="outline" onClick={loadFromPhotos}>
+        <Button type="button" variant="outline" onClick={loadFromUploads}>
           Run the {confirmed.length} confirmed legs through research
         </Button>
       ) : null}
@@ -259,10 +256,10 @@ function ParlayCatalog({
     sportFilter && sportFilter !== "ALL" ? sportLabel(sportFilter) : null,
   ].filter(Boolean);
   const emptyWhy = !unfilteredMains.length
-    ? "Ranked 2-leg mains are still filling from the board. Wait a beat, or photograph a slip below."
+    ? "Ranked 2-leg mains are still filling from the board. Wait a beat, or Fast Log a slip below."
     : filterBits.length
       ? `This filter is ${filterBits.join(" · ")}. ${unfilteredMains.length} ranked slip${unfilteredMains.length === 1 ? "" : "s"} sit on All legs / Any mix. Clear the filter.`
-      : "No ranked parlays on All / Any mix. Photograph a slip or add legs below.";
+      : "No ranked parlays on All / Any mix. Fast Log a slip or add legs below.";
   function clearCatalogFilter() {
     setFunMoney(false);
     setLegs("all");
@@ -424,7 +421,7 @@ function LegResearchCard({ leg, index, onRemove }: { leg: ParlayPick; index: num
   const prop = propLive ?? leg.propReport;
   const why =
     leg.marketType === "prop"
-      ? prop?.because ?? "Player-bet model runs as soon as the screenshot is confirmed."
+      ? prop?.because ?? "Player-bet model runs as soon as the ticket is confirmed."
       : research
         ? [
             research.espnHomeWin != null
@@ -500,7 +497,7 @@ function PlayerPropForm({
   const [pick, setPick] = useState("");
   const [price, setPrice] = useState(-110);
   const [note, setNote] = useState(
-    "NFL, NBA, MLB, NHL only. Photograph the Hard Rock Bet Florida screen — we run the player-bet model on the live number. College player bets are blocked in Florida.",
+    "NFL, NBA, MLB, NHL only. Fast Log the screen — we run the player-bet model on the live number. College player bets are blocked in Florida.",
   );
 
   function submit() {

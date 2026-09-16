@@ -3,7 +3,7 @@ import { useDeskStore, selectTicketPulse } from "@/lib/desk-store";
 import { formatBetUsd, formatChancePct, profitOnStake } from "@/lib/copy";
 import { formatAmerican } from "@/lib/utils";
 import { BRAND } from "@/lib/brand";
-import { ScreenshotIngest, PhotoFirstNote } from "./screenshot-ingest";
+import { ScreenshotIngest } from "./screenshot-ingest";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { postMortem } from "@/lib/market/post-mortem";
@@ -30,10 +30,10 @@ export function DeskPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Photographed tickets wait here</p>
+        <p className="text-sm text-gold">Fast Logged tickets wait here</p>
         <h1 className="font-display mt-2 text-3xl text-ink">Log</h1>
         <p className="mt-3 text-ink/80">
-          Photograph a Hard Rock ticket. Confirm the line. After the game, tap Hit or Miss. This site never places the bet.
+          Fast Log a ticket. Confirm the line. After the game, tap Hit or Miss. This site never places the bet.
         </p>
       </header>
 
@@ -59,10 +59,7 @@ export function DeskPage() {
           down={pulse.net < 0}
         />
       </div>
-
-      <PhotoFirstNote venue="Hard Rock Bet Florida" />
-
-      <section>
+<section>
         <h2 className="font-display text-2xl text-ink">Waiting</h2>
         {open.length ? (
           <ul className="mt-3 grid gap-3">
@@ -108,9 +105,10 @@ export function DeskPage() {
           </ul>
         ) : (
           <div className="paper-card mt-3 p-5">
-            <p className="text-base text-ink">Nothing waiting. Photograph a Hard Rock ticket to start a log.</p>
-            <div className="mt-4">
-              <ScreenshotIngest kind="ticket" heading="Photograph a Hard Rock ticket" />
+            <p className="text-base text-ink">Nothing waiting. Fast Log a ticket from the board to start.</p>
+            <div className="mt-4 rounded-lg border border-panel-border bg-obsidian p-4">
+              <ScreenshotIngest kind="ticket" heading="Upload a Custom Parlay" />
+              <p className="mt-2 text-xs text-muted">Only use this to upload a screenshot of a custom parlay that cannot be built on SportsLock.</p>
             </div>
           </div>
         )}
@@ -118,9 +116,10 @@ export function DeskPage() {
 
       {open.length ? (
         <details className="paper-card p-5">
-          <summary className="cursor-pointer text-sm font-medium text-gold">Add another photo</summary>
-          <div className="mt-3">
-            <ScreenshotIngest kind="ticket" heading="Photograph another Hard Rock ticket" embedded />
+          <summary className="cursor-pointer text-sm font-medium text-gold">Upload a Custom Parlay</summary>
+          <div className="mt-3 rounded-lg border border-panel-border bg-obsidian p-4">
+            <ScreenshotIngest kind="ticket" heading="Upload a Custom Parlay" embedded />
+            <p className="mt-2 text-xs text-muted">Only use this to upload a screenshot of a custom parlay that cannot be built on SportsLock.</p>
           </div>
         </details>
       ) : null}
