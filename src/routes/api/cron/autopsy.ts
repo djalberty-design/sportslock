@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const Route = createFileRoute("/api/cron/autopsy")({
   server: {
@@ -11,8 +12,21 @@ export const Route = createFileRoute("/api/cron/autopsy")({
 });
 
 async function callLLM(prompt: string): Promise<string> {
-  // Placeholder for real OpenAI / Gemini integration
-  return "[PENDING LLM API INTEGRATION] - Needs OpenAI/Gemini SDK wired.";
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return "[ERROR] GEMINI_API_KEY environment variable is missing.";
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (err) {
+    console.error("LLM Generation Failed:", err);
+    return [LLM ERROR] - ;
+  }
 }
 
 async function handleAutopsy() {
