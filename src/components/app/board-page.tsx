@@ -55,8 +55,7 @@ export function BoardPage() {
       ) : null}
 
       <SportFilter sports={sports} />
-      <PhotoFirstNote venue="Hard Rock Bet Florida" />
-      <p className="text-sm text-muted">
+<p className="text-sm text-muted">
         Ranked by researched chance and payout together. A huge favorite that pays almost nothing sits lower. Today first.
         {allGames.length ? ` ${allGames.length} games on All.` : ""}
       </p>
