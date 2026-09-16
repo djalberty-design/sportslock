@@ -37,6 +37,7 @@ import { ScreenshotIngest, PhotoFirstNote } from "./screenshot-ingest";
 import { PhotoWagerCta } from "./photo-wager-cta";
 import { ConfidenceChips, EdgeRow } from "./pick-card";
 import { useDeskStore, selectUnit } from "@/lib/desk-store";
+import { logPrediction } from "@/lib/market/ledger";
 import { buildLockPayload, LockedStamp } from "./ticket-lock";
 import { Button } from "@/components/ui/button";
 import type { DeskSnapshot, EventBrief, PaperTicket, ParsedTicket, ScanBundle, ScanRow } from "@/lib/market/types";
@@ -324,6 +325,10 @@ function ParlayTicketView({
     if (res.ok) {
       setLocked(res.ticket);
       setLockError(null);
+      // Log to Immutable Ledger
+      for (const leg of parlay.legs) {
+        logPrediction(leg, snapshot).catch(console.error);
+      }
     } else {
       setLockError(res.error);
     }

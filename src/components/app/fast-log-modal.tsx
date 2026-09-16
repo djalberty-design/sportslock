@@ -1,6 +1,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { useDeskStore } from "@/lib/desk-store";
+import { useDeskDecision } from "@/lib/market/use-board";
+import { logPrediction } from "@/lib/market/ledger";
 import { payoutMultiple } from "@/lib/market/engine";
 
 export function FastLogModal({
@@ -11,6 +13,7 @@ export function FastLogModal({
   onClose: () => void;
 }) {
   const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
+  const { snapshot } = useDeskDecision();
   const [stake, setStake] = React.useState(5);
   const [price, setPrice] = React.useState(item.price ?? item.row?.price ?? -110);
 
@@ -45,6 +48,24 @@ export function FastLogModal({
         }
       ] : undefined
     });
+    
+    // Log to Immutable Ledger
+    if (item.eventId) {
+      logPrediction({
+        eventId: item.eventId,
+        sport: item.sport,
+        start: item.start,
+        home: item.home,
+        away: item.away,
+        marketType: item.marketType,
+        selection: item.selection,
+        side: item.side,
+        price: price,
+        fairProb: item.fairProb ?? item.row?.fairProb ?? 0,
+        point: item.line ?? item.row?.line ?? null
+      } as any, snapshot).catch(console.error);
+    }
+    
     onClose();
   };
 
