@@ -427,12 +427,8 @@ function GameCard({
           {brief?.weather ?? ""}
           {brief?.injuryCount ? ` · ${brief.injuryCount} injury listings` : ""}
         </p>
-        <p className="mt-3 text-xs font-medium text-gold">Bet this one game →</p>
+        <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-gold/10 px-3 text-sm font-medium text-gold ring-1 ring-inset ring-gold/20 hover:bg-gold/20">⚡ Fast Log Ticket</div>
       </Link>
     </article>
   );
 }
-
-
-
-

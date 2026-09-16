@@ -1,0 +1,23 @@
+  const uniqueQuotes: QuoteLine[] = [];
+  const seen = new Set<string>();
+  const nowMs = Date.now();
+  for (const q of quotes) {
+    if (seen.has(q.eventId)) continue;
+
+    const isNFL = q.sport === "NFL";
+    const isMLB = q.sport === "MLB";
+    const msUntil = new Date(q.start).getTime() - nowMs;
+    
+    if (isNFL) {
+      if (msUntil > 7 * 86400_000) continue; 
+    } else if (isMLB && q.inPlay) {
+      // Unconditionally allow any live MLB game
+    } else {
+      // Allow games starting within 24 hours, or games that are currently in-play, or recently finished (negative msUntil)
+      if (!q.inPlay && msUntil > 24 * 3600_000) continue;
+      if (!q.inPlay && msUntil < -36 * 3600_000) continue;
+    }
+
+    seen.add(q.eventId);
+    uniqueQuotes.push(q);
+  }

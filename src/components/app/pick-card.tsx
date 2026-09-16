@@ -101,7 +101,7 @@ export function PickCard({
             <HitReadout chance={pick.chance} price={pick.price} hero align="left" />
           </div>
         )}
-        <p className="mt-3 text-xs font-medium text-gold">Full breakdown →</p>
+        <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-gold/10 px-3 text-sm font-medium text-gold ring-1 ring-inset ring-gold/20 hover:bg-gold/20">⚡ Fast Log Ticket</div>
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
       <FeeTimingRow pick={pick} />
