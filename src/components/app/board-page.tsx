@@ -35,26 +35,27 @@ export function BoardPage() {
 
   const handleBuildCombo = () => {
     try {
-      const rows = scan?.rows || [];
       const legs = [];
-      
+      const allRows = scan?.rows || [];
+
       for (const eventId of comboLegs) {
-        const gameRows = rows.filter((r) => r.eventId === eventId);
-        const brief = snapshot?.briefs?.find((b) => b.eventId === eventId);
-        const home = gameRows[0]?.home || "";
-        const away = gameRows[0]?.away || "";
+        const pick = picks?.find(p => p.eventId === eventId || p.row?.eventId === eventId || p.id?.includes(eventId));
         
-        const fav = researchedFavorite(gameRows, brief, { home, away });
-        if (fav && fav.row) {
-          legs.push(rowToPick(fav.row));
+        if (pick && pick.row) {
+          legs.push(rowToPick(pick.row));
+        } else {
+          const fallbackRow = allRows.find(r => r.eventId === eventId && (r.marketType === "moneyline" || r.marketType === "spread"));
+          if (fallbackRow) {
+            legs.push(rowToPick(fallbackRow));
+          }
         }
       }
-      
+
       if (legs.length > 1) {
         setParlayLegs(legs);
         navigate({ to: "/parlay" });
       } else {
-        alert("Could not build ticket: Not enough valid odds found for selected games.");
+        alert("Could not build combo: Found " + legs.length + " valid legs for " + comboLegs.length + " selected games.");
       }
     } catch (err) {
       alert("Combo Error: " + (err instanceof Error ? err.message : String(err)));
