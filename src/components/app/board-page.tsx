@@ -36,10 +36,16 @@ export function BoardPage() {
   const handleBuildCombo = () => {
     try {
       const legs = [];
-      const allRows = scan?.rows || [];
+
+      // Defensively cast dictionaries to arrays
+      const rawRows = scan?.rows || [];
+      const allRows = Array.isArray(rawRows) ? rawRows : Object.values(rawRows);
+
+      const rawPicks = picks || [];
+      const picksArray = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks);
 
       for (const eventId of comboLegs) {
-        const pick = picks?.find(p => p.eventId === eventId || p.row?.eventId === eventId || p.id?.includes(eventId));
+        const pick = picksArray.find(p => p.eventId === eventId || p.row?.eventId === eventId || p.id?.includes(eventId));
         
         if (pick && pick.row) {
           legs.push(rowToPick(pick.row));
