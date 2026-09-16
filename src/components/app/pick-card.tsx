@@ -81,6 +81,7 @@ export function PickCard({
             {pick.parlay ? ` · ${pick.parlay.legs.length}-pick combo` : ""}
             {pick.parlay?.sameGame ? " · same-game combo" : ""}
           </p>
+          </div>
           <TeamMarks pick={pick} />
         </div>
         <LiveStamp row={pick.row} className="mt-1 block" />

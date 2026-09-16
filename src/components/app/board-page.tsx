@@ -458,6 +458,7 @@ function GameCard({
             {isCore ? "THE PLAY" : sportLabel(g.sport)}
             {g.phase === "preseason" ? " · Preseason" : g.phase === "playoff" ? " · Playoff" : ""}
           </p>
+          </div>
           {(homeLogo || awayLogo) ? (
             <span className="flex -space-x-2">
               {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
