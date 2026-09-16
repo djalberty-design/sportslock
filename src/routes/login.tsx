@@ -63,7 +63,7 @@ function Login() {
               <button
                 key={p.providerId}
                 type="button"
-                onClick={() => signIn(p.providerId, { callbackURL: "/" })}
+                onClick={async () => { await authClient.signIn.social({ provider: "google", callbackURL: "/admin/terminal" }); }}
                 className="flex min-h-11 w-full items-center justify-center rounded-md bg-gold px-4 text-sm font-medium text-navy-deep hover:opacity-90"
               >
                 Continue with {p.label}
