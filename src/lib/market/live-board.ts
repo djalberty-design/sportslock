@@ -384,14 +384,20 @@ export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: s
     { sport: "NFL", url: `${ESPN_WEB}/football/nfl/scoreboard?dates=${yesterday}-${plus7}&limit=50` },
     { sport: "NFL", url: `${ESPN_WEB}/football/nfl/scoreboard?limit=50&seasontype=2&week=2` },
     { sport: "NFL", url: `${ESPN_WEB}/football/nfl/scoreboard?limit=50&seasontype=2&week=3` },
-    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${yesterday}-${plus2}&limit=50` },
+    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${yesterday}&limit=50` },
+    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${today}&limit=50` },
+    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${plus2}&limit=50` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&groups=80` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&week=2&year=${year}&seasontype=2&groups=80` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&week=3&year=${year}&seasontype=2&groups=80` },
     { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?limit=40` },
-    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${yesterday}-${plus24}&limit=50` },
+    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${yesterday}&limit=50` },
+    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${today}&limit=50` },
+    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${plus24}&limit=50` },
     { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?limit=30` },
-    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${yesterday}-${plus40}&limit=50` },
+    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${yesterday}&limit=50` },
+    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${today}&limit=50` },
+    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${plus40}&limit=50` },
     { sport: "NCAAB", url: `${ESPN_WEB}/basketball/mens-college-basketball/scoreboard?limit=50` },
   ];
 
@@ -831,6 +837,8 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
+
 
 
 
