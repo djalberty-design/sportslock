@@ -55,28 +55,42 @@ async function handleSweep() {
     const loggedIds = new Set(existing.map((row) => row.event_id));
 
     const paperSnapshot = { ...snapshot, isPaperTrade: true };
-
+    const insertPromises: Promise<void>[] = [];
     let loggedCount = 0;
+
     for (const [eventId, picksForEvent] of byEvent.entries()) {
       if (loggedIds.has(eventId)) continue;
 
-      let bestPick = picksForEvent[0];
-      let bestEdge = -999;
-      
+      // Track the best +EV pick for EACH market type (moneyline, spread, total)
+      const bestByMarket = new Map<string, { pick: any, edge: number }>();
+
       for (const p of picksForEvent) {
-        const edge = (p.chance * p.decimalPayout) - 1;
-        if (edge > bestEdge) {
-          bestEdge = edge;
-          bestPick = p;
+        const payout = p.price < 0 ? (100 / Math.abs(p.price)) + 1 : (p.price / 100) + 1;
+        const edge = (p.chance * payout) - 1;
+        
+        // STRICT +EV FLOOR: Only log mathematically profitable angles (> 1% edge)
+        if (edge < 0.01) continue;
+
+        const mType = p.row?.marketType || 'moneyline';
+        const currentBest = bestByMarket.get(mType);
+
+        if (!currentBest || edge > currentBest.edge) {
+          bestByMarket.set(mType, { pick: p, edge });
         }
       }
 
-      if (bestPick && bestPick.row) {
-        const parlayPick = rowToPick(bestPick.row);
-        await logPrediction(parlayPick, paperSnapshot);
-        loggedCount++;
+      // Queue the best +EV picks for this event
+      for (const { pick } of bestByMarket.values()) {
+        if (pick.row) {
+          const parlayPick = rowToPick(pick.row);
+          insertPromises.push(logPrediction(parlayPick, paperSnapshot) as Promise<void>);
+          loggedCount++;
+        }
       }
     }
+
+    // Execute all database writes in parallel to prevent serverless timeouts
+    await Promise.all(insertPromises);
 
     return new Response(JSON.stringify({ success: true, loggedCount, sweepWindowTotal: byEvent.size }), {
       headers: { 'Content-Type': 'application/json' }
