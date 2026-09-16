@@ -214,6 +214,10 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
         awayPitcher: line.awayPitcher,
         homeAbbr: line.homeAbbr,
         awayAbbr: line.awayAbbr,
+          homeScore: line.homeScore,
+          awayScore: line.awayScore,
+          clock: line.clock,
+          period: line.period,
         homeLogo: line.homeLogo,
         awayLogo: line.awayLogo,
         homeSpread: line.homeSpread,
@@ -297,6 +301,10 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       awayPitcher: line.awayPitcher,
       homeAbbr: line.homeAbbr,
       awayAbbr: line.awayAbbr,
+          homeScore: line.homeScore,
+          awayScore: line.awayScore,
+          clock: line.clock,
+          period: line.period,
       homeLogo: line.homeLogo,
       awayLogo: line.awayLogo,
       homeSpread: line.homeSpread,
@@ -1052,3 +1060,5 @@ export function canPlacePaper(opts: {
   }
   return { ok: true };
 }
+
+

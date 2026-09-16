@@ -61,7 +61,7 @@ export function PickCard({
           {pick.selection}
         </h3>
         <p className="mt-1 text-sm text-gold">
-          {pick.start ? formatKickoff(pick.start, true) : ""}
+          {pick.start && !pick.row?.inPlay ? formatKickoff(pick.start, true) : ""}
           {pick.away && pick.home ? ` · ${pickMatchup(pick)}` : ""}
         </p>
         {featured ? (
@@ -369,3 +369,4 @@ function FeeTimingRow({ pick }: { pick: DeskPick }) {
     </div>
   );
 }
+

@@ -58,6 +58,10 @@ export type QuoteLine = {
   awayPitcher?: string;
   homeAbbr?: string;
   awayAbbr?: string;
+  homeScore?: number;
+  awayScore?: number;
+  clock?: string;
+  period?: number;
   homeLogo?: string;
   awayLogo?: string;
   homeSpread?: number;
@@ -104,6 +108,10 @@ export type ScanRow = {
   awayPitcher?: string;
   homeAbbr?: string;
   awayAbbr?: string;
+  homeScore?: number;
+  awayScore?: number;
+  clock?: string;
+  period?: number;
   homeLogo?: string;
   awayLogo?: string;
   homeSpread?: number;
@@ -494,3 +502,5 @@ export type SlateBundle = {
   salaryShifts?: SalaryShift[];
   inactiveAlerts?: InactiveAlert[];
 };
+
+

@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 export type Liveish = {
   eventId?: string;
   sport?: string;
+  homeAbbr?: string;
+  awayAbbr?: string;
   inPlay?: boolean;
   homeScore?: number;
   awayScore?: number;
@@ -39,16 +41,26 @@ function scoreClock(row?: Liveish | null): string {
   return [score, clock].filter(Boolean).join(" · ");
 }
 
-/** Hard Live mark. Use on any card that can still show an in-play game. */
 export function LiveStamp({ row, className }: { row?: Liveish | null; className?: string }) {
   if (!row?.inPlay) return null;
-  const s = stateOf(row);
-  const extra = scoreClock(row);
+  
+  let p = row.period != null ? String(row.period) : "";
+  if (p && row.sport === "NFL" || row.sport === "NCAAF" || row.sport === "NBA") {
+    p = "Q" + p;
+  } else if (p && row.sport === "MLB") {
+    p = "Inning " + p;
+  } else if (p) {
+    p = "P" + p;
+  }
+  const clk = row.clock ?? "";
+  const stateStr = [p, clk].filter(Boolean).join(" ");
+  
+  const score = row.homeScore != null && row.awayScore != null ? " | " + (row.awayAbbr || "AWAY") + " " + row.awayScore + " - " + (row.homeAbbr || "HOME") + " " + row.homeScore : "";
+
   return (
-    <span className={cn("stamp text-gold", className)}>
-      Live{extra ? ` · ${extra}` : ""}
-      {s?.thin ? " · thin" : ""}
-      {" · never The Call"}
+    <span className={cn("stamp flex items-center gap-2 text-red-600 dark:text-red-400 font-bold", className)}>
+      <span className="animate-pulse h-2 w-2 rounded-full bg-red-600 dark:bg-red-500"></span>
+      LIVE {stateStr}{score}
     </span>
   );
 }
@@ -65,3 +77,5 @@ export function LiveBanner({ row }: { row?: Liveish | null }) {
     </p>
   );
 }
+
+

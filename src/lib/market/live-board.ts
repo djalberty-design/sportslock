@@ -158,6 +158,10 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
   const awayRecord = recordOf(awayC, "total");
   const homePitcher = pitcherOf(homeC);
   const awayPitcher = pitcherOf(awayC);
+  const homeScore = homeC?.score != null ? Number(homeC.score) : undefined;
+  const awayScore = awayC?.score != null ? Number(awayC.score) : undefined;
+  const clock = comp.status?.displayClock;
+  const period = comp.status?.period;
 
   const base = {
     eventId,
@@ -165,6 +169,17 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
     start,
     home,
     away,
+    homeAbbr,
+    awayAbbr,
+    inPlay,
+    homeRecord,
+    awayRecord,
+    homePitcher,
+    awayPitcher,
+    homeScore,
+    awayScore,
+    clock,
+    period,
     source: "espn" as const,
     delayed: true as const,
     inPlay,
@@ -791,3 +806,5 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
+

@@ -394,7 +394,7 @@ function GameCard({
           />
         ) : null}
       </div>
-      <p className="mt-1 text-sm text-gold">{formatKickoff(g.start, true)}</p>
+      {!g.inPlay ? <p className="mt-1 text-sm text-gold">{formatKickoff(g.start, true)}</p> : null}
       <p className="mt-2 text-sm text-ink">{lean.title}</p>
       {fav ? (
         <WagerMeter
@@ -415,3 +415,4 @@ function GameCard({
     </Link>
   );
 }
+
