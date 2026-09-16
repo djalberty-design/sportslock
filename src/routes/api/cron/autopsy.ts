@@ -25,7 +25,7 @@ async function callLLM(prompt: string): Promise<string> {
     return result.response.text();
   } catch (err) {
     console.error("LLM Generation Failed:", err);
-    return [LLM ERROR] - ;
+    return `[LLM ERROR] - ${(err as Error).message}`;
   }
 }
 
