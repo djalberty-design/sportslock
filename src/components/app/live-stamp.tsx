@@ -11,6 +11,7 @@ export type Liveish = {
   awayScore?: number;
   period?: string;
   clock?: string;
+  statusText?: string;
   situation?: string;
   leftover?: boolean;
 };
@@ -44,16 +45,21 @@ function scoreClock(row?: Liveish | null): string {
 export function LiveStamp({ row, className }: { row?: Liveish | null; className?: string }) {
   if (!row?.inPlay) return null;
   
-  let p = row.period != null ? String(row.period) : "";
-  if (p && row.sport === "NFL" || row.sport === "NCAAF" || row.sport === "NBA") {
-    p = "Q" + p;
-  } else if (p && row.sport === "MLB") {
-    p = "Inning " + p;
-  } else if (p) {
-    p = "P" + p;
+  let stateStr = "";
+  if (row.sport === "MLB" && row.statusText) {
+    stateStr = row.statusText.toUpperCase();
+  } else {
+    let p = row.period != null ? String(row.period) : "";
+    if (p && (row.sport === "NFL" || row.sport === "NCAAF" || row.sport === "NBA")) {
+      p = "Q" + p;
+    } else if (p && row.sport === "MLB") {
+      p = "Inning " + p;
+    } else if (p) {
+      p = "P" + p;
+    }
+    const clk = row.clock ?? "";
+    stateStr = [p, clk].filter(Boolean).join(" ");
   }
-  const clk = row.clock ?? "";
-  const stateStr = [p, clk].filter(Boolean).join(" ");
   
   const score = row.homeScore != null && row.awayScore != null ? " | " + (row.awayAbbr || "AWAY") + " " + row.awayScore + " - " + (row.homeAbbr || "HOME") + " " + row.homeScore : "";
 
@@ -77,5 +83,8 @@ export function LiveBanner({ row }: { row?: Liveish | null }) {
     </p>
   );
 }
+
+
+
 
 

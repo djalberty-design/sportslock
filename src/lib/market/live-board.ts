@@ -164,6 +164,7 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
   const awayScore = awayC?.score != null ? Number(awayC.score) : undefined;
   const clock = comp.status?.displayClock;
   const period = comp.status?.period;
+  const statusText = comp.status?.type?.shortDetail;
 
   const base = {
     eventId,
@@ -172,6 +173,7 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
     home,
     away,
     homeAbbr,
+    statusText,
     awayAbbr,
     inPlay,
     homeRecord,

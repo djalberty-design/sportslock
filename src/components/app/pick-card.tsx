@@ -38,7 +38,7 @@ export function PickCard({
   const profit = pick.price != null ? profitOnStake(unit, pick.price) : null;
   const pinned = settings.pinnedPickId === pick.id;
   return (
-    <article className={cn("paper-card relative p-4", featured && "p-5 ring-2 ring-gold md:p-6")}>
+    <article className={cn("paper-card relative p-4", featured && "p-5 ring-2 ring-gold md:p-6", pick.row?.inPlay && "ring-1 ring-red-500/80 shadow-[0_0_12px_rgba(239,68,68,0.3)]")}>
       {featured ? <CallRibbon /> : null}
       <Link
         to="/ticket"
@@ -369,4 +369,5 @@ function FeeTimingRow({ pick }: { pick: DeskPick }) {
     </div>
   );
 }
+
 

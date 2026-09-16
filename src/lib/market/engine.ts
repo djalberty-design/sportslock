@@ -217,6 +217,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
           homeScore: line.homeScore,
           awayScore: line.awayScore,
           clock: line.clock,
+          statusText: line.statusText,
           period: line.period,
         homeLogo: line.homeLogo,
         awayLogo: line.awayLogo,
@@ -230,6 +231,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
         homeScore: line.homeScore,
         awayScore: line.awayScore,
         clock: line.clock,
+          statusText: line.statusText,
         period: line.period,
         situation: line.situation,
       };
@@ -304,6 +306,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
           homeScore: line.homeScore,
           awayScore: line.awayScore,
           clock: line.clock,
+          statusText: line.statusText,
           period: line.period,
       homeLogo: line.homeLogo,
       awayLogo: line.awayLogo,
@@ -317,6 +320,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       homeScore: line.homeScore,
       awayScore: line.awayScore,
       clock: line.clock,
+          statusText: line.statusText,
       period: line.period,
       situation: line.situation,
     };
@@ -1060,5 +1064,6 @@ export function canPlacePaper(opts: {
   }
   return { ok: true };
 }
+
 
 

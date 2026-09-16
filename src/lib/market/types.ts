@@ -45,6 +45,7 @@ export type QuoteLine = {
   delayed: boolean;
   confirmed?: boolean;
   inPlay?: boolean;
+  statusText?: string;
   isProp?: boolean;
   player?: string;
   point?: number;
@@ -99,6 +100,7 @@ export type ScanRow = {
   consensusPrice?: number;
   point?: number;
   inPlay?: boolean;
+  statusText?: string;
   isProp?: boolean;
   player?: string;
   venueNote?: VenueNote | string;
@@ -502,5 +504,6 @@ export type SlateBundle = {
   salaryShifts?: SalaryShift[];
   inactiveAlerts?: InactiveAlert[];
 };
+
 
 

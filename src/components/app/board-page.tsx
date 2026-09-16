@@ -29,8 +29,8 @@ export function BoardPage() {
     snapshot?.briefs,
     snapshot?.predict,
   );
-  const today = games.filter((g) => isTodayEt(g.start) || g.inPlay);
-  const later = games.filter((g) => !isTodayEt(g.start) && !g.inPlay);
+  const today = games.filter((g) => isTodayEt(g.start) || g.inPlay).sort((a, b) => Number(b.inPlay || false) - Number(a.inPlay || false));
+  const later = games.filter((g) => !isTodayEt(g.start) && !g.inPlay).sort((a, b) => Number(b.inPlay || false) - Number(a.inPlay || false));
   const tableRows = applySportFilter(rows, sportFilter);
   const filteredEmpty = !games.length && sportFilter && sportFilter !== "ALL" && allGames.length > 0;
   const feedLooked = !allGames.length && (!sportFilter || sportFilter === "ALL");
@@ -366,7 +366,7 @@ function GameCard({
   const homeLogo = g.homeLogo || (g.homeAbbr ? espnLogoUrl(g.sport, g.homeAbbr) : "");
 
   return (
-    <article className={cn("paper-card relative p-4", isCore && "p-5 ring-2 ring-gold md:p-6")}>
+    <article className={cn("paper-card relative p-4", isCore && "p-5 ring-2 ring-gold md:p-6", g.inPlay && "ring-1 ring-red-500/80 shadow-[0_0_12px_rgba(239,68,68,0.3)]")}>
       <Link
         to="/game/$eventId"
         params={{ eventId: g.eventId }}
@@ -432,4 +432,6 @@ function GameCard({
     </article>
   );
 }
+
+
 
