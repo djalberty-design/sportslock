@@ -76,7 +76,7 @@ export function LiveBanner({ row }: { row?: Liveish | null }) {
   const s = stateOf(row);
   const extra = scoreClock(row);
   return (
-    <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-gold">
+    <p className="rounded-md bg-neon/10 px-3 py-2 text-sm text-neon">
       Live. Remaining-G from the current score and clock. Never The Call.
       {extra ? ` ${extra}.` : " Score not posted yet."}
       {s?.thin ? " Critical field missing (down / outs / strength) — thin look." : ""}

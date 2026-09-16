@@ -34,7 +34,7 @@ export function HitReadout({
       {pctLabel ? (
         <p
           className={cn(
-            "font-display leading-none tabular-nums text-gold",
+            "font-display leading-none tabular-nums text-neon",
             hero ? "text-2xl" : "text-xl",
           )}
         >
@@ -44,7 +44,7 @@ export function HitReadout({
         <p className="text-xs text-muted">—</p>
       )}
       {hit != null ? (
-        <p className="mt-0.5 truncate text-xs leading-tight text-gold">
+        <p className="mt-0.5 truncate text-xs leading-tight text-neon">
           <span className="font-medium">Hit</span> {formatBetUsd(hit)}
         </p>
       ) : (
@@ -88,17 +88,17 @@ export function WagerMeter({
     size === "lg" ? "text-5xl md:text-6xl" : size === "sm" ? "text-3xl" : "text-4xl";
 
   return (
-    <div className={cn("rounded-md bg-wash px-3 py-3", className)}>
+    <div className={cn("rounded-md bg-panel px-3 py-3", className)}>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className={cn("font-display leading-none tabular-nums text-gold", pctClass)}>
+          <p className={cn("font-display leading-none tabular-nums text-neon", pctClass)}>
             {pctLabel ?? "—"}
           </p>
           <p className="mt-1 truncate text-xs uppercase tracking-[0.14em] text-muted">{label}</p>
         </div>
         {total != null && profit != null ? (
           <div className="shrink-0 text-right">
-            <p className="text-sm font-medium text-gold">
+            <p className="text-sm font-medium text-neon">
               <span className="stamp mr-1">Hit</span>
               {formatBetUsd(total)}
             </p>
@@ -117,7 +117,7 @@ export function WagerMeter({
       </div>
       {hasChance ? (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
-          <div className="h-full rounded-full bg-gold" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-neon" style={{ width: `${pct}%` }} />
         </div>
       ) : null}
       {price != null && Number.isFinite(price) ? (

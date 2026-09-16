@@ -26,7 +26,7 @@ export function SportFilter({ sports }: { sports: string[] }) {
             onClick={() => set(s)}
             className={cn(
               "min-h-11 rounded-md px-3 text-sm font-medium",
-              active ? "bg-gold text-navy-deep" : "bg-wash text-muted hover:text-ink",
+              active ? "bg-neon text-obsidian" : "bg-panel text-muted hover:text-ink",
             )}
           >
             {s === "ALL" ? "All" : s === "NCAAF" ? "College Football" : s === "NCAAB" ? "College Basketball" : s}
@@ -54,7 +54,7 @@ export function SportSeasonNote({ sport }: { sport: string }) {
     NFL: "NFL Sundays, plus Monday and Thursday nights. Photograph the Hard Rock number before you confirm.",
   };
   return (
-    <p className="rounded-md bg-wash px-4 py-3 text-sm text-ink/80">
+    <p className="rounded-md bg-panel px-4 py-3 text-sm text-ink/80">
       {copy[sport] ?? "No games in this filter yet. Photograph a ticket and we will still grade it."}
     </p>
   );

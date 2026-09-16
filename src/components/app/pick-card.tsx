@@ -40,7 +40,7 @@ export function PickCard({
   const profit = pick.price != null ? profitOnStake(unit, pick.price) : null;
   const pinned = settings.pinnedPickId === pick.id;
   return (
-    <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured ? "ring-2 ring-gold" : ""))}>
+    <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured ? "ring-2 ring-neon" : ""))}>
       {featured ? <CallRibbon /> : null}
       <Link
         to="/ticket"
@@ -51,7 +51,7 @@ export function PickCard({
         className="block"
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="stamp text-gold">
+          <p className="stamp text-neon">
             {featured ? "The Call" : rank ? `${rank}` : sportLabel(pick.sport)}
             {pick.parlay ? ` · ${pick.parlay.legs.length}-pick combo` : ""}
             {pick.parlay?.sameGame ? " · same-game combo" : ""}
@@ -62,7 +62,7 @@ export function PickCard({
         <h3 className={cn("font-display mt-2 text-ink", featured ? "text-2xl md:text-3xl" : "text-lg")}>
           {pick.selection}
         </h3>
-        <p className="mt-1 text-sm text-gold">
+        <p className="mt-1 text-sm text-muted">
           {pick.start && !pick.row?.inPlay ? formatKickoff(pick.start, true) : ""}
           {pick.away && pick.home ? ` · ${pickMatchup(pick)}` : ""}
         </p>
@@ -95,11 +95,11 @@ export function PickCard({
               label="Chance they all hit"
             />
             {pick.parlay?.sameGame ? (
-              <p className="mt-2 text-xs text-gold">Same-game combo. They move together.</p>
+              <p className="mt-2 text-xs text-neon">Same-game combo. They move together.</p>
             ) : null}
           </>
         ) : (
-          <div className="mt-3 rounded-md bg-wash px-3 py-2">
+          <div className="mt-3 rounded-md bg-panel px-3 py-2">
             <HitReadout chance={pick.chance} price={pick.price} hero align="left" />
           </div>
         )}
@@ -134,8 +134,8 @@ export function PickCard({
               });
             }}
             className={cn(
-              "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-wash px-3 text-sm font-medium text-muted hover:text-gold",
-              pinned && "text-gold",
+              "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted hover:text-neon",
+              pinned && "text-neon",
             )}
           >
             <Pin className="size-4" strokeWidth={1.75} />
@@ -149,7 +149,7 @@ export function PickCard({
                 qc.setQueryData(["desk-hidden"], ids);
               });
             }}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-wash px-3 text-sm font-medium text-muted hover:text-gold"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted hover:text-neon"
           >
             <EyeOff className="size-4" strokeWidth={1.75} />
             Hide
@@ -210,14 +210,14 @@ export function ConfidenceChips({
         : 0;
   const band = qualityBand(qualityForBand);
   const tape = tapeChip(pick.tapeStamp, pick.researchOnly, fromUserPhoto);
-  const chips: { id: ChipId; label: string; tone: "gold" | "muted" | "up" }[] = [];
-  if (showCall) chips.push({ id: "the-call", label: "The Call", tone: "gold" });
+  const chips: { id: ChipId; label: string; tone: "neon" | "muted" | "up" }[] = [];
+  if (showCall) chips.push({ id: "the-call", label: "The Call", tone: "neon" });
   if (pick.safestFallback) {
-    chips.push({ id: "highest-today", label: highestTodayLabel(pick), tone: "gold" });
+    chips.push({ id: "highest-today", label: highestTodayLabel(pick), tone: "neon" });
   } else if (belowSixty(pick)) {
     chips.push({ id: "under-60", label: "Under 60%", tone: "muted" });
   }
-  chips.push({ id: lookChipId(band), label: LOOK_LABEL[band], tone: "gold" });
+  chips.push({ id: lookChipId(band), label: LOOK_LABEL[band], tone: "neon" });
   chips.push({ id: tape.id, label: tape.label, tone: "muted" });
   if (!fromUserPhoto && tape.id !== "research") {
     chips.push({ id: "photo-needed", label: "Fast Log to lock this price", tone: "muted" });
@@ -232,7 +232,7 @@ export function ConfidenceChips({
     });
   }
   if (pick.row?.marketType === "ml" && pick.earlyMover) {
-    chips.push({ id: "early-mover", label: "Early Mover Advantage", tone: "gold" });
+    chips.push({ id: "early-mover", label: "Early Mover Advantage", tone: "neon" });
   }
   const seen = new Set<string>();
   const unique = chips.filter((c) => {
@@ -253,8 +253,8 @@ export function ConfidenceChips({
               setOpen(c.id);
             }}
             className={cn(
-              "rounded-sm bg-wash px-2 py-1 text-left text-xs tracking-wide",
-              c.tone === "gold" ? "text-gold" : c.tone === "up" ? "text-up" : "text-muted",
+              "rounded-sm bg-panel px-2 py-1 text-left text-xs tracking-wide",
+              c.tone === "neon" ? "text-neon" : c.tone === "up" ? "text-up" : "text-muted",
             )}
           >
             {c.label}
@@ -272,7 +272,7 @@ export function EdgeRow({ pick, className }: { pick: DeskPick; className?: strin
     <div className={className}>
       <div className="grid grid-cols-3 gap-2">
         <MiniStat label="Book" value={formatChancePct(pick.implied) ?? "—"} />
-        <MiniStat label="Desk" value={formatChancePct(pick.chance) ?? "—"} gold />
+        <MiniStat label="Desk" value={formatChancePct(pick.chance) ?? "—"} neon/>
         <MiniStat
           label="Edge"
           value={
@@ -285,11 +285,11 @@ export function EdgeRow({ pick, className }: { pick: DeskPick; className?: strin
   );
 }
 
-function MiniStat({ label, value, gold = false }: { label: string; value: string; gold?: boolean }) {
+function MiniStat({ label, value, neon= false }: { label: string; value: string; neon: boolean }) {
   return (
-    <div className="rounded-md bg-wash px-2 py-2 text-center">
+    <div className="rounded-md bg-panel px-2 py-2 text-center">
       <p className="stamp text-muted">{label}</p>
-      <p className={cn("font-display mt-1 text-lg tabular-nums", gold ? "text-gold" : "text-ink")}>{value}</p>
+      <p className={cn("font-display mt-1 text-lg tabular-nums", neon? "text-neon" : "text-ink")}>{value}</p>
     </div>
   );
 }
@@ -301,8 +301,8 @@ function TeamMarks({ pick }: { pick: DeskPick }) {
   if (!home && !away) return null;
   return (
     <span className="flex -space-x-2">
-      {away ? <img src={away} alt="" className="size-8 rounded-full bg-wash object-contain" /> : null}
-      {home ? <img src={home} alt="" className="size-8 rounded-full bg-wash object-contain" /> : null}
+      {away ? <img src={away} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
+      {home ? <img src={home} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
     </span>
   );
 }
@@ -354,7 +354,7 @@ function FeeTimingRow({ pick }: { pick: DeskPick }) {
             e.stopPropagation();
             setOpen("fee");
           }}
-          className={cn("rounded-sm bg-wash px-2 py-1 text-xs", fee.tone === "avoid" ? "text-down" : fee.tone === "high" ? "text-gold" : "text-muted")}
+          className={cn("rounded-sm bg-panel px-2 py-1 text-xs", fee.tone === "avoid" ? "text-down" : fee.tone === "high" ? "text-neon" : "text-muted")}
         >
           {fee.text}
         </button>
@@ -367,7 +367,7 @@ function FeeTimingRow({ pick }: { pick: DeskPick }) {
             e.stopPropagation();
             setOpen(kind);
           }}
-          className="rounded-sm bg-wash-gold px-2 py-1 text-xs text-gold"
+          className="rounded-sm bg-neon/10 px-2 py-1 text-xs text-neon"
         >
           {TIMING_COPY[kind].title}
         </button>

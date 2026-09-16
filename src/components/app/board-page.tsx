@@ -40,7 +40,7 @@ export function BoardPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Live ESPN schedule · tap a game to bet that one ticket</p>
+        <p className="text-sm text-neon">Live ESPN schedule · tap a game to bet that one ticket</p>
         <h1 className="font-display mt-2 text-3xl text-ink">Every game. Who's more likely, and what it pays.</h1>
         <p className="mt-3 text-sm text-ink/80">{snapshot?.hours.note ?? snapshot?.sourceNote}</p>
         <p className="mt-1 font-mono text-xs text-muted">
@@ -49,7 +49,7 @@ export function BoardPage() {
       </header>
 
       {ranking ? (
-        <p className="rounded-md bg-wash px-4 py-3 text-sm text-muted">
+        <p className="rounded-md bg-panel px-4 py-3 text-sm text-muted">
           Ranking tickets in the background. You can still tap around.
         </p>
       ) : null}
@@ -107,7 +107,7 @@ export function BoardPage() {
       {!games.length && sportFilter && sportFilter !== "ALL" ? <SportSeasonNote sport={sportFilter} /> : null}
       {feedLooked ? (
         <section className="paper-card p-5">
-          <p className="stamp text-gold">Empty board</p>
+          <p className="stamp text-neon">Empty board</p>
           <h2 className="font-display mt-2 text-xl text-ink">No games on this slate.</h2>
           <p className="mt-2 text-sm text-muted">
             Off-slate or the ESPN feed Looked empty — not a skip. Photograph a Hard Rock Bet Florida screen so we still have a live number.
@@ -116,11 +116,11 @@ export function BoardPage() {
       ) : null}
 
       <details className="paper-card overflow-x-auto p-0" open>
-<summary className="cursor-pointer bg-wash px-4 py-3 text-sm font-medium text-ink">
+<summary className="cursor-pointer bg-panel px-4 py-3 text-sm font-medium text-ink">
   All numbers on this board (Wide Open — delayed consensus prices)
 </summary>
         <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="bg-wash text-muted">
+          <thead className="bg-panel text-muted">
             <tr>
               <th className="px-4 py-3">Event</th>
               <th>When</th>
@@ -143,7 +143,7 @@ export function BoardPage() {
                     {sportLabel(r.sport)} · Away {r.away} · Home {r.home}
                   </p>
                 </td>
-                <td className="whitespace-nowrap text-xs text-gold">
+                <td className="whitespace-nowrap text-xs text-muted">
                   {r.inPlay ? <LiveStamp row={r} /> : formatKickoff(r.start, true)}
                 </td>
                 <td>{MARKET_LABEL[r.marketType]}</td>
@@ -179,16 +179,16 @@ export function BoardPage() {
                     {s.steam ? " · steam" : ""}
                     {s.lean === "sharp" ? " · money lead" : s.lean === "public" ? " · public on tickets" : ""}
                   </span>
-                  <span className="font-mono tabular-nums text-gold">
+                  <span className="font-mono tabular-nums text-neon">
                     {tickets}% bets · {money}% $
                   </span>
                 </div>
                 <div className="mt-1 grid grid-cols-2 gap-2">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-navy-deep">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-obsidian">
                     <span className="block h-full bg-ink/50" style={{ width: `${tickets}%` }} />
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-navy-deep">
-                    <span className="block h-full bg-gold" style={{ width: `${money}%` }} />
+                  <div className="h-1.5 overflow-hidden rounded-full bg-obsidian">
+                    <span className="block h-full bg-neon" style={{ width: `${money}%` }} />
                   </div>
                 </div>
                 {s.note ? <p className="mt-1 text-xs text-muted">{s.note}</p> : null}
@@ -201,7 +201,7 @@ export function BoardPage() {
 
       <p className="text-sm">
         Build a custom ticket on{" "}
-        <Link to="/parlay" className="font-medium text-gold underline-offset-4 hover:underline">
+        <Link to="/parlay" className="font-medium text-neon underline-offset-4 hover:underline">
           Your parlay
         </Link>
         .
@@ -244,7 +244,7 @@ function GameGrid({
           <button
             type="button"
             onClick={onClear}
-            className="mt-3 inline-flex min-h-11 items-center rounded-md bg-gold px-4 text-sm font-medium text-navy-deep"
+            className="mt-3 inline-flex min-h-11 items-center rounded-md bg-neon px-4 text-sm font-medium text-obsidian"
           >
             Clear filter{allCount ? ` · ${allCount} on All` : ""}
           </button>
@@ -264,11 +264,11 @@ function GameGrid({
         <>
           {/* ── CORE 85% ── disciplined, high-edge plays */}
           <div className="mb-1 mt-3 flex items-center gap-2">
-            <span className="h-px flex-1 bg-gold/30" />
-            <span className="text-xs font-semibold tracking-widest text-gold">
+            <span className="h-px flex-1 bg-neon/30" />
+            <span className="text-xs font-semibold tracking-widest text-neon">
               CORE · 85% BANKROLL
             </span>
-            <span className="h-px flex-1 bg-gold/30" />
+            <span className="h-px flex-1 bg-neon/30" />
           </div>
           <p className="mb-3 text-xs text-muted">
             Fair or better vs the consensus price. Disciplined plays only.
@@ -366,21 +366,21 @@ function GameCard({
   const homeLogo = g.homeLogo || (g.homeAbbr ? espnLogoUrl(g.sport, g.homeAbbr) : "");
 
   return (
-    <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore ? "ring-2 ring-gold" : ""))}>
+    <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore ? "ring-2 ring-neon" : ""))}>
       <Link
         to="/game/$eventId"
         params={{ eventId: g.eventId }}
         className="block"
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="stamp text-gold">
+          <p className="stamp text-neon">
             {isCore ? "THE PLAY" : sportLabel(g.sport)}
             {g.phase === "preseason" ? " · Preseason" : g.phase === "playoff" ? " · Playoff" : ""}
           </p>
           {(homeLogo || awayLogo) ? (
             <span className="flex -space-x-2">
-              {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-wash object-contain" /> : null}
-              {homeLogo ? <img src={homeLogo} alt="" className="size-8 rounded-full bg-wash object-contain" /> : null}
+              {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
+              {homeLogo ? <img src={homeLogo} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
             </span>
           ) : null}
         </div>
@@ -388,7 +388,7 @@ function GameCard({
         <h3 className={cn("font-display mt-2 text-ink", isCore ? "text-2xl md:text-3xl" : "text-lg")}>
           {lean.title}
         </h3>
-        <p className="mt-1 text-sm text-gold">
+        <p className="mt-1 text-sm text-muted">
           {g.start && !g.inPlay ? formatKickoff(g.start, true) : ""}
           {g.away && g.home ? ` · ${g.away}${awayRec ? ` (${awayRec})` : ""} @ ${g.home}${homeRec ? ` (${homeRec})` : ""}` : ""}
         </p>
