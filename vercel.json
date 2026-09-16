@@ -1,4 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
+  "crons": [
+    {
+      "path": "/api/cron/grade",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/autopsy",
+      "schedule": "30 8 * * *"
+    }
+  ]
 }
