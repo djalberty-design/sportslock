@@ -23,7 +23,7 @@ export type AuthProvider = {
 export type GrokProvider = AuthProvider;
 
 export const AUTH_PROVIDERS: readonly AuthProvider[] = [
-  { providerId: "sl-google", idp: "google", label: "Google" },
+  { providerId: "google", idp: "google", label: "Google" },
   
 ];
 
