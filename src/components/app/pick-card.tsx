@@ -39,8 +39,16 @@ export function PickCard({
   const liveFits = bankroll >= 100 && unit >= 1;
   const profit = pick.price != null ? profitOnStake(unit, pick.price) : null;
   const pinned = settings.pinnedPickId === pick.id;
+  const row = pick.row;
+  const isSharp = row?.ticketPct != null && row?.handlePct != null && (row.handlePct - row.ticketPct >= 15);
+
   return (
     <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured ? "ring-2 ring-neon" : ""))}>
+      {isSharp && (
+        <div className="absolute top-14 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
+          🔥 SHARP
+        </div>
+      )}
       {featured ? <CallRibbon /> : null}
       <Link
         to="/ticket"

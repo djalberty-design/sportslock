@@ -376,8 +376,15 @@ function GameCard({
   const awayLogo = g.awayLogo || (g.awayAbbr ? espnLogoUrl(g.sport, g.awayAbbr) : "");
   const homeLogo = g.homeLogo || (g.homeAbbr ? espnLogoUrl(g.sport, g.homeAbbr) : "");
 
+  const isSharp = g.ticketPct != null && g.handlePct != null && (g.handlePct - g.ticketPct >= 15);
+
   return (
     <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore ? "ring-2 ring-neon" : ""))}>
+      {isSharp && (
+        <div className="absolute top-14 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
+          🔥 SHARP
+        </div>
+      )}
       <Link
         to="/game/$eventId"
         params={{ eventId: g.eventId }}
