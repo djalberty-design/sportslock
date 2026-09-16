@@ -293,17 +293,11 @@ export function predictFor(predict, eventId) {
 	return predict?.find((p) => p.eventId === eventId);
 }
 export function uniqueUpcomingGames(rows: ScanRow[]): ScanRow[] {
-	const now = Date.now();
-	const horizon = now + 36 * 3600_000;
-	const recentlyStarted = now - 6 * 3600_000;
 	const rank = (r: ScanRow) =>
 		r.marketType === "ml" ? 3 : r.marketType === "spread" ? 2 : r.marketType === "total" ? 1 : 0;
 	const map = new Map<string, ScanRow>();
 	for (const r of rows) {
 		if (r.tag === "illegal_fl") continue;
-		const t = new Date(r.start).getTime();
-		const upcoming = Number.isFinite(t) && t >= recentlyStarted && t <= horizon;
-		if (!upcoming && !r.inPlay && !isTodayEt(r.start)) continue;
 		const cur = map.get(r.eventId);
 		if (!cur || rank(r) > rank(cur) || (rank(r) === rank(cur) && (r.fairProb ?? 0) > (cur.fairProb ?? 0))) {
 			map.set(r.eventId, r);
@@ -1417,3 +1411,5 @@ export async function enrichResearchForm(research: EventResearch, path: string):
     awayLooks: awayLooks ?? research.awayLooks,
   };
 }
+
+

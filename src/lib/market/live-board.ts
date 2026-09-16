@@ -375,6 +375,7 @@ function capEventIds(quotes: QuoteLine[], sport: string, n: number): QuoteLine[]
 export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: string[] }> {
   const yesterday = yyyymmddEt(-1);
   const today = yyyymmddEt(0);
+    const plus1 = yyyymmddEt(1);
   const plus2 = yyyymmddEt(2);
   const plus7 = yyyymmddEt(7);
   const plus24 = yyyymmddEt(24);
@@ -386,6 +387,7 @@ export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: s
     { sport: "NFL", url: `${ESPN_WEB}/football/nfl/scoreboard?limit=50&seasontype=2&week=3` },
     { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${yesterday}&limit=50` },
     { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${today}&limit=50` },
+      { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${plus1}&limit=50` },
     { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${plus2}&limit=50` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&groups=80` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&week=2&year=${year}&seasontype=2&groups=80` },
@@ -837,6 +839,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
 
 
 
