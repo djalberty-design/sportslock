@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
+import { SkeletonCard } from "./skeleton-card";
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDeskDecision } from "@/lib/market/use-board";
@@ -64,7 +65,13 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
   const research = researchQ.data && researchQ.data.ok ? researchQ.data.research : null;
 
   if ((query.isLoading || !scan) && !pick) {
-    return <p className="text-muted">Reading the desk…</p>;
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </div>
+    );
   }
   if (!pick) {
     return (

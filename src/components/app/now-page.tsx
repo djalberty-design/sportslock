@@ -8,6 +8,7 @@ import { sportLabel } from "@/lib/copy";
 import { useAccess } from "@/lib/use-access";
 import { SportFilter } from "./sport-filter";
 import { PickCard } from "./pick-card";
+import { SkeletonCard } from "./skeleton-card";
 import { PhotoWagerCta } from "./photo-wager-cta";
 import { MasterFilter, type BetType } from "./master-filter";
 import { cn } from "@/lib/utils";
@@ -179,7 +180,13 @@ export function NowPage() {
         </p>
       ) : null}
 
-      {!picks && !query.isError ? <OpinionSkeleton /> : null}
+            {!picks && !query.isError ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : null}
 
       {hero ? (
         <section>

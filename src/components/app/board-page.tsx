@@ -14,10 +14,11 @@ import { isCollegeSport } from "@/lib/market/universe";
 import type { EventBrief, PredictQuote, ScanRow } from "@/lib/market/types";
 import { LiveStamp } from "./live-stamp";
 import { PickCard } from "./pick-card";
+import { SkeletonCard } from "./skeleton-card";
 import type { DeskPick } from "@/lib/market/picks";
 
 export function BoardPage() {
-  const { snapshot, scan, ranking, picks } = useDeskDecision();
+  const { snapshot, scan, ranking, picks, query } = useDeskDecision();
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const setSportFilter = useDeskStore((s) => s.setSportFilter);
   const hideCollege = useDeskStore((s) => s.hideCollege);
@@ -60,6 +61,14 @@ export function BoardPage() {
         {allGames.length ? ` ${allGames.length} games on All.` : ""}
       </p>
 
+      {query.isLoading || !snapshot ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : (
+        <>
       <GameGrid
         title="Playing today"
         empty={
