@@ -152,7 +152,9 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
   const odds = comp.odds?.[0];
   const scheduleOnly = !odds;
 
-  const eventId = `espn-${sport}-${event.id ?? `${awayShort}-${homeShort}-${start}`}`;
+    const eventId = `espn-${sport}-${event.id ?? `${awayShort}-${homeShort}-${start}`}`;
+  const homeAbbr = homeC?.team?.abbreviation;
+  const awayAbbr = awayC?.team?.abbreviation;
   const sportPath = ESPN_PATH[sport];
   const homeRecord = recordOf(homeC, "total");
   const awayRecord = recordOf(awayC, "total");
@@ -806,5 +808,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
+
 
 
