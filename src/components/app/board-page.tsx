@@ -34,22 +34,20 @@ export function BoardPage() {
   const allGames = uniqueUpcomingGames(rows);
 
   const handleBuildCombo = () => {
-    const rows = scan?.rows || [];
-    const allGames = uniqueUpcomingGames(rows);
-    const legs = [];
-    for (const eventId of comboLegs) {
-      const gameRows = rows.filter((r) => r.eventId === eventId);
-      const brief = snapshot?.briefs?.find((b) => b.eventId === eventId);
-      const g = allGames.find((x) => x.eventId === eventId);
-      if (!g) continue;
-      const fav = researchedFavorite(gameRows, brief, { home: g.home, away: g.away });
-      if (fav && fav.row) {
-        legs.push(rowToPick(fav.row));
-      }
-    }
+    if (!picks) return;
+
+    // Grab the exact AI picks for the selected games
+    const legs = comboLegs
+      .map((eventId) => picks.find((p) => p.row?.eventId === eventId))
+      .filter(Boolean);
+
     if (legs.length > 1) {
-      setParlayLegs(legs);
+      if (typeof setParlayLegs === 'function') {
+        setParlayLegs(legs);
+      }
       navigate({ to: "/parlay" });
+    } else {
+      alert("Could not build combo. Ensure selected games have valid AI picks.");
     }
   };
   const games = sortByResearchedChance(
