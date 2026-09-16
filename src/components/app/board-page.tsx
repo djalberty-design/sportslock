@@ -34,20 +34,30 @@ export function BoardPage() {
   const allGames = uniqueUpcomingGames(rows);
 
   const handleBuildCombo = () => {
-    if (!picks) return;
-
-    // Grab the exact AI picks for the selected games
-    const legs = comboLegs
-      .map((eventId) => picks.find((p) => p.row?.eventId === eventId))
-      .filter(Boolean);
-
-    if (legs.length > 1) {
-      if (typeof setParlayLegs === 'function') {
-        setParlayLegs(legs);
+    try {
+      const rows = scan?.rows || [];
+      const legs = [];
+      
+      for (const eventId of comboLegs) {
+        const gameRows = rows.filter((r) => r.eventId === eventId);
+        const brief = snapshot?.briefs?.find((b) => b.eventId === eventId);
+        const home = gameRows[0]?.home || "";
+        const away = gameRows[0]?.away || "";
+        
+        const fav = researchedFavorite(gameRows, brief, { home, away });
+        if (fav && fav.row) {
+          legs.push(rowToPick(fav.row));
+        }
       }
-      navigate({ to: "/parlay" });
-    } else {
-      alert("Could not build combo. Ensure selected games have valid AI picks.");
+      
+      if (legs.length > 1) {
+        setParlayLegs(legs);
+        navigate({ to: "/parlay" });
+      } else {
+        alert("Could not build ticket: Not enough valid odds found for selected games.");
+      }
+    } catch (err) {
+      alert("Combo Error: " + (err instanceof Error ? err.message : String(err)));
     }
   };
   const games = sortByResearchedChance(
