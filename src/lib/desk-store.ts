@@ -11,7 +11,7 @@ import { DEFAULTS } from "./market/universe";
 import { isCollegePlayerBet } from "./market/florida";
 import { etParts, startOfEtWeekMonday } from "./utils";
 
-export type PlacePaperInput = Omit<PaperTicket, "id" | "createdAt" | "venue"> & {
+export type PlacePaperInput = Omit<PaperTicket, "id" | "createdAt" | "venue"> & { fastLog?: boolean;
   status?: PaperTicket["status"];
 };
 
@@ -232,7 +232,7 @@ export const useDeskStore = create<DeskState>()(
       },
       placePaperTicket: (t) => {
         const s = get();
-        if (!s.confirmedTickets.some((x) => x.confirmed)) {
+        if (!t.fastLog && !s.confirmedTickets.some((x) => x.confirmed)) {
           return {
             ok: false,
             error: "Upload a Hard Rock or DraftKings screenshot first. We need the live number before we lock it in.",
@@ -459,3 +459,4 @@ export function selectTicketPulse(s: Pick<DeskState, "paperTickets"> | { paperTi
     open,
   };
 }
+

@@ -1,3 +1,5 @@
+import * as React from "react";
+import { FastLogModal } from "./fast-log-modal";
 import { Link } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { useDeskStore } from "@/lib/desk-store";
@@ -427,8 +429,9 @@ function GameCard({
           {brief?.weather ?? ""}
           {brief?.injuryCount ? ` · ${brief.injuryCount} injury listings` : ""}
         </p>
-        <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-gold/10 px-3 text-sm font-medium text-gold ring-1 ring-inset ring-gold/20 hover:bg-gold/20">⚡ Fast Log Ticket</div>
+        <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFastLogOpen(true); }} className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20 hover:bg-neon/20 cursor-pointer">⚡ Fast Log Ticket</div>
       </Link>
+      {fastLogOpen && <FastLogModal item={g} onClose={() => setFastLogOpen(false)} />}
     </article>
   );
 }

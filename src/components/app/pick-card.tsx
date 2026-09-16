@@ -16,6 +16,7 @@ import { cn, formatKickoff } from "@/lib/utils";
 import { HitReadout, WagerMeter } from "./wager-meter";
 import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
+import { FastLogModal } from "./fast-log-modal";
 
 export function PickCard({
   pick,
@@ -26,6 +27,7 @@ export function PickCard({
   featured?: boolean;
   rank?: number;
 }) {
+  const [fastLogOpen, setFastLogOpen] = useState(false);
   const unit = useDeskStore(selectUnit);
   const bankroll = useDeskStore((s) => s.liveBankroll);
   const setParlayLegs = useDeskStore((s) => s.setParlayLegs);
@@ -101,7 +103,16 @@ export function PickCard({
             <HitReadout chance={pick.chance} price={pick.price} hero align="left" />
           </div>
         )}
-        <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-gold/10 px-3 text-sm font-medium text-gold ring-1 ring-inset ring-gold/20 hover:bg-gold/20">⚡ Fast Log Ticket</div>
+        <div
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setFastLogOpen(true);
+          }}
+          className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20 hover:bg-neon/20 cursor-pointer"
+        >
+          ⚡ Fast Log Ticket
+        </div>
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
       <FeeTimingRow pick={pick} />
@@ -150,6 +161,7 @@ export function PickCard({
           </button>
         </div>
       ) : null}
+      {fastLogOpen && <FastLogModal item={pick} onClose={() => setFastLogOpen(false)} />}
     </article>
   );
 }
