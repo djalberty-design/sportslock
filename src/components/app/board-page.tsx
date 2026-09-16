@@ -1,11 +1,11 @@
 import * as React from "react";
 import { FastLogModal } from "./fast-log-modal";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { useDeskStore } from "@/lib/desk-store";
 import { formatAmerican, formatPct, formatKickoff, isTodayEt, cn } from "@/lib/utils";
 import { MARKET_LABEL, TAG_LABEL, shortPick, sportLabel } from "@/lib/copy";
-import { leanEnglish, researchedFavorite, sortByResearchedChance, uniqueUpcomingGames } from "@/lib/market/research";
+import { leanEnglish, researchedFavorite, sortByResearchedChance, uniqueUpcomingGames, rowToPick } from "@/lib/market/research";
 
 import { SportFilter, applySportFilter, SportSeasonNote } from "./sport-filter";
 import { WagerMeter, HitReadout, getEdgeTone } from "./wager-meter";
@@ -19,13 +19,37 @@ import type { DeskPick } from "@/lib/market/picks";
 
 export function BoardPage() {
   const { snapshot, scan, ranking, picks, query } = useDeskDecision();
+  const [comboLegs, setComboLegs] = React.useState<string[]>([]);
+  const toggleLeg = (eventId: string) => {
+    setComboLegs((prev) => prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]);
+  };
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const setSportFilter = useDeskStore((s) => s.setSportFilter);
   const hideCollege = useDeskStore((s) => s.hideCollege);
   const splits = snapshot?.publicSplits ?? [];
   const rows = (scan?.rows ?? []).filter((r) => !(hideCollege && isCollegeSport(r.sport)));
   const sports = [...new Set((scan?.rows ?? []).map((r) => r.sport))];
+  const navigate = useNavigate();
+  const setParlayLegs = useDeskStore((s) => s.setParlayLegs);
   const allGames = uniqueUpcomingGames(rows);
+
+  const handleBuildCombo = () => {
+    const legs = [];
+    for (const eventId of comboLegs) {
+      const gameRows = rows.filter((r) => r.eventId === eventId);
+      const brief = snapshot?.briefs?.find((b) => b.eventId === eventId);
+      const g = allGames.find((x) => x.eventId === eventId);
+      if (!g) continue;
+      const fav = researchedFavorite(gameRows, brief, { home: g.home, away: g.away });
+      if (fav && fav.row) {
+        legs.push(rowToPick(fav.row));
+      }
+    }
+    if (legs.length > 1) {
+      setParlayLegs(legs);
+      navigate({ to: "/parlay" });
+    }
+  };
   const games = sortByResearchedChance(
     applySportFilter(allGames, sportFilter),
     rows,
@@ -70,6 +94,8 @@ export function BoardPage() {
       ) : (
         <>
       <GameGrid
+        comboLegs={comboLegs}
+        onToggleLeg={toggleLeg}
         title="Playing today"
         empty={
           filteredEmpty
@@ -94,6 +120,8 @@ export function BoardPage() {
         allCount={allGames.length}
       />
       <GameGrid
+        comboLegs={comboLegs}
+        onToggleLeg={toggleLeg}
         title="Later this week"
         empty={
           later.length
@@ -217,6 +245,17 @@ export function BoardPage() {
       </p>
         </>
       )}
+      {comboLegs.length > 1 && (
+        <div className="fixed bottom-0 left-0 w-full bg-obsidian border-t border-neon p-4 z-50 shadow-2xl flex justify-between items-center">
+          <p className="font-bold text-neon">Combo &bull; {comboLegs.length} Legs</p>
+          <button
+            onClick={handleBuildCombo}
+            className="rounded-md bg-neon px-4 py-2 text-sm font-bold text-obsidian hover:bg-neon/90 transition-colors"
+          >
+            Build Parlay &rarr;
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -231,19 +270,22 @@ function GameGrid({
   predict,
   onClear,
   allCount,
-    picks,
+  picks,
+  comboLegs,
+  onToggleLeg,
 }: {
   title: string;
   empty: string;
   games: ScanRow[];
   rows: ScanRow[];
-    picks?: DeskPick[];
+  picks?: DeskPick[];
   briefs?: EventBrief[];
   quotes?: { eventId: string; awayRecord?: string; homeRecord?: string }[];
   predict?: PredictQuote[];
   onClear?: () => void;
   allCount?: number;
-    picks?: DeskPick[];
+  comboLegs?: string[];
+  onToggleLeg?: (eventId: string) => void;
 }) {
   if (!games.length) {
     if (!empty) return null;
@@ -294,6 +336,8 @@ function GameGrid({
                 quotes={quotes}
                 predict={predict}
                 rows={rows}
+                isSelected={comboLegs?.includes(g.eventId)}
+                onToggle={() => onToggleLeg?.(g.eventId)}
               />
             ))}
           </div>
@@ -323,6 +367,8 @@ function GameGrid({
                 quotes={quotes}
                 predict={predict}
                 rows={rows}
+                isSelected={comboLegs?.includes(g.eventId)}
+                onToggle={() => onToggleLeg?.(g.eventId)}
               />
             ))}
           </div>
@@ -340,6 +386,8 @@ function GameCard({
   predict,
   rows,
   picks,
+  isSelected,
+  onToggle,
 }: {
   game: ScanRow;
   isCore: boolean;
@@ -348,11 +396,13 @@ function GameCard({
   predict?: PredictQuote[];
   rows: ScanRow[];
   picks?: DeskPick[];
+  isSelected?: boolean;
+  onToggle?: (e: React.MouseEvent) => void;
 }) {
   const [fastLogOpen, setFastLogOpen] = React.useState(false);
   const existingPick = picks?.find((p) => p.eventId === g.eventId);
   if (existingPick) {
-    return <PickCard pick={existingPick} featured={isCore} />;
+    return <PickCard pick={existingPick} featured={isCore} isSelected={isSelected} onToggle={onToggle} />;
   }
   const brief = briefs?.find((b) => b.eventId === g.eventId);
   const quote = quotes?.find((q) => q.eventId === g.eventId);
@@ -379,7 +429,7 @@ function GameCard({
   const isSharp = g.ticketPct != null && g.handlePct != null && (g.handlePct - g.ticketPct >= 15);
 
   return (
-    <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore ? "ring-2 ring-neon" : ""))}>
+    <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore || isSelected ? "ring-2 ring-neon" : ""))}>
       {isSharp && (
         <div className="absolute top-14 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
           🔥 SHARP
@@ -391,7 +441,20 @@ function GameCard({
         className="block"
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="stamp text-neon">
+          <div className="flex items-center gap-2">
+            {onToggle && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggle(e);
+                }}
+                className={cn("flex size-5 items-center justify-center rounded-full border border-neon/50 bg-obsidian text-neon transition-colors", isSelected && "bg-neon text-obsidian")}
+              >
+                {isSelected ? "✓" : "+"}
+              </button>
+            )}
+            <p className="stamp text-neon">
             {isCore ? "THE PLAY" : sportLabel(g.sport)}
             {g.phase === "preseason" ? " · Preseason" : g.phase === "playoff" ? " · Playoff" : ""}
           </p>

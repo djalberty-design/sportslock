@@ -22,10 +22,14 @@ export function PickCard({
   pick,
   featured = false,
   rank,
+  isSelected,
+  onToggle,
 }: {
   pick: DeskPick;
   featured?: boolean;
   rank?: number;
+  isSelected?: boolean;
+  onToggle?: (e: React.MouseEvent) => void;
 }) {
   const [fastLogOpen, setFastLogOpen] = useState(false);
   const unit = useDeskStore(selectUnit);
@@ -43,7 +47,7 @@ export function PickCard({
   const isSharp = row?.ticketPct != null && row?.handlePct != null && (row.handlePct - row.ticketPct >= 15);
 
   return (
-    <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured ? "ring-2 ring-neon" : ""))}>
+    <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured || isSelected ? "ring-2 ring-neon" : ""))}>
       {isSharp && (
         <div className="absolute top-14 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
           🔥 SHARP
@@ -59,7 +63,20 @@ export function PickCard({
         className="block"
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="stamp text-neon">
+          <div className="flex items-center gap-2">
+            {onToggle && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggle(e);
+                }}
+                className={cn("flex size-5 items-center justify-center rounded-full border border-neon/50 bg-obsidian text-neon transition-colors", isSelected && "bg-neon text-obsidian")}
+              >
+                {isSelected ? "✓" : "+"}
+              </button>
+            )}
+            <p className="stamp text-neon">
             {featured ? "The Call" : rank ? `${rank}` : sportLabel(pick.sport)}
             {pick.parlay ? ` · ${pick.parlay.legs.length}-pick combo` : ""}
             {pick.parlay?.sameGame ? " · same-game combo" : ""}
