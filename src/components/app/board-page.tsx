@@ -215,6 +215,8 @@ export function BoardPage() {
         </Link>
         .
       </p>
+        </>
+      )}
     </div>
   );
 }
