@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { shortPick } from "@/lib/copy";
 import { useDeskStore } from "@/lib/desk-store";
+import { payoutMultiple } from "@/lib/market/engine";
 import {
   assembleChanceInput,
   gradeParlay,
@@ -18,7 +19,7 @@ import { getEventResearch } from "@/lib/market/server";
 import type { QuoteLine, ScanRow } from "@/lib/market/types";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { shownCombinedChance } from "@/lib/market/calibrate";
-import { ScreenshotIngest } from "./screenshot-ingest";
+import type { ParlayPick } from "@/lib/market/picks";
 import { WagerMeter } from "./wager-meter";
 import { HardRockSheet } from "./hard-rock-sheet";
 import { LiveBanner } from "./live-stamp";
@@ -143,15 +144,15 @@ export function GamePage({ eventId }: { eventId: string }) {
         </div>
         <p className="mt-3 text-xs text-muted">
           {report?.because ??
-            "Looks are pooled in log-odds. Ticket count vs handle is a layer — we never copy 80% of bets. Kalshi and Polymarket are research, not a Hard Rock ticket. This is not a lock."}
+            "Looks are pooled in log-odds. Ticket count vs handle is a layer â€” we never copy 80% of bets. Kalshi and Polymarket are research, not a Hard Rock ticket. This is not a lock."}
         </p>
         <p className="mt-1 text-xs text-gold">
           Confidence {report?.confidence ?? "low"}
-          {report ? ` · ${report.layers.length} looks · agreement ${Math.round(report.agreement * 100)} in 100` : ""}
+          {report ? ` Â· ${report.layers.length} looks Â· agreement ${Math.round(report.agreement * 100)} in 100` : ""}
         </p>
       </section>
 
-      {q.isLoading ? <p className="text-sm text-muted">Loading injuries, form, and the ESPN model…</p> : null}
+      {q.isLoading ? <p className="text-sm text-muted">Loading injuries, form, and the ESPN modelâ€¦</p> : null}
       {q.data && !q.data.ok ? <p className="text-sm text-down">{q.data.error}</p> : null}
 
       {research?.pitchers.length ? (
@@ -196,10 +197,10 @@ export function GamePage({ eventId }: { eventId: string }) {
             {research.injuries.map((inj, i) => (
               <li key={`${inj.player}-${i}`}>
                 <span className="text-gold">{inj.status}</span>
-                {" · "}
+                {" Â· "}
                 <span className="font-medium">{inj.player}</span>
                 <span className="text-muted"> ({inj.team})</span>
-                {inj.detail ? <span className="text-muted"> · {inj.detail}</span> : null}
+                {inj.detail ? <span className="text-muted"> Â· {inj.detail}</span> : null}
               </li>
             ))}
           </ul>
@@ -268,41 +269,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
       {sgpGrade ? (
         <section id="one-game-wager" className="fixed inset-x-0 bottom-[4.75rem] z-50 mx-auto max-w-6xl px-3">
-          <div className="paper-card p-3 ring-2 ring-gold">
-            <p className="stamp text-gold">
-              Same-game parlay · {eventLegs.length} legs
-            </p>
-            <WagerMeter
-              className="mt-2"
-              size="md"
-              chance={shownCombinedChance(
-                sgpGrade.combinedFair,
-                sgpGrade.decimalPayout,
-                eventLegs.length,
-                true,
-              )}
-              decimalPayout={sgpGrade.decimalPayout}
-              label="Chance every leg hits"
-            />
-            <p className="mt-2 text-[11px] text-muted">
-              Combined math treats legs as independent — same-game legs hit a bit less often. Photograph the live SGP
-              to lock.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Button
-                className="flex-1"
-                onClick={() => document.getElementById("lock-in")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              >
-                Upload screenshot
-              </Button>
-              <Link
-                to="/parlay"
-                className="inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium text-ink hover:bg-wash"
-              >
-                Open parlay
-              </Link>
-            </div>
-          </div>
+          <SgpSlip sgpGrade={sgpGrade} eventLegs={eventLegs} />
         </section>
       ) : liveWager ? (
         <section id="one-game-wager" className="fixed inset-x-0 bottom-[4.75rem] z-50 mx-auto max-w-6xl px-3">
@@ -310,49 +277,183 @@ export function GamePage({ eventId }: { eventId: string }) {
         </section>
       ) : null}
 
-      {liveWager || sgpGrade ? (
-        <ScreenshotIngest
-          kind="ticket"
-          heading={
-            liveWager
-              ? `Upload a screenshot of ${shortPick(liveWager.selection, liveWager.marketType)}`
-              : "Upload a screenshot of this same-game parlay"
-          }
-        />
-      ) : (
+      {!liveWager && !sgpGrade ? (
         <p className="px-1 text-sm text-muted">
-          Tap a number — same layout as Hard Rock. Every cell already shows chance it hits and what you collect. Then
-          photograph it to lock.
+          Tap a number — same layout as Hard Rock. Every cell already shows chance it hits and what you collect.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
 
 function BetSlip({ row, onCancel }: { row: ScanRow; onCancel: () => void }) {
+  const [stake, setStake] = useState(5);
+  const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
+  const price = row.price ?? -110;
+  const multi = payoutMultiple(price);
+  const toWin = stake * (multi - 1);
+
+  const handleLock = () => {
+    placePaperTicket({
+      kind: "main",
+      description: `${row.selection} ${row.marketType.toUpperCase()} (${price})`,
+      stake,
+      price,
+      status: "open",
+      fastLog: true,
+      legs: [
+        {
+          eventId: row.eventId,
+          sport: row.sport,
+          start: row.start,
+          home: row.home,
+          away: row.away,
+          marketType: row.marketType,
+          selection: row.selection,
+          side: row.side,
+          price,
+          status: "open"
+        }
+      ]
+    });
+    onCancel();
+  };
+
   return (
-    <div className="paper-card p-3 ring-2 ring-gold">
-      <WagerMeter
-        size="md"
-        chance={row.fairProb}
-        price={row.price}
-        label={shortPick(row.selection, row.marketType)}
-      />
-      <p className="mt-2 text-[11px] text-muted">
-        {row.researchOnly
-          ? "Research look · photograph Hard Rock to lock the live number"
-          : "Photograph Hard Rock to lock the live number"}
-      </p>
-      <div className="mt-2 flex gap-2">
-        <Button
-          className="flex-1"
-          onClick={() => document.getElementById("lock-in")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+    <div className="rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
+      <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
+        <div>
+          <p className="text-xs text-muted font-bold uppercase">{row.sport} • {row.marketType}</p>
+          <p className="text-lg font-bold">{row.selection}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-mono-numbers text-neon">{price > 0 ? `+${price}` : price}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-1">
+          <label className="text-xs text-muted font-bold uppercase">Wager</label>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+            <input 
+              type="number" 
+              value={stake} 
+              onChange={(e) => setStake(Number(e.target.value))}
+              className="w-full rounded-md bg-obsidian border border-panel-border py-2 pl-7 pr-3 font-mono-numbers text-ink focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon"
+            />
+          </div>
+        </div>
+        <div className="flex-1 text-right">
+          <label className="text-xs text-muted font-bold uppercase">To Win</label>
+          <p className="mt-2 text-xl font-mono-numbers text-ink">${toWin.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button 
+          onClick={handleLock}
+          className="flex-1 flex min-h-12 items-center justify-center rounded-lg bg-neon text-obsidian font-bold text-lg hover:bg-neon/90 transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)]"
         >
-          Upload screenshot
-        </Button>
-        <Button variant="ghost" onClick={onCancel}>
+          Lock It
+        </button>
+        <button 
+          onClick={onCancel}
+          className="px-4 min-h-12 rounded-lg border border-panel-border text-muted hover:text-ink hover:bg-panel-border transition-colors font-bold uppercase text-sm"
+        >
           Cancel
-        </Button>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SgpSlip({ 
+  sgpGrade, 
+  eventLegs,
+}: { 
+  sgpGrade: ReturnType<typeof gradeParlay>; 
+  eventLegs: ParlayPick[]; 
+}) {
+  const [stake, setStake] = useState(5);
+  const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
+  const removeParlayLeg = useDeskStore((s) => s.removeParlayLeg);
+  const price = sgpGrade.americanPayout;
+  const multi = sgpGrade.decimalPayout;
+  const toWin = stake * (multi - 1);
+
+  const handleLock = () => {
+    placePaperTicket({
+      kind: "parlay",
+      description: `Same Game Parlay (${eventLegs.length} legs) (${price > 0 ? '+' : ''}${price})`,
+      stake,
+      price,
+      status: "open",
+      fastLog: true,
+      legs: eventLegs.map(l => ({
+        eventId: l.eventId,
+        sport: l.sport,
+        start: l.start,
+        home: l.home,
+        away: l.away,
+        marketType: l.marketType,
+        selection: l.selection,
+        side: l.side,
+        price: l.price,
+        status: "open"
+      }))
+    });
+    eventLegs.forEach(l => removeParlayLeg(l.key || l.selection));
+  };
+
+  const handleCancel = () => {
+    eventLegs.forEach(l => removeParlayLeg(l.key || l.selection));
+  };
+
+  return (
+    <div className="rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
+      <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
+        <div>
+          <p className="text-xs text-muted font-bold uppercase">Same Game Parlay • {eventLegs.length} Legs</p>
+          <p className="text-lg font-bold">Combined Odds</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-mono-numbers text-neon">{price > 0 ? `+${price}` : price}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-1">
+          <label className="text-xs text-muted font-bold uppercase">Wager</label>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+            <input 
+              type="number" 
+              value={stake} 
+              onChange={(e) => setStake(Number(e.target.value))}
+              className="w-full rounded-md bg-obsidian border border-panel-border py-2 pl-7 pr-3 font-mono-numbers text-ink focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon"
+            />
+          </div>
+        </div>
+        <div className="flex-1 text-right">
+          <label className="text-xs text-muted font-bold uppercase">To Win</label>
+          <p className="mt-2 text-xl font-mono-numbers text-ink">${toWin.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button 
+          onClick={handleLock}
+          className="flex-1 flex min-h-12 items-center justify-center rounded-lg bg-neon text-obsidian font-bold text-lg hover:bg-neon/90 transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)]"
+        >
+          Lock It
+        </button>
+        <button 
+          onClick={handleCancel}
+          className="px-4 min-h-12 rounded-lg border border-panel-border text-muted hover:text-ink hover:bg-panel-border transition-colors font-bold uppercase text-sm"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
