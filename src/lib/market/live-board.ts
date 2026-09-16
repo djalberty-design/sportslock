@@ -718,13 +718,14 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     if (seen.has(q.eventId)) continue;
 
     const isNFL = q.sport === "NFL";
-    const todayEt = isTodayEt(q.start);
+    const msUntil = new Date(q.start).getTime() - nowMs;
     
     if (isNFL) {
-      const msUntil = new Date(q.start).getTime() - nowMs;
       if (msUntil > 7 * 86400_000) continue; 
     } else {
-      if (!todayEt && !q.inPlay) continue; 
+      // Allow games starting within 24 hours, or games that are currently in-play, or recently finished (negative msUntil)
+      if (!q.inPlay && msUntil > 24 * 3600_000) continue;
+      if (!q.inPlay && msUntil < -36 * 3600_000) continue;
     }
 
     seen.add(q.eventId);
@@ -821,6 +822,8 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
+
 
 
 
