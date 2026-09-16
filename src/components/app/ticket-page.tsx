@@ -268,15 +268,11 @@ function ParlayTicketView({
   const navigate = useNavigate();
   const [locked, setLocked] = useState<PaperTicket | null>(null);
     const [lockError, setLockError] = useState<string | null>(null);
-  const [stake, setStake] = React.useState(5);
-  const [price, setPrice] = React.useState(() => {
-    let decimal = 1;
-    for (const leg of parlay.legs) {
-      const p = leg.price || -110;
-      decimal *= p > 0 ? (p / 100) + 1 : (100 / Math.abs(p)) + 1;
-    }
-    return Math.round(decimal >= 2 ? (decimal - 1) * 100 : -100 / (decimal - 1));
-  });
+    const [stake, setStake] = React.useState(5);
+  const [legPrices, setLegPrices] = React.useState<number[]>(() => parlay.legs.map((l) => l.price || -110));
+
+  const decimal = legPrices.reduce((acc, p) => acc * (p > 0 ? (p / 100) + 1 : (100 / Math.abs(p)) + 1), 1);
+  const combinedPrice = Math.round(decimal >= 2 ? (decimal - 1) * 100 : -100 / (decimal - 1));
 
   useEffect(() => {
     const next = candidateToPicks(parlay, scan.rows).filter(
@@ -304,20 +300,20 @@ function ParlayTicketView({
   }
 
   function lockToLog() {
-    const items: ParsedTicket[] = parlay.legs.map((l) => ({
+    const items: ParsedTicket[] = parlay.legs.map((l, i) => ({
       sport: l.sport,
       home: l.home,
       away: l.away,
       marketType: l.marketType,
       side: l.side,
       selection: l.selection,
-      price: l.price,
+      price: legPrices[i],
       start: l.start,
       confidence: 1,
       confirmed: true,
     }));
     const payload = buildLockPayload(items, scan.rows, stake);
-    const res = place({ ...payload, price, fastLog: true, fairAtLock: pick.chance, tapeSource: pick.tapeStamp });
+    const res = place({ ...payload, price: combinedPrice, fastLog: true, fairAtLock: pick.chance, tapeSource: pick.tapeStamp });
     if (res.ok) {
       setLocked(res.ticket);
       setLockError(null);
@@ -416,19 +412,19 @@ function ParlayTicketView({
       {locked ? <LockedStamp ticket={locked} /> : null}
 
       <div className="mt-6 rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
-        <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
+                <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
           <div>
             <p className="text-xs text-muted font-bold uppercase">Combo • {parlay.legs.length} Legs</p>
             <p className="text-lg font-bold">Combined Odds</p>
           </div>
           <div className="text-right">
-            <p className="text-xl font-mono-numbers text-neon">{price > 0 ? `+${price}` : price}</p>
+            <p className="text-xl font-mono-numbers text-neon">{combinedPrice > 0 ? `+${combinedPrice}` : combinedPrice}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1">
-            <label className="text-xs text-muted font-bold uppercase">Wager</label>
+        <div className="space-y-4 mb-4">
+          <div>
+            <label className="text-xs text-muted font-bold uppercase block">Wager</label>
             <div className="relative mt-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
               <input 
@@ -439,22 +435,34 @@ function ParlayTicketView({
               />
             </div>
           </div>
-          <div className="flex-1">
-            <label className="text-xs text-muted font-bold uppercase">Odds</label>
-            <div className="relative mt-1">
-              <input 
-                type="number" 
-                value={price} 
-                onChange={(e) => setPrice(Number(e.target.value))}
-                className="w-full rounded-md bg-obsidian border border-panel-border py-2 px-3 font-mono-numbers text-neon focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-right"
-              />
+          
+          <div className="pt-3 border-t border-panel-border/50">
+            <label className="text-xs text-muted font-bold uppercase mb-2 block">Leg Odds</label>
+            <div className="space-y-2">
+              {parlay.legs.map((leg, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 rounded-md bg-obsidian p-2 border border-panel-border">
+                  <span className="text-sm text-ink/90 truncate flex-1" title={leg.selection}>{leg.selection}</span>
+                  <div className="w-24 shrink-0">
+                    <input 
+                      type="number" 
+                      value={legPrices[i]} 
+                      onChange={(e) => {
+                        const next = [...legPrices];
+                        next[i] = Number(e.target.value);
+                        setLegPrices(next);
+                      }}
+                      className="w-full rounded-md bg-panel border border-panel-border py-1 px-2 font-mono-numbers text-neon focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-right text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
         
         <div className="pt-2 border-t border-panel-border flex justify-between items-center mb-4">
           <p className="text-sm text-muted font-bold uppercase">To Win</p>
-          <p className="text-xl font-mono-numbers text-ink">${(stake * ((Number(price) > 0 ? (Number(price) / 100) + 1 : (100 / Math.abs(Number(price))) + 1) - 1)).toFixed(2)}</p>
+          <p className="text-xl font-mono-numbers text-ink">${(stake * ((Number(combinedPrice) > 0 ? (Number(combinedPrice) / 100) + 1 : (100 / Math.abs(Number(combinedPrice))) + 1) - 1)).toFixed(2)}</p>
         </div>
 
         <button 
