@@ -1,3 +1,4 @@
+import { getSql } from "@/lib/db";
 import { createServerFn } from "@tanstack/react-start";
 import { BRAND } from "@/lib/brand";
 import { buildLiveSnapshot } from "./live-board";
@@ -196,3 +197,14 @@ Rules: ticket = Hard Rock / DraftKings odds. slate = player salary list. contest
   });
 
 
+
+export const getPredictionLogs = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const sql = await getSql();
+    const logs = await sql`SELECT * FROM prediction_logs ORDER BY created_at DESC LIMIT 200`;
+    return logs;
+  } catch (err) {
+    console.error("Failed to fetch prediction logs:", err);
+    return [];
+  }
+});
