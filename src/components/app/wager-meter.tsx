@@ -28,6 +28,7 @@ export function HitReadout({
   className,
   hero = false,
   align = "center",
+  heatTone,
 }: {
   chance?: number | null;
   price?: number | null;
@@ -72,6 +73,7 @@ export function WagerMeter({
   size = "md",
   label = "Chance it hits",
   className,
+  heatTone,
 }: {
   chance?: number | null;
   price?: number | null;
@@ -136,7 +138,7 @@ export function WagerMeter({
           <div className={cn(
             "h-full rounded-full",
             heatTone === "high" ? "bg-neon" : heatTone === "medium" ? "bg-ink" : heatTone === "low" ? "bg-muted" : "bg-neon"
-          )} style={{ width: `%` }} />
+          )} style={{ width: `${pct}%` }} />
         </div>
       ) : null}
       {price != null && Number.isFinite(price) ? (
