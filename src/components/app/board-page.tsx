@@ -366,7 +366,7 @@ function GameCard({
   const homeLogo = g.homeLogo || (g.homeAbbr ? espnLogoUrl(g.sport, g.homeAbbr) : "");
 
   return (
-    <article className={cn("paper-card relative p-4", isCore && "p-5 ring-2 ring-gold md:p-6", g.inPlay && "ring-1 ring-red-500/80 shadow-[0_0_12px_rgba(239,68,68,0.3)]")}>
+    <article className={cn("paper-card relative p-4", (isCore || g.inPlay) && "p-5 md:p-6", g.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (isCore ? "ring-2 ring-gold" : ""))}>
       <Link
         to="/game/$eventId"
         params={{ eventId: g.eventId }}
@@ -432,6 +432,7 @@ function GameCard({
     </article>
   );
 }
+
 
 
 
