@@ -373,20 +373,21 @@ function capEventIds(quotes: QuoteLine[], sport: string, n: number): QuoteLine[]
 }
 
 export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: string[] }> {
-  const today = yyyymmddEt(0);
+  const yesterday = yyyymmddEt(-1);
+    const today = yyyymmddEt(0);
   const plus2 = yyyymmddEt(2);
   const plus24 = yyyymmddEt(24);
   const plus40 = yyyymmddEt(40);
   const year = etParts().year;
   const urls: Array<{ sport: string; url: string }> = [
     { sport: "NFL", url: `${ESPN_WEB}/football/nfl/scoreboard?limit=50` },
-    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${today}-${plus2}&limit=50` },
+    { sport: "MLB", url: `${ESPN_WEB}/baseball/mlb/scoreboard?dates=${yesterday}-${plus2}&limit=50` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&groups=80` },
     { sport: "NCAAF", url: `${ESPN_WEB}/football/college-football/scoreboard?limit=80&week=2&year=${year}&seasontype=2&groups=80` },
     { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?limit=40` },
-    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${today}-${plus24}&limit=50` },
+    { sport: "NHL", url: `${ESPN_WEB}/hockey/nhl/scoreboard?dates=${yesterday}-${plus24}&limit=50` },
     { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?limit=30` },
-    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${today}-${plus40}&limit=50` },
+    { sport: "NBA", url: `${ESPN_WEB}/basketball/nba/scoreboard?dates=${yesterday}-${plus40}&limit=50` },
     { sport: "NCAAB", url: `${ESPN_WEB}/basketball/mens-college-basketball/scoreboard?limit=50` },
   ];
 
@@ -712,8 +713,20 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   ]);
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();
+  const nowMs = Date.now();
   for (const q of quotes) {
     if (seen.has(q.eventId)) continue;
+
+    const isNFL = q.sport === "NFL";
+    const todayEt = isTodayEt(q.start);
+    
+    if (isNFL) {
+      const msUntil = new Date(q.start).getTime() - nowMs;
+      if (msUntil > 7 * 86400_000) continue; 
+    } else {
+      if (!todayEt && !q.inPlay) continue; 
+    }
+
     seen.add(q.eventId);
     uniqueQuotes.push(q);
   }
@@ -808,6 +821,9 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       : "Live ESPN schedule failed to load. No invented games.",
   };
 }
+
+
+
 
 
 
