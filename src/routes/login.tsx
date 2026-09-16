@@ -54,8 +54,7 @@ function Login() {
         <p className="text-sm text-gold">{BRAND.kicker}</p>
         <h1 className="font-display mt-2 text-4xl text-ink">Owner sign in</h1>
         <p className="mt-3 text-sm text-ink/80">
-          The desk is open to everyone. Sign in only if you need Admin. Google, X, or email-password.
-          Magic link is not supported. This site never places a bet.
+          The desk is open to everyone. Sign in only if you need Admin access via Google or Email. This site never places a bet.
         </p>
 
         <section className="paper-card mt-6 space-y-3 p-5">
