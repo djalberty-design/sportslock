@@ -8,7 +8,7 @@ import { MARKET_LABEL, TAG_LABEL, shortPick, sportLabel } from "@/lib/copy";
 import { leanEnglish, researchedFavorite, sortByResearchedChance, uniqueUpcomingGames } from "@/lib/market/research";
 
 import { SportFilter, applySportFilter, SportSeasonNote } from "./sport-filter";
-import { WagerMeter, HitReadout } from "./wager-meter";
+import { WagerMeter, HitReadout, getEdgeTone } from "./wager-meter";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { isCollegeSport } from "@/lib/market/universe";
 import type { EventBrief, PredictQuote, ScanRow } from "@/lib/market/types";
@@ -152,7 +152,7 @@ export function BoardPage() {
                   {r.hardRockPrice != null ? formatAmerican(r.hardRockPrice) : "confirm on Hard Rock"}
                 </td>
                 <td>
-                  <HitReadout chance={r.fairProb} price={r.hardRockPrice ?? r.price} className="mt-0" align="left" />
+                  <HitReadout chance={r.fairProb} price={r.hardRockPrice ?? r.price} heatTone={getEdgeTone(r.fairProb, null, r.hardRockPrice ?? r.price)} className="mt-0" align="left" />
                 </td>
                 <td className="tabular-nums">{Number.isFinite(r.evPct) ? formatPct(r.evPct, 1) : "—"}</td>
                 <td className="text-xs text-muted">{TAG_LABEL[r.tag]}</td>
@@ -401,10 +401,11 @@ function GameCard({
                 size="lg"
                 chance={fav.chance}
                 price={g.price}
+                heatTone={getEdgeTone(fav.chance, null, g.price)}
                 label={`${fav.name} to win`}
               />
             ) : Number.isFinite(g.fairProb) ? (
-              <WagerMeter className="mt-3" size="lg" chance={g.fairProb} price={g.price} />
+              <WagerMeter className="mt-3" size="lg" chance={g.fairProb} price={g.price} heatTone={getEdgeTone(g.fairProb, null, g.price)} />
             ) : null}
           </>
         ) : (
@@ -415,10 +416,11 @@ function GameCard({
                 size="sm"
                 chance={fav.chance}
                 price={g.price}
+                heatTone={getEdgeTone(fav.chance, null, g.price)}
                 label={`${fav.name} to win`}
               />
             ) : Number.isFinite(g.fairProb) ? (
-              <WagerMeter className="mt-3" size="sm" chance={g.fairProb} price={g.price} />
+              <WagerMeter className="mt-3" size="sm" chance={g.fairProb} price={g.price} heatTone={getEdgeTone(g.fairProb, null, g.price)} />
             ) : null}
           </>
         )}

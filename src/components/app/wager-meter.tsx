@@ -3,6 +3,15 @@ import { americanToDecimal } from "@/lib/market/engine";
 import { useDeskStore, selectUnit } from "@/lib/desk-store";
 import { cn, formatAmerican } from "@/lib/utils";
 
+export function getEdgeTone(chance?: number | null, decimalPayout?: number | null, price?: number | null): "high" | "medium" | "low" {
+  const dec = decimalPayout != null ? decimalPayout : (price != null ? americanToDecimal(price) : null);
+  if (chance == null || dec == null) return "low";
+  const edge = (chance * dec) - 1;
+  if (edge >= 0.05) return "high";
+  if (edge >= 0.01) return "medium";
+  return "low";
+}
+
 export function ticketMath(chance?: number | null, price?: number | null, stake = 0) {
   const pctLabel = formatChancePct(chance);
   const decimal =
@@ -25,6 +34,7 @@ export function HitReadout({
   className?: string;
   hero?: boolean;
   align?: "center" | "left";
+  heatTone?: "high" | "medium" | "low";
 }) {
   const stake = useDeskStore(selectUnit);
   const { pctLabel, hit } = ticketMath(chance, price, stake);
@@ -34,7 +44,8 @@ export function HitReadout({
       {pctLabel ? (
         <p
           className={cn(
-            "font-display leading-none tabular-nums text-neon",
+            "font-display leading-none tabular-nums",
+            heatTone === "high" ? "text-neon" : heatTone === "medium" ? "text-ink" : heatTone === "low" ? "text-muted" : "text-neon",
             hero ? "text-2xl" : "text-xl",
           )}
         >
@@ -68,6 +79,7 @@ export function WagerMeter({
   size?: "sm" | "md" | "lg";
   label?: string;
   className?: string;
+  heatTone?: "high" | "medium" | "low";
 }) {
   const stake = useDeskStore(selectUnit);
   const pctLabel = formatChancePct(chance);
@@ -91,7 +103,11 @@ export function WagerMeter({
     <div className={cn("rounded-md bg-panel px-3 py-3", className)}>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className={cn("font-display leading-none tabular-nums text-neon", pctClass)}>
+          <p className={cn(
+            "font-display leading-none tabular-nums", 
+            heatTone === "high" ? "text-neon" : heatTone === "medium" ? "text-ink" : heatTone === "low" ? "text-muted" : "text-neon",
+            pctClass
+          )}>
             {pctLabel ?? "—"}
           </p>
           <p className="mt-1 truncate text-xs uppercase tracking-[0.14em] text-muted">{label}</p>
@@ -117,7 +133,10 @@ export function WagerMeter({
       </div>
       {hasChance ? (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
-          <div className="h-full rounded-full bg-neon" style={{ width: `${pct}%` }} />
+          <div className={cn(
+            "h-full rounded-full",
+            heatTone === "high" ? "bg-neon" : heatTone === "medium" ? "bg-ink" : heatTone === "low" ? "bg-muted" : "bg-neon"
+          )} style={{ width: `%` }} />
         </div>
       ) : null}
       {price != null && Number.isFinite(price) ? (

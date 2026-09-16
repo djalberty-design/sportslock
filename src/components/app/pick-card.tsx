@@ -13,7 +13,7 @@ import { useDeskDecision } from "@/lib/market/use-board";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PaperTicket, ParsedTicket } from "@/lib/market/types";
 import { cn, formatKickoff } from "@/lib/utils";
-import { HitReadout, WagerMeter } from "./wager-meter";
+import { HitReadout, WagerMeter, getEdgeTone } from "./wager-meter";
 import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
 import { FastLogModal } from "./fast-log-modal";
@@ -74,6 +74,7 @@ export function PickCard({
               chance={pick.chance}
               price={pick.price}
               decimalPayout={pick.decimalPayout}
+              heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
               label={pick.parlay ? "Chance they all hit" : "Chance it hits"}
             />
             {pick.implied != null ? <EdgeRow pick={pick} className="mt-3" /> : null}
@@ -92,6 +93,7 @@ export function PickCard({
               size="sm"
               chance={pick.chance}
               decimalPayout={pick.decimalPayout}
+              heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
               label="Chance they all hit"
             />
             {pick.parlay?.sameGame ? (
@@ -100,7 +102,7 @@ export function PickCard({
           </>
         ) : (
           <div className="mt-3 rounded-md bg-panel px-3 py-2">
-            <HitReadout chance={pick.chance} price={pick.price} hero align="left" />
+            <HitReadout chance={pick.chance} price={pick.price} heatTone={getEdgeTone(pick.chance, pick.decimalPayout)} hero align="left" />
           </div>
         )}
         {pick.parlay ? (
