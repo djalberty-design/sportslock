@@ -6,7 +6,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import { formatAmerican, formatPct, formatKickoff, isTodayEt, cn } from "@/lib/utils";
 import { MARKET_LABEL, TAG_LABEL, shortPick, sportLabel } from "@/lib/copy";
 import { leanEnglish, researchedFavorite, sortByResearchedChance, uniqueUpcomingGames } from "@/lib/market/research";
-import { ScreenshotIngest, PhotoFirstNote } from "./screenshot-ingest";
+
 import { SportFilter, applySportFilter, SportSeasonNote } from "./sport-filter";
 import { WagerMeter, HitReadout } from "./wager-meter";
 import { espnLogoUrl } from "@/lib/market/logos";
@@ -205,10 +205,8 @@ export function BoardPage() {
         <Link to="/parlay" className="font-medium text-gold underline-offset-4 hover:underline">
           Your parlay
         </Link>
-        . Photograph a slip and we grade every leg.
+        .
       </p>
-
-      <ScreenshotIngest heading="Upload a screenshot of a parlay or a single ticket" />
     </div>
   );
 }
@@ -341,6 +339,7 @@ function GameCard({
   rows: ScanRow[];
   picks?: DeskPick[];
 }) {
+  const [fastLogOpen, setFastLogOpen] = React.useState(false);
   const existingPick = picks?.find((p) => p.eventId === g.eventId);
   if (existingPick) {
     return <PickCard pick={existingPick} featured={isCore} />;

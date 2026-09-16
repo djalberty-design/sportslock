@@ -116,18 +116,7 @@ export function PickCard({
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
       <FeeTimingRow pick={pick} />
-      <Link
-        to="/ticket"
-        search={{ id: pick.id }}
-        hash="lock-in"
-        onClick={() => {
-          if (pick.parlay) setParlayLegs(candidateToPicks(pick.parlay, []));
-        }}
-        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-gold px-3 text-sm font-medium text-navy-deep"
-      >
-        <Camera className="size-4" strokeWidth={1.75} />
-        Confirm with Hard Rock Photo
-      </Link>
+      
       {isAdmin ? (
         <div className="mt-2 flex gap-2">
           <button
@@ -225,7 +214,7 @@ export function ConfidenceChips({
   chips.push({ id: lookChipId(band), label: LOOK_LABEL[band], tone: "gold" });
   chips.push({ id: tape.id, label: tape.label, tone: "muted" });
   if (!fromUserPhoto && tape.id !== "research") {
-    chips.push({ id: "photo-needed", label: "Photo to lock this price", tone: "muted" });
+    chips.push({ id: "photo-needed", label: "Fast Log to lock this price", tone: "muted" });
   }
   if (edge != null && Math.abs(edge) >= 0.008) {
     const pts = Math.round(edge * 100);

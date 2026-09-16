@@ -147,7 +147,7 @@ export function NowPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm text-gold">Named tickets. Photograph Hard Rock to lock the live price.</p>
+        <p className="text-sm text-gold">Named tickets. Fast Log to lock the live price.</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">AI Picks</h1>
         <p className="mt-2 max-w-2xl text-sm text-ink/80">
           Three columns. Not a guarantee. This site never places a bet.
@@ -175,7 +175,7 @@ export function NowPage() {
 
       {query.isError ? (
         <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
-          Live board missing. Open Games after a refresh, or photograph a Hard Rock screen.
+          Live board missing. Open Games after a refresh, or Fast Log.
         </p>
       ) : null}
 
@@ -280,7 +280,7 @@ export function NowPage() {
 
           <PhotoWagerCta what="wager" />
           <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
-            Photograph the Hard Rock Bet Florida screen. We read the live price. Then you confirm it on Log.
+            Fast Log the ticket to confirm it on Log.
           </p>
           <p className="text-sm text-muted">
             Build your own mix on{" "}

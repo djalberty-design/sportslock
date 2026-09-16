@@ -10,14 +10,14 @@ const TABS = [
     icon: Sparkles,
     stamp: "01",
     title: "AI Picks",
-    body: "Tonight’s named tickets. Photograph Hard Rock to lock the live price.",
+    body: "Tonight’s named tickets. Fast Log to lock the live price.",
   },
   {
     to: "/board" as const,
     icon: Newspaper,
     stamp: "02",
     title: "Games",
-    body: "Every matchup. Add a leg or photograph the number.",
+    body: "Every matchup. Add a leg or Fast Log the number.",
   },
   {
     to: "/parlay" as const,
@@ -38,7 +38,7 @@ const TABS = [
     icon: ClipboardList,
     stamp: "05",
     title: "Log",
-    body: "Photographed tickets wait here. Tap Hit or Miss after the game.",
+    body: "Fast Logged tickets wait here. Tap Hit or Miss after the game.",
   },
 ];
 

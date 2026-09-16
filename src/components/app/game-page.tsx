@@ -262,7 +262,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
       {first && "scheduleOnly" in first && first.scheduleOnly ? (
         <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-gold">
-          ESPN listed this matchup but has not posted a two-way price. Upload a Hard Rock screenshot when the number
+          ESPN listed this matchup but has not posted a two-way price. Fast Log when the number
           drops.
         </p>
       ) : null}
@@ -279,7 +279,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
       {!liveWager && !sgpGrade ? (
         <p className="px-1 text-sm text-muted">
-          Tap a number — same layout as Hard Rock. Every cell already shows chance it hits and what you collect.
+          Tap a number — same layout as the book. Every cell already shows chance it hits and what you collect.
         </p>
       ) : null}
     </div>
