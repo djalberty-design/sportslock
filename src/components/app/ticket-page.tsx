@@ -267,7 +267,16 @@ function ParlayTicketView({
   const place = useDeskStore((s) => s.placePaperTicket);
   const navigate = useNavigate();
   const [locked, setLocked] = useState<PaperTicket | null>(null);
-  const [lockError, setLockError] = useState<string | null>(null);
+    const [lockError, setLockError] = useState<string | null>(null);
+  const [stake, setStake] = useState(5);
+  const [price, setPrice] = useState(() => {
+    let decimal = 1;
+    for (const leg of parlay.legs) {
+      const p = leg.price || -110;
+      decimal *= p > 0 ? (p / 100) + 1 : (100 / Math.abs(p)) + 1;
+    }
+    return Math.round(decimal >= 2 ? (decimal - 1) * 100 : -100 / (decimal - 1));
+  });
 
   useEffect(() => {
     const next = candidateToPicks(parlay, scan.rows).filter(
@@ -307,8 +316,8 @@ function ParlayTicketView({
       confidence: 1,
       confirmed: true,
     }));
-    const payload = buildLockPayload(items, scan.rows, unit);
-    const res = place({ ...payload, fairAtLock: pick.chance, tapeSource: pick.tapeStamp });
+    const payload = buildLockPayload(items, scan.rows, stake);
+    const res = place({ ...payload, price, fastLog: true, fairAtLock: pick.chance, tapeSource: pick.tapeStamp });
     if (res.ok) {
       setLocked(res.ticket);
       setLockError(null);

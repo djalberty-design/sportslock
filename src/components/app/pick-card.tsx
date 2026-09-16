@@ -103,16 +103,22 @@ export function PickCard({
             <HitReadout chance={pick.chance} price={pick.price} hero align="left" />
           </div>
         )}
-        <div
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setFastLogOpen(true);
-          }}
-          className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20 hover:bg-neon/20 cursor-pointer"
-        >
-          ⚡ Fast Log Ticket
-        </div>
+        {pick.parlay ? (
+          <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon px-3 text-sm font-bold text-obsidian shadow-[0_0_15px_rgba(57,255,20,0.4)] hover:bg-neon/90 cursor-pointer transition-colors">
+            Open Combo →
+          </div>
+        ) : (
+          <div
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setFastLogOpen(true);
+            }}
+            className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20 hover:bg-neon/20 cursor-pointer transition-colors"
+          >
+            ⚡ Fast Log Ticket
+          </div>
+        )}
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
       <FeeTimingRow pick={pick} />
