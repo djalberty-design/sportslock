@@ -17,7 +17,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   const firstQuoteRef = gameQuotes[0];
   
             const gameProps = useMemo(() => {
-    const allProps = picks?.props || [];
+    const allProps = picks?.allProps || picks?.props || [];
     
     // Strict Match: Only return props that belong to this EXACT eventId
     const fromPicks = allProps.filter((p: any) => p.eventId === eventId || p.row?.eventId === eventId);
