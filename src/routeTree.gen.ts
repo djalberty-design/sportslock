@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminTerminalRouteImport } from './routes/admin/terminal'
 import { Route as AdminArchitectRouteImport } from './routes/admin/architect'
+import { Route as AdminBrainRouteImport } from './routes/admin/brain'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as DeskRouteImport } from './routes/desk'
@@ -50,6 +51,11 @@ const AdminTerminalRoute = AdminTerminalRouteImport.update({
 const AdminArchitectRoute = AdminArchitectRouteImport.update({
   id: '/architect',
   path: '/architect',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBrainRoute = AdminBrainRouteImport.update({
+  id: '/brain',
+  path: '/brain',
   getParentRoute: () => AdminRoute,
 } as any)
 const AlertsRoute = AlertsRouteImport.update({
@@ -146,6 +152,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
     '/admin/architect': typeof AdminArchitectRoute
     '/admin/terminal': typeof AdminTerminalRoute
+    '/admin/brain': typeof AdminBrainRoute
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/alerts': typeof AlertsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
     '/admin/architect': typeof AdminArchitectRoute
     '/admin/terminal': typeof AdminTerminalRoute
+    '/admin/brain': typeof AdminBrainRoute
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/alerts': typeof AlertsRoute
@@ -194,6 +202,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
     '/admin/architect': typeof AdminArchitectRoute
     '/admin/terminal': typeof AdminTerminalRoute
+    '/admin/brain': typeof AdminBrainRoute
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
@@ -218,8 +227,11 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
+    fullPaths:
+      | '/'
+      | '/admin/architect'
+      | '/admin/brain'
+      | '/admin/terminal'
     | '/admin'
     | '/alerts'
     | '/board'
@@ -240,8 +252,11 @@ export interface FileRouteTypes {
     | '/option/$kind'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
+    to:
+      | '/'
+      | '/admin/architect'
+      | '/admin/brain'
+      | '/admin/terminal'
     | '/admin'
     | '/alerts'
     | '/board'
@@ -261,9 +276,12 @@ export interface FileRouteTypes {
     | '/game/$eventId'
     | '/option/$kind'
     | '/api/auth/$'
-  id:
-    | '__root__'
-    | '/'
+    id:
+      | '__root__'
+      | '/'
+      | '/admin/architect'
+      | '/admin/brain'
+      | '/admin/terminal'
     | '/admin'
     | '/alerts'
     | '/board'
@@ -336,9 +354,16 @@ declare module '@tanstack/react-router' {
         path: '/terminal'
         fullPath: '/admin/terminal'
         preLoaderRoute: typeof AdminTerminalRouteImport
+                parentRoute: typeof AdminRouteImport
+      }
+      '/admin/brain': {
+        id: '/admin/brain'
+        path: '/brain'
+        fullPath: '/admin/brain'
+        preLoaderRoute: typeof AdminBrainRouteImport
         parentRoute: typeof AdminRouteImport
       }
-    '/alerts': {
+      '/alerts': {
       id: '/alerts'
       path: '/alerts'
       fullPath: '/alerts'
@@ -469,6 +494,7 @@ declare module '@tanstack/react-router' {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren({
   AdminArchitectRoute: AdminArchitectRoute,
+  AdminBrainRoute: AdminBrainRoute,
   AdminTerminalRoute: AdminTerminalRoute,
 })
 

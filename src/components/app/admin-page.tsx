@@ -87,6 +87,13 @@ export function AdminPage() {
         >
           Terminal
         </Link>
+        <Link
+          to="/admin/brain"
+          className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
+          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+        >
+          Brain
+        </Link>
       </div>
 
       {isRootAdmin && tab === "allowlist" ? <AllowlistPanel /> : null}
