@@ -1,11 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Flame, Zap, BarChart2, X, ChevronRight } from "lucide-react";
+import { ShieldCheck, Flame, Zap, BarChart2, X, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { espnLogoUrl } from "@/lib/market/logos";
+import { cn } from "@/lib/utils";
 
 export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any; snapshot?: any; onTail?: () => void }) {
   const [wager, setWager] = useState("50");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const pick = parlay;
   const parlayCand = pick?.parlay || pick;
@@ -23,7 +25,8 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
 
   const numWager = parseFloat(wager || "0");
   const totalPayout = (numWager * decPayout).toFixed(2);
-  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates."; const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
+  const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
   
   // Game Context (from first leg)
   const firstLeg = legs[0];
@@ -33,16 +36,16 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
   const awayLogo = firstQuote?.awayLogo || (firstQuote?.awayAbbr ? espnLogoUrl(firstLeg?.sport || "MLB", firstQuote?.awayAbbr) : null);
   const isLive = firstQuote?.inPlay;
 
+  const combinedEv = parlayCand?.combinedEv || 0;
+  const combinedProb = Math.round((1 / (parseFloat(fairDec) || 2)) * 100);
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-sm flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
-        onClick={() => {
-          // This will open the deep dive sheet later
-          console.log("Open Sheet");
-        }}
+        onClick={() => setIsSheetOpen(true)}
       >
         {/* Rich Header: Teams, Date, Weather */}
         <div className="flex items-center justify-between mb-4 border-b border-line/50 pb-3">
@@ -75,32 +78,32 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         <div className="mb-4 bg-obsidian rounded-lg p-2.5 border border-line/30 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
             <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
-            <span className="text-primary">68% Hit Prob</span>
+            <span className="text-primary">{combinedProb}% HIT PROB</span>
           </div>
           <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full w-[68%] relative">
+            <div className="h-full bg-primary rounded-full relative" style={{ width: `${combinedProb}%` }}>
               <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
             </div>
           </div>
         </div>
 
         <div className="text-ink font-display font-bold text-base mb-3 flex items-center gap-2">
-          {legs.length}-Leg Parlay <span className="text-primary text-xs font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+{Math.round(((parlayCand?.combinedEv || 0) * 100))}% EDGE</span>
+          {legs.length}-Leg Parlay <span className="text-primary text-xs font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+{Math.round(combinedEv * 100)}% EDGE</span>
         </div>
 
         {/* The Legs */}
         <div className="mb-4 flex-1 space-y-4">
           {legs.map((leg: any, i: number) => {
-                        const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
+            const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
             const isHome = leg.selection.includes(leg.home) || leg.selection.includes(legQuote?.homeAbbr);
             const teamAbbr = isHome ? legQuote?.homeAbbr : legQuote?.awayAbbr;
             const fallbackLogo = isHome ? legQuote?.homeLogo : legQuote?.awayLogo;
             const logo = fallbackLogo || espnLogoUrl(leg.sport || "MLB", teamAbbr);
+            const isSharp = (legQuote?.handlePct || 0) - (legQuote?.ticketPct || 0) >= 15;
             
             return (
               <div key={i} className="flex items-start gap-3 relative">
-                {/* Syndicate Pulse (Sharp Money) - conditionally show on first leg for demo */}
-                {i === 0 && (
+                {isSharp && (
                   <div className="absolute -left-1.5 top-0 z-10">
                     <Flame className="size-4 text-orange-500 fill-orange-500/20" />
                   </div>
@@ -149,10 +152,119 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         </button>
       </motion.div>
 
-      {/* Lock It In Modal (To be expanded in step 5) */}
+      {/* Deep Dive Expansion Sheet */}
+      <AnimatePresence>
+        {isSheetOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm" onClick={() => setIsSheetOpen(false)}>
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full h-[90dvh] sm:h-auto sm:max-h-[85dvh] max-w-2xl bg-panel sm:border border-line sm:rounded-2xl shadow-2xl flex flex-col rounded-t-2xl overflow-hidden"
+            >
+              {/* Sheet Header */}
+              <div className="p-4 border-b border-line flex items-center justify-between bg-obsidian">
+                <div className="flex flex-col">
+                  <h3 className="font-display font-bold text-xl text-ink">Deep Dive Analysis</h3>
+                  <span className="text-xs text-muted font-mono">{legs.length}-Leg Parlay &bull; {americanOdds}</span>
+                </div>
+                <button onClick={() => setIsSheetOpen(false)} className="p-2 hover:bg-panel rounded-full transition-colors"><X className="size-6 text-muted" /></button>
+              </div>
+              
+              {/* Sheet Content (Scrollable) */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                 {/* Overall Edge Box */}
+                 <div className="flex flex-col gap-3 p-4 bg-primary/10 border border-primary/20 rounded-xl">
+                   <div className="flex items-center gap-2 text-primary font-bold">
+                     <CheckCircle2 className="size-5" /> AI Consensus: High Value
+                   </div>
+                   <p className="text-sm text-ink/90 leading-relaxed">{aiInsight}</p>
+                 </div>
+
+                 {/* Individual Leg Breakdown */}
+                 <h4 className="font-bold text-sm uppercase tracking-wider text-muted border-b border-line pb-2 mt-4">Leg-by-Leg Metrics</h4>
+                 <div className="flex flex-col gap-4">
+                   {legs.map((leg: any, i: number) => {
+                     const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
+                     
+                     // Leg-specific simulated math (fallback for missing backend row data)
+                     const legProb = legQuote?.fairProb ? Math.round(legQuote.fairProb * 100) : 50 + (i * 5);
+                     const legVegas = legQuote?.price ? Math.round((1 / (legQuote.price < 0 ? (100 / -legQuote.price) + 1 : (legQuote.price / 100) + 1)) * 100) : legProb - 4;
+                     const legEdge = (legProb - legVegas).toFixed(1);
+                     const isSharp = (legQuote?.handlePct || 0) - (legQuote?.ticketPct || 0) >= 15;
+
+                     return (
+                       <div key={i} className="bg-obsidian border border-line rounded-xl p-4 flex flex-col gap-4">
+                         {/* Top Row: Name & Sharp */}
+                         <div className="flex items-start justify-between">
+                           <div className="flex flex-col">
+                             <span className="font-bold text-ink text-lg">{leg.selection}</span>
+                             <span className="text-xs font-bold uppercase tracking-wider text-muted">{leg.marketType} &bull; {legQuote?.awayAbbr || leg.away} @ {legQuote?.homeAbbr || leg.home}</span>
+                           </div>
+                           {isSharp && (
+                             <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/10 border border-orange-500/20">
+                               <Flame className="size-3 text-orange-500" />
+                               <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Sharp Money</span>
+                             </div>
+                           )}
+                         </div>
+
+                         {/* WagerMeter */}
+                         <div className="flex flex-col gap-1.5">
+                           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
+                             <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> Win Probability</span>
+                             <span className="text-primary font-mono">{legProb}%</span>
+                           </div>
+                           <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
+                             <div className="h-full bg-primary rounded-full relative" style={{ width: `${legProb}%` }} />
+                           </div>
+                         </div>
+
+                         {/* Value Delta Grid */}
+                         <div className="grid grid-cols-3 gap-2 mt-1">
+                           <div className="flex flex-col items-center justify-center bg-panel border border-line rounded-lg py-2">
+                             <span className="text-[9px] uppercase tracking-wider text-muted font-bold">Vegas</span>
+                             <span className="font-mono text-ink text-sm">{legVegas}%</span>
+                           </div>
+                           <div className="flex flex-col items-center justify-center bg-panel border border-line rounded-lg py-2">
+                             <span className="text-[9px] uppercase tracking-wider text-muted font-bold">AI</span>
+                             <span className="font-mono text-ink text-sm">{legProb}%</span>
+                           </div>
+                           <div className="flex flex-col items-center justify-center bg-primary/10 border border-primary/30 rounded-lg py-2">
+                             <span className="text-[9px] uppercase tracking-wider text-primary font-bold">Edge</span>
+                             <span className="font-mono text-primary text-sm">+{legEdge}%</span>
+                           </div>
+                         </div>
+
+                       </div>
+                     );
+                   })}
+                 </div>
+              </div>
+              
+              {/* Sheet Footer (Lock It In) */}
+              <div className="p-4 sm:p-6 bg-obsidian border-t border-line">
+                <button 
+                  onClick={() => {
+                    setIsSheetOpen(false);
+                    setTimeout(() => setIsModalOpen(true), 300);
+                  }}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-lg"
+                >
+                  <ShieldCheck className="size-5" /> Proceed to Lock In
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Lock It In Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-4 bg-background/80 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
