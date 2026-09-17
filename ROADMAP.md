@@ -68,3 +68,16 @@ arrative.ts)**
 *Goal: Autonomously generate the highest +EV parlays mathematically possible.*
 - [x] **Step 7.1: The +EV Scanner & Correlation Engine**
   - Scan the board for maximum discrepancy between simFair and sportsbooks, then group positively correlated game scripts.
+---
+
+## Phase 8 & 9: The Syndicate Sandbox & Final Asymmetries
+- [x] **Step 8.1: The Trench Mismatch (NFL):** Added O-Line vs D-Line pressure multipliers to QB props.
+- [x] **Step 8.2: Pitch Arsenal Synergy (MLB):** Matched Batter heatmaps to Pitcher primary arsenals.
+- [x] **Step 8.3: Goalie & Altitude Traps:** Added NHL Backup Goalie logic and NBA Extreme Altitude exhaustions.
+- [x] **Step 9.1: Thermodynamics & Air Density:** Added temperature/humidity/altitude modifiers for totals and kickers.
+- [x] **Step 9.2: Red Zone Stall:** Added kicker boosts against bend-but-dont-break defenses.
+- [x] **Step 9.3: Referee Pace:** Added NBA/NCAAB whistle-rate adjustments to game totals.
+- [x] **Step 9.4: Hostile Freshman Penalty:** Added psychological fade logic for NCAAF/NCAAB true freshmen in severe away environments.
+
+---
+**STATUS: THE QUANTITATIVE ENGINE (THE BRAIN) IS 100% COMPLETE.**
