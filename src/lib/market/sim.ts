@@ -27,11 +27,20 @@ export type GameSimResult = {
 };
 
 // Box-Muller transform for normal distribution
+let spareRandom: number | null = null;
 export function randomNormal(mu: number, sigma: number): number {
+  if (spareRandom !== null) {
+    const z = spareRandom;
+    spareRandom = null;
+    return z * sigma + mu;
+  }
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
   while (v === 0) v = Math.random();
-  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  const radius = Math.sqrt(-2.0 * Math.log(u));
+  const theta = 2.0 * Math.PI * v;
+  spareRandom = radius * Math.sin(theta);
+  const z = radius * Math.cos(theta);
   return z * sigma + mu;
 }
 
