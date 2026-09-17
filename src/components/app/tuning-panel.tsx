@@ -25,7 +25,7 @@ export function TuningPanel() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchTuning().then((data) => {
+    fetchTuning({ data: undefined }).then((data) => {
       setConfig(data);
       setIsLoading(false);
     }).catch(err => {
