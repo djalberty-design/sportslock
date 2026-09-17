@@ -1,16 +1,32 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Terminal, Settings, ShieldAlert, Cpu } from "lucide-react";
+import { Terminal, Settings, ShieldAlert, Cpu, BarChart2, Brain, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAccess } from "@/lib/use-access";
 
 export const Route = createFileRoute("/admin")({ component: AdminOverseer });
 
 const TABS = [
   { to: "/admin/brain", label: "Engine Bay", icon: Cpu },
-  { to: "/admin/terminal", label: "Telemetry", icon: Terminal },
+  { to: "/admin/terminal", label: "Live Status", icon: Activity },
+  { to: "/admin/predictions", label: "Predictions", icon: BarChart2 },
+  { to: "/admin/autopsy", label: "AI Autopsy", icon: Brain },
 ];
 
 function AdminOverseer() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAdmin } = useAccess();
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 animate-in fade-in">
+        <ShieldAlert className="size-12 text-muted" />
+        <h1 className="text-2xl font-display font-bold text-ink">Access Restricted</h1>
+        <p className="text-muted text-sm max-w-md">
+          The Overseer is only available to the super admin. Sign in with your admin account to access this page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
@@ -25,7 +41,7 @@ function AdminOverseer() {
       </div>
 
       {/* Internal Navigation */}
-      <nav className="flex gap-4">
+      <nav className="flex flex-wrap gap-2">
         {TABS.map((tab) => {
           const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
           return (
@@ -33,7 +49,7 @@ function AdminOverseer() {
               key={tab.to}
               to={tab.to}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-4 py-2 font-bold transition-all",
+                "flex items-center gap-2 rounded-lg px-4 py-2 font-bold transition-all text-sm",
                 active ? "bg-primary text-primary-foreground shadow-apex-glow" : "bg-panel text-muted hover:text-ink hover:bg-line/50"
               )}
             >
