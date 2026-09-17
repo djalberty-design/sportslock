@@ -1,0 +1,36 @@
+function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
+  const sportMap: Record<string, string> = {
+    "americanfootball_nfl": "NFL",
+    "americanfootball_ncaaf": "NCAAF",
+    "baseball_mlb": "MLB",
+    "basketball_nba": "NBA",
+    "icehockey_nhl": "NHL",
+    "basketball_ncaab": "NCAAB"
+  };
+  const out: QuoteLine[] = [];
+  if (!oddsApiData || !oddsApiData.length) return out;
+  for (const group of oddsApiData) {
+    if (!group || !group.data) continue;
+    const sport = sportMap[group.sport] || group.sport;
+    for (const g of group.data) {
+      if (!g.home_team || !g.away_team) continue;
+      const start = g.commence_time || new Date().toISOString();
+      const eventId = `oddsapi-${sport}-${g.id}`;
+      const homeAbbr = g.home_team.substring(0, 3).toUpperCase();
+      const awayAbbr = g.away_team.substring(0, 3).toUpperCase();
+      const base = {
+        eventId, sport, start,
+        home: g.home_team, away: g.away_team,
+        homeAbbr, awayAbbr,
+        delayed: true, inPlay: false, source: "odds-api",
+      };
+      out.push({ ...base, marketType: "ml", side: "away", selection: g.away_team, price: 0 });
+      out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: 0 });
+      out.push({ ...base, marketType: "spread", side: "away", selection: g.away_team, price: 0 });
+      out.push({ ...base, marketType: "spread", side: "home", selection: g.home_team, price: 0 });
+      out.push({ ...base, marketType: "total", side: "away", selection: "Over", price: 0 });
+      out.push({ ...base, marketType: "total", side: "home", selection: "Under", price: 0 });
+    }
+  }
+  return out;
+}

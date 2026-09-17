@@ -1,16 +1,7 @@
-import { buildLiveSnapshot } from "../src/lib/market/live-board.ts";
-
-async function run() {
-  console.log("Running buildLiveSnapshot()...");
-  try {
-    const snap = await buildLiveSnapshot();
-    console.log("SUCCESS! Fetched", snap.quotes.length, "quotes.");
-    console.log("Timestamp:", snap.asOf);
-  } catch (err: any) {
-    console.error("\n=== FATAL ERROR ===\n");
-    console.error(err);
-    console.error("\nStack Trace:\n", err.stack);
-  }
-}
-
-run();
+import { buildLiveSnapshot } from "./src/lib/market/live-board.ts";
+buildLiveSnapshot().then(snap => {
+  console.log("Quotes:", snap.quotes.length);
+  console.log("Briefs:", snap.briefs.length);
+  console.log("Notes:", snap.hours.note);
+  console.log("First quote:", snap.quotes[0]);
+}).catch(console.error);

@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { BRAND } from "@/lib/brand";
 import { buildLiveSnapshot } from "./live-board";
 import { ESPN_PATH, applyLeaderStats, enrichResearchForm, fetchEspnRoster, fetchEspnTeamLeaders, mergeResearchPlayers, parseEspnSummary, parseInternalEventId, type EventResearch } from "./research";
-import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota, fetchOddsApiProps } from "./odds-api";
+import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota, fetchOddsApiProps } from "./odds-api";
 import { resolveVisionKey, VISION_MODELS, VISION_UNAVAILABLE } from "./vision-key";
 
 export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
@@ -12,10 +12,10 @@ export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async 
   } catch (err: any) {
     console.error("SERVER_SNAPSHOT_FATAL_ERROR:", err);
     return {
-      asOf: "",
+      asOf: new Date().toISOString(),
       delayed: false,
       sample: false,
-      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: undefined },
+      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: `CRASH IN BUILDLIVESNAPSHOT: ${String(err.stack || err)}` },
       quotes: [],
       news: [],
       publicSplits: [],
@@ -24,9 +24,6 @@ export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async 
       sourceNote: "FATAL SERVER ERROR: " + (err?.stack || err?.message || String(err)),
     };
   }
-});
-
-export const getEventResearch = createServerFn({ method: "GET" })
   .validator((d: { eventId: string }) => d)
   .handler(async ({ data }): Promise<{ ok: true; research: EventResearch } | { ok: false; error: string }> => {
     const parsed = parseInternalEventId(data.eventId);

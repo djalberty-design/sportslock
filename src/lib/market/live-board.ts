@@ -752,11 +752,14 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     if (seen.has(q.eventId)) continue;
 
     const isNFL = q.sport === "NFL";
+    const isNCAAF = q.sport === "NCAAF";
     const isMLB = q.sport === "MLB";
     const msUntil = new Date(q.start).getTime() - nowMs;
     
     if (isNFL) {
-      if (msUntil > 7 * 86400_000) continue; 
+      if (msUntil > 12 * 86400_000) continue; 
+    } else if (isNCAAF) {
+      if (msUntil > 10 * 86400_000) continue; 
     } else if (isMLB && q.inPlay) {
       // Unconditionally allow any live MLB game
     } else {
@@ -831,7 +834,26 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     return `${sport}`;
   });
 
-  const finalQuotes = overlayOddsApiMains(quotes, oddsApiMains);
+  let finalQuotes = overlayOddsApiMains(quotes, oddsApiMains);
+  if (finalQuotes.length === 0) {
+    finalQuotes.push({
+      eventId: "diagnostic-empty",
+      sport: "SYS",
+      start: new Date().toISOString(),
+      home: "Odds API",
+      away: "Quota Empty",
+      homeAbbr: "API",
+      awayAbbr: "QTA",
+      marketType: "ml",
+      side: "home",
+      selection: "Odds API",
+      price: -999,
+      source: "system",
+      delayed: true,
+      inPlay: false,
+    });
+    notes.push(`Diagnostic: The API returned 0 games. Quota used up or fetch failed.`);
+  }
   const live = finalQuotes.length > 0;
 
   return {
@@ -849,8 +871,8 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
           ? "No upcoming kickoff on the live board"
           : "Live schedule unavailable",
       note: live
-        ? `Live ESPN schedule for every league we cover: ${labels.join(" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ")}. Odds, ESPN model, Kalshi + Polymarket, records, pitchers, rest, injuries, ticket count vs handle. NBA, NHL, and college basketball stay on the board even before books post a number ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â photograph Hard Rock Bet Florida when they do. Confirm at ${BRAND.venueLive}.`
-        : "Could not load the live ESPN schedule. Photograph a Hard Rock screen so we still have real games.",
+        ? `Live schedule for every league we cover: ${labels.join(", ")}. Odds, Kalshi + Polymarket, records, rest, ticket count vs handle. NBA, NHL, and college basketball stay on the board even before books post a number — photograph Hard Rock Bet Florida when they do. Confirm at ${BRAND.venueLive}.`
+        : "Could not load the live schedule. Photograph a Hard Rock screen so we still have real games.",
     },
     quotes: finalQuotes,
     news: [],
@@ -946,8 +968,8 @@ function overlayOddsApiMains(quotes: QuoteLine[], oddsApiData: any[]): QuoteLine
       out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: 0 });
       out.push({ ...base, marketType: "spread", side: "away", selection: g.away_team, price: 0 });
       out.push({ ...base, marketType: "spread", side: "home", selection: g.home_team, price: 0 });
-      out.push({ ...base, marketType: "total", side: "away", selection: "Over", price: 0 });
-      out.push({ ...base, marketType: "total", side: "home", selection: "Under", price: 0 });
+      out.push({ ...base, marketType: "total", side: "over", selection: "Over", price: 0 });
+      out.push({ ...base, marketType: "total", side: "under", selection: "Under", price: 0 });
     }
   }
   return out;
