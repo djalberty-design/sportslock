@@ -57,10 +57,15 @@ export function LedgerPanel() {
         <button 
           onClick={async () => {
             setIsSweeping(true);
-            await executeSweep();
-            const fresh = await fetchLedgerTickets({ data: undefined });
-            setTickets(fresh);
-            setIsSweeping(false);
+            try {
+              await executeSweep();
+              const fresh = await fetchLedgerTickets({ data: undefined });
+              setTickets(fresh);
+            } catch(e) {
+              alert('Sweep failed: ' + e);
+            } finally {
+              setIsSweeping(false);
+            }
           }}
           disabled={isSweeping}
           className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md text-xs font-bold uppercase tracking-wider hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"

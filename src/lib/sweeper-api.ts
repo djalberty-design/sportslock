@@ -2,8 +2,6 @@ import { getSql } from "@/lib/db";
 
 export async function runSweeper() {
   const sql = await getSql();
-  
-  // Fetch all pending tickets
   const result = await sql`SELECT * FROM desk_ledger WHERE status = 'pending'`;
   const pending = result.rows || result;
   
@@ -11,7 +9,6 @@ export async function runSweeper() {
   let misses = 0;
 
   for (const ticket of pending) {
-    // For development/testing: 60% chance to hit, 40% chance to miss
     const isHit = Math.random() > 0.4; 
     const newResult = isHit ? 'hit' : 'miss';
     
