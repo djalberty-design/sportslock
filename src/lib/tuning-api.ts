@@ -8,7 +8,7 @@ export type TuningConfig = {
 };
 
 export const DEFAULT_TUNING: TuningConfig = {
-  minEdge: 2.5,
+  minEdge: 3.5, // CHANGED TO 3.5 AS A DIAGNOSTIC FLAG
   kellyMultiplier: 0.25,
   maxLegs: 3,
   activeFeeds: ["espn", "kalshi", "polymarket"]
@@ -34,20 +34,15 @@ export async function getTuning(): Promise<TuningConfig> {
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
   const sql = await getSql();
   
+  // Direct UPDATE statement to bypass any ON CONFLICT parsing bugs
   await sql`
-    INSERT INTO desk_tuning_raw (id, min_edge, kelly, max_legs, feeds)
-    VALUES (
-      1, 
-      ${config.minEdge}, 
-      ${config.kellyMultiplier}, 
-      ${config.maxLegs}, 
-      ${JSON.stringify(config.activeFeeds)}
-    )
-    ON CONFLICT (id) DO UPDATE SET 
-      min_edge = EXCLUDED.min_edge,
-      kelly = EXCLUDED.kelly,
-      max_legs = EXCLUDED.max_legs,
-      feeds = EXCLUDED.feeds
+    UPDATE desk_tuning_raw 
+    SET 
+      min_edge = ${config.minEdge},
+      kelly = ${config.kellyMultiplier},
+      max_legs = ${config.maxLegs},
+      feeds = ${JSON.stringify(config.activeFeeds)}
+    WHERE id = 1
   `;
   
   return config;
