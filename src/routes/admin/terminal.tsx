@@ -1,179 +1,109 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { getPredictionLogs } from "@/lib/market/server";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { createServerFn } from "@tanstack/react-start";
+import { getLedgerTickets } from "@/lib/ledger-api";
 
-export const Route = createFileRoute("/admin/terminal")({
-  loader: async () => {
-    return getPredictionLogs();
-  },
-  component: QuantitativeTerminal,
+const fetchTerminalData = createServerFn({ method: "GET" }).handler(async () => {
+  const tickets = await getLedgerTickets();
+  return tickets;
 });
 
-function QuantitativeTerminal() {
-  const logs = Route.useLoaderData() as any[];
-  const [report, setReport] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+export const Route = createFileRoute("/admin/terminal")({
+  loader: async () => fetchTerminalData(),
+  component: TerminalDashboard,
+});
 
-  const chronologicalLogs = [...logs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+function americanToDecimal(american: number): number {
+  if (!american) return 0;
+  if (american > 0) return (american / 100) + 1;
+  return (100 / Math.abs(american)) + 1;
+}
+
+function TerminalDashboard() {
+  const tickets = Route.useLoaderData() as any[];
+
+  // Math & Aggregations
+  const totalTickets = tickets.length;
+  const pendingTickets = tickets.filter((t) => t.status === "pending");
+  const settledTickets = tickets.filter((t) => t.status === "settled");
+
+  const hits = settledTickets.filter((t) => t.result === "hit");
+  const misses = settledTickets.filter((t) => t.result === "miss");
+
+  const hitRate = settledTickets.length > 0 ? ((hits.length / settledTickets.length) * 100).toFixed(1) : "0.0";
+
+  // Financials
+  const totalStaked = settledTickets.reduce((acc, t) => acc + Number(t.stake || 0), 0);
+  const totalPendingRisk = pendingTickets.reduce((acc, t) => acc + Number(t.stake || 0), 0);
+
+  const grossReturn = hits.reduce((acc, t) => {
+    const dec = americanToDecimal(Number(t.combined_odds));
+    return acc + (Number(t.stake) * dec);
+  }, 0);
+
+  const netProfit = grossReturn - totalStaked;
+  const roi = totalStaked > 0 ? ((netProfit / totalStaked) * 100).toFixed(2) : "0.00";
   
-  let cumulativeProfit = 0;
-  const cumulativeData = chronologicalLogs.map(log => {
-    let pnl = 0;
-    if (log.status === "WIN") {
-      pnl = log.price < 0 ? (100 / Math.abs(log.price)) : (log.price / 100);
-    } else if (log.status === "LOSS") {
-      pnl = -1;
-    }
-    cumulativeProfit += pnl;
-    return {
-      date: new Date(log.created_at).toLocaleDateString(),
-      profit: parseFloat(cumulativeProfit.toFixed(2)),
-    };
-  });
-
-  const marketStats: Record<string, { wins: number, total: number }> = {};
-  for (const log of logs) {
-    if (log.status === "PENDING" || log.status === "PUSH") continue;
-    const mType = log.market_type || "moneyline";
-    if (!marketStats[mType]) marketStats[mType] = { wins: 0, total: 0 };
-    
-    marketStats[mType].total++;
-    if (log.status === "WIN") {
-      marketStats[mType].wins++;
-    }
-  }
-
-  const marketData = Object.entries(marketStats).map(([name, stats]) => ({
-    name: name.toUpperCase(),
-    winRate: parseFloat(((stats.wins / stats.total) * 100).toFixed(1)),
-  }));
-
-  const totalROI = cumulativeProfit;
-  const totalGraded = logs.filter(l => l.status === "WIN" || l.status === "LOSS").length;
-  const totalWins = logs.filter(l => l.status === "WIN").length;
-  const overallWinRate = totalGraded > 0 ? ((totalWins / totalGraded) * 100).toFixed(1) : 0;
-  const activeSweeperVolume = logs.filter(l => l.snapshot?.isPaperTrade).length;
-
-  async function handleGenerateReport() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/strategy');
-      const data = await res.json();
-      setReport(data.report);
-    } catch (err) {
-      console.error(err);
-      setReport("[ERROR] Failed to fetch strategy report.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const isProfitable = netProfit >= 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 md:p-12 font-mono">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-zinc-800 pb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <span className="text-blue-500">◆</span> Quantitative Admin Terminal
-            </h1>
-            <p className="text-zinc-400 mt-2">
-              Macro algorithmic performance and portfolio telemetry.
-            </p>
-          </div>
-          <button 
-            onClick={handleGenerateReport} 
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Generating..." : "Generate AI Strategy Report"}
-          </button>
-        </header>
+    <div className="space-y-8 p-6 md:p-10 max-w-6xl mx-auto font-mono">
+      <header className="space-y-2 mb-8 border-b border-zinc-800 pb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <span className="text-emerald-500">📈</span> Macro Terminal
+        </h1>
+        <p className="text-zinc-400">
+          Live quantitative performance and cumulative ROI tracking.
+        </p>
+      </header>
 
-        {/* AI Strategy Report Block */}
-        {report && (
-          <div className="bg-indigo-950/20 border border-indigo-500/30 p-6 rounded-xl text-indigo-100 whitespace-pre-wrap mt-6">
-            <h2 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2">
-              <span>✦</span> CHIEF RISK OFFICER REPORT
-            </h2>
-            <div className="prose prose-invert prose-indigo max-w-none text-sm leading-relaxed">
-              {report}
-            </div>
-          </div>
-        )}
-
-        {/* Top Row: Summary Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">Total ROI (Units)</div>
-            <div className={`text-4xl font-bold ${totalROI >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {totalROI > 0 ? '+' : ''}{totalROI.toFixed(2)}U
-            </div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">Overall Win Rate</div>
-            <div className="text-4xl font-bold text-zinc-100">
-              {overallWinRate}%
-            </div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">Sweeper Volume</div>
-            <div className="text-4xl font-bold text-indigo-400">
-              {activeSweeperVolume} <span className="text-lg text-zinc-600">trades</span>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Net Profit */}
+        <div className={`p-6 rounded-xl border ${isProfitable ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+          <div className="text-xs font-bold uppercase tracking-wider mb-2 text-zinc-400">Net Profit (Settled)</div>
+          <div className={`text-4xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isProfitable ? '+' : '-'}${Math.abs(netProfit).toFixed(2)}
           </div>
         </div>
 
-        {/* Middle Row: Recharts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Cumulative P&L */}
-          <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h3 className="text-zinc-400 font-bold tracking-wider uppercase text-sm mb-6">Cumulative P&L (Units)</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={cumulativeData}>
-                  <XAxis dataKey="date" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val > 0 ? '+' : ''}${val}`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }}
-                    itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 6, fill: '#10b981' }} 
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        {/* ROI */}
+        <div className={`p-6 rounded-xl border ${isProfitable ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+          <div className="text-xs font-bold uppercase tracking-wider mb-2 text-zinc-400">Yield (ROI)</div>
+          <div className={`text-4xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isProfitable ? '+' : ''}{roi}%
           </div>
-
-          {/* Win Rate by Market */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h3 className="text-zinc-400 font-bold tracking-wider uppercase text-sm mb-6">Win Rate by Market</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={marketData} layout="vertical" margin={{ left: 20 }}>
-                  <XAxis type="number" domain={[0, 100]} hide />
-                  <YAxis dataKey="name" type="category" stroke="#a1a1aa" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: '#27272a' }}
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#f4f4f5' }}
-                    formatter={(value: number) => [`${value}%`, 'Win Rate']}
-                  />
-                  <Bar dataKey="winRate" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
         </div>
+
+        {/* Win Rate */}
+        <div className="p-6 rounded-xl bg-zinc-900 border border-zinc-800">
+          <div className="text-xs font-bold uppercase tracking-wider mb-2 text-zinc-400">Hit Rate</div>
+          <div className="text-4xl font-bold text-white">{hitRate}%</div>
+          <div className="text-xs text-zinc-500 mt-2">{hits.length}W - {misses.length}L</div>
+        </div>
+
+        {/* Open Risk */}
+        <div className="p-6 rounded-xl bg-zinc-900 border border-zinc-800">
+          <div className="text-xs font-bold uppercase tracking-wider mb-2 text-zinc-400">Open Risk (Pending)</div>
+          <div className="text-4xl font-bold text-amber-400">${totalPendingRisk.toFixed(2)}</div>
+          <div className="text-xs text-zinc-500 mt-2">{pendingTickets.length} active slips</div>
+        </div>
+      </div>
+      
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-8">
+         <h3 className="text-lg font-bold text-white mb-4">Volume Metrics</h3>
+         <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+               <span className="text-zinc-500 block mb-1 uppercase text-xs font-bold">Total Staked (Settled)</span>
+               <span className="text-zinc-300">${totalStaked.toFixed(2)}</span>
+            </div>
+            <div>
+               <span className="text-zinc-500 block mb-1 uppercase text-xs font-bold">Total Returned</span>
+               <span className="text-zinc-300">${grossReturn.toFixed(2)}</span>
+            </div>
+            <div>
+               <span className="text-zinc-500 block mb-1 uppercase text-xs font-bold">Total Lifetime Tickets</span>
+               <span className="text-zinc-300">{totalTickets} generated</span>
+            </div>
+         </div>
       </div>
     </div>
   );
