@@ -758,6 +758,14 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
   const favorite = home >= 0.5 ? "home" : "away";
   const chance = favorite === "home" ? home : 1 - home;
   
+  // Phase 1.1: Visual Shadowing of Double-Counted Layers
+  const activeIds = new Set(pooled.activeIds || []);
+  for (const l of layers) {
+    if (!activeIds.has(l.id) && l.id !== "market" && !l.empty && pooled.isAnchored) {
+      l.note = "[PRICED IN] " + l.note;
+    }
+  }
+
   return {
     home,
     away: 1 - home,
@@ -776,7 +784,7 @@ function poolLayers(
   layers: ChanceLayer[],
   marketHome?: number,
   haircuts?: Record<string, number>,
-): { mean: number; std: number; posteriorVar: number; overdispersed: boolean } {
+): { mean: number; std: number; posteriorVar: number; overdispersed: boolean; activeIds?: string[]; isAnchored?: boolean } {
   const active = layers
     .map((l) => {
       const h = haircuts?.[l.id];
@@ -789,12 +797,47 @@ function poolLayers(
     return { mean: 0.5, std: 0, posteriorVar: 1, overdispersed: false };
   }
   
-  const precSum0 = active.reduce((s, l) => s + l.precision, 0);
-  const logitMean0 = active.reduce((s, l) => s + logit(l.home) * l.precision, 0) / precSum0;
-
   const meanP = active.reduce((s, l) => s + l.home, 0) / active.length;
   const variance = active.reduce((s, l) => s + (l.home - meanP) ** 2, 0) / active.length;
   const std = Math.sqrt(variance);
+
+  // STEP 1.1: THE SHARP ANCHOR
+  const anchorLayer = active.find((l) => l.id === "market" || l.id === "open" || l.id === "book" || l.id === "spread");
+
+  if (anchorLayer && marketHome != null) {
+    let z = logit(marketHome);
+    const activeIds = [anchorLayer.id];
+
+    // STEP 1.2: THE ALPHA HOOK SYSTEM
+    const alphaPlugins = ["officials", "steam", "b2b", "rest"]; // Contextual Alpha
+    const crowdPlugins = ["kalshi", "poly"]; // Wisdom of the Crowd Alpha
+
+    for (const l of active) {
+      if (alphaPlugins.includes(l.id)) {
+        const delta = logit(l.home) - logit(0.5);
+        z += delta;
+        activeIds.push(l.id);
+      }
+      if (crowdPlugins.includes(l.id)) {
+        const totalPrec = anchorLayer.precision + l.precision;
+        z = (z * anchorLayer.precision + logit(l.home) * l.precision) / totalPrec;
+        activeIds.push(l.id);
+      }
+    }
+
+    return {
+      mean: invLogit(z, FINAL_LO, FINAL_HI),
+      std,
+      posteriorVar: 1 / (anchorLayer.precision * 1.5),
+      overdispersed: false,
+      activeIds,
+      isAnchored: true
+    };
+  }
+
+  // BOTTOM-UP BAYESIAN BLENDER (Synthetic Generator)
+  const precSum0 = active.reduce((s, l) => s + l.precision, 0);
+  const logitMean0 = active.reduce((s, l) => s + logit(l.home) * l.precision, 0) / precSum0;
 
   let chi = 0;
   for (const l of active) chi += l.precision * (logit(l.home) - logitMean0) ** 2;
@@ -810,18 +853,17 @@ function poolLayers(
 
   const precSum = scaled.reduce((s, l) => s + l.precision, 0);
   let z = scaled.reduce((s, l) => s + logit(l.home) * l.precision, 0) / precSum;
-  if (marketHome != null && overdispersed) {
-    const lambda = Math.min(0.55, 0.18 + 0.5 * Math.max(0, 1 - Math.max(0, 1 - std / 0.14)));
-    z = lambda * logit(marketHome) + (1 - lambda) * z;
-  }
 
   return {
     mean: invLogit(z, FINAL_LO, FINAL_HI),
     std,
     posteriorVar: 1 / precSum,
     overdispersed,
+    activeIds: active.map(l => l.id),
+    isAnchored: false
   };
 }
+
 export function poissonCdf(k: number, lambda: number): number {
   if (lambda <= 0) return 1;
   if (k < 0) return 0;
