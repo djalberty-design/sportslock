@@ -5,7 +5,7 @@ import { ESPN_PATH, fetchPlayerRecent, fetchTeamLastTen, parseEspnSummary, parse
 import { fetchTeamLooks } from "./looks.ts";
 import { mergeForm } from "./form.ts";
 import { fetchKalshiContracts, kalshiHomeWin } from "./kalshi.ts";
-import { polyFromEventResearch, type PolyContract, guessPolySlug, polymarketHomeWin } from "./polymarket.ts";
+import { fetchPolymarketContracts, fetchPolymarketBySlug, polyFromEventResearch, type PolyContract, guessPolySlug, polymarketHomeWin } from "./polymarket.ts";
 import { fetchOddsApiMains, getOddsPropsCache } from "./odds-api.ts";
 import { buildChance, parseEra } from "./chance.ts";
 import { twoWayNoVig } from "./engine.ts";
