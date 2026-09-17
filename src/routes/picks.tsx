@@ -29,11 +29,19 @@ function TheLab() {
           const selection = playerName ? p.selection.replace(playerName, '').trim() : p.selection;
           
           // Calculate Odds
-          const priceDec = p.price && p.price > 0 ? p.price : (p.row?.price ?? p.decimalPayout);
-          const priceStr = formatAm(priceDec);
+                      // Calculate Odds (Robust fallback)
+            let pAm = "";
+            let rawP = p.row?.hardRockPrice || p.row?.consensusPrice || p.price;
+            if (rawP && rawP < -100 || rawP > 100) {
+              pAm = rawP > 0 ? `+${rawP}` : `${rawP}`;
+            } else {
+              const d = p.decimalPayout || 2.0;
+              pAm = d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
+            }
+            const priceStr = pAm;
           
           const teamAbbr = p.row?.homeAbbr || p.row?.awayAbbr;
-          const teamLogo = teamAbbr ? espnLogoUrl(p.sport || "MLB", teamAbbr) : null;
+          const teamLogo = (p.row as any)?.homeLogo || (p.row as any)?.awayLogo || (teamAbbr ? espnLogoUrl(p.sport || "MLB", teamAbbr) : null);
           
           // Player Headshot fallback support
           const headshotUrl = (p.row as any)?.headshot; 
@@ -68,7 +76,7 @@ function TheLab() {
                     <span className="font-bold text-lg text-ink">{p.selection}</span>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{p.row?.marketType} • {p.sport}</span>
+                    <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{p.row?.marketType} Ã¢â‚¬Â¢ {p.sport}</span>
                   </div>
                 </div>
               </div>

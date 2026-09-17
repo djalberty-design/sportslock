@@ -13,10 +13,10 @@ function TheMatrix() {
   snapshot?.briefs?.forEach((b: any) => {
     gamesMap.set(b.eventId, { 
       sport: b.sport || "GAME", 
-      home: b.home || "Home", 
-      away: b.away || "Away",
-      homeAbbr: b.homeAbbr,
-      awayAbbr: b.awayAbbr, 
+      home: b.home || b.homeAbbr || "Home", 
+      away: b.away || b.awayAbbr || "Away",
+      homeAbbr: b.homeAbbr, homeLogo: b.homeLogo,
+      awayAbbr: b.awayAbbr, awayLogo: b.awayLogo, 
       weather: b.weather,
       eventId: b.eventId,
       start: b.start,
@@ -30,7 +30,7 @@ function TheMatrix() {
     if (!g) {
       g = {
         eventId: q.eventId, sport: q.sport || "GAME", home: q.home || "Home", away: q.away || "Away",
-        homeAbbr: q.homeAbbr, awayAbbr: q.awayAbbr, start: q.start,
+        homeAbbr: q.homeAbbr, homeLogo: q.homeLogo, awayAbbr: q.awayAbbr, awayLogo: q.awayLogo, start: q.start,
         markets: {}
       };
     }
@@ -92,13 +92,13 @@ function TheMatrix() {
                   
                   {/* Away Team */}
                   <div className="flex items-center gap-3 h-12">
-                    {g.awayAbbr ? <img src={espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    {(g.awayLogo || g.awayAbbr) ? <img src={g.awayLogo || espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
                     <span className="text-base font-medium text-ink truncate">{g.away}</span>
                   </div>
 
                   {/* Home Team */}
                   <div className="flex items-center gap-3 h-12 mt-2">
-                    {g.homeAbbr ? <img src={espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    {(g.homeLogo || g.homeAbbr) ? <img src={g.homeLogo || espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
                     <span className="text-base font-medium text-ink truncate">{g.home}</span>
                   </div>
                 </div>
