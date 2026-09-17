@@ -588,7 +588,7 @@ export function buildPropChance(input: PropInput): PropReport {
         p: invLogit(z),
         precision: 4.5,
         family: "alpha",
-        note: \[ALPHA] \ + bits.join(" | ") + \. Dynamically compounds weather against team's offensive identity.\,
+        note: `[ALPHA] ${bits.join(" | ")}. Dynamically compounds weather against team's offensive identity.`,
       });
     }
   }
