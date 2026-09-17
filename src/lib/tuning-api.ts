@@ -16,9 +16,9 @@ export const DEFAULT_TUNING: TuningConfig = {
 
 async function ensureTuningTable(sql: any) {
   await sql`
-    CREATE TABLE IF NOT EXISTS desk_tuning_v2 (
+    CREATE TABLE IF NOT EXISTS desk_tuning_v3 (
       id INTEGER PRIMARY KEY,
-      payload JSONB
+      payload TEXT
     )
   `;
 }
@@ -27,14 +27,20 @@ export async function getTuning(): Promise<TuningConfig> {
   const sql = await getSql();
   await ensureTuningTable(sql);
 
-  const result = await sql`SELECT payload FROM desk_tuning_v2 WHERE id = 1`;
+  // The timestamp forces Vercel's cache to miss, guaranteeing a live DB read
+  const ts = Date.now();
+  const result = await sql`SELECT payload FROM desk_tuning_v3 WHERE id = 1 AND ${ts} = ${ts}`;
   const rows = result.rows || result;
   
   if (!rows || rows.length === 0) {
     return DEFAULT_TUNING;
   }
   
-  return rows[0].payload as TuningConfig;
+  try {
+    return JSON.parse(rows[0].payload) as TuningConfig;
+  } catch (e) {
+    return DEFAULT_TUNING;
+  }
 }
 
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
@@ -44,8 +50,8 @@ export async function updateTuning(config: TuningConfig): Promise<TuningConfig> 
   const payloadStr = JSON.stringify(config);
 
   await sql`
-    INSERT INTO desk_tuning_v2 (id, payload)
-    VALUES (1, ${payloadStr}::jsonb)
+    INSERT INTO desk_tuning_v3 (id, payload)
+    VALUES (1, ${payloadStr})
     ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
   `;
   
