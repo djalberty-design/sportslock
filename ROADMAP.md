@@ -66,5 +66,5 @@ arrative.ts)**
 
 ## PHASE 7: The AI Parlay Constructor
 *Goal: Autonomously generate the highest +EV parlays mathematically possible.*
-- [ ] **Step 7.1: The +EV Scanner & Correlation Engine**
+- [x] **Step 7.1: The +EV Scanner & Correlation Engine**
   - Scan the board for maximum discrepancy between simFair and sportsbooks, then group positively correlated game scripts.
