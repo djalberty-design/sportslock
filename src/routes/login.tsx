@@ -63,7 +63,7 @@ function Login() {
               <button
                 key={p.providerId}
                 type="button"
-                onClick={async () => { await authClient.signIn.social({ provider: "google", callbackURL: "/admin/terminal" }); }}
+                onClick={async () => { try { console.log("Initiating Google sign-in..."); const res = await authClient.signIn.social({ provider: "google", callbackURL: "/admin/terminal" }); console.log("Sign-in response:", res); } catch (err) { console.error("Sign-in failed:", err); alert("OAuth Error: " + (err instanceof Error ? err.message : String(err))); } }}
                 className="flex min-h-11 w-full items-center justify-center rounded-md bg-gold px-4 text-sm font-medium text-navy-deep hover:opacity-90"
               >
                 Continue with {p.label}
