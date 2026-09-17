@@ -72,8 +72,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         
-        {isAdmin && (
-          <div className="p-3 border-t border-line/50">
+        <div className="p-3 border-t border-line/50 flex flex-col gap-2">
+          <UserButton />
+          {isAdmin && (
             <Link
               to="/admin"
               className={cn(
@@ -84,8 +85,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Settings className="size-5" />
               <span className="font-medium">The Overseer</span>
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -98,6 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
              <TicketChip />
+             <UserButton />
              {isAdmin && (
                <Link to="/admin" className="text-muted hover:text-primary">
                  <Settings className="size-5" />

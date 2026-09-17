@@ -7,20 +7,24 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
   const [wager, setWager] = useState("50");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const legs = parlay?.legs || [];
-  const fairDec = parlay?.combinedFair ? (1 / parlay.combinedFair).toFixed(2) : "0.00";
-  const payoutDec = parlay?.decimalPayout ? parlay.decimalPayout.toFixed(2) : fairDec;
+  // Safely extract the parlay candidate whether it's wrapped in a DeskPick or not
+  const pick = parlay;
+  const parlayCand = pick?.parlay || pick;
+  const legs = parlayCand?.legs || [];
+  
+  const fairDec = parlayCand?.combinedFair ? (1 / parlayCand.combinedFair).toFixed(2) : "0.00";
+  const payoutDec = (pick?.decimalPayout || parlayCand?.decimalPayout) 
+    ? (pick?.decimalPayout || parlayCand?.decimalPayout).toFixed(2) 
+    : fairDec;
   
   // Extract primary game info
   const primaryEventId = legs[0]?.eventId;
   const brief = snapshot?.briefs?.find((b: any) => b.eventId === primaryEventId);
-  
-  // Find a quote line to grab start time and live scores
   const quote = snapshot?.quotes?.find((q: any) => q.eventId === primaryEventId);
   
-  const home = quote?.homeAbbr || quote?.home || "HOME";
-  const away = quote?.awayAbbr || quote?.away || "AWAY";
-  const startStr = quote?.start;
+  const home = quote?.homeAbbr || quote?.home || brief?.homeAbbr || brief?.home || "HOME";
+  const away = quote?.awayAbbr || quote?.away || brief?.awayAbbr || brief?.away || "AWAY";
+  const startStr = quote?.start || brief?.start;
   const startTime = startStr ? new Date(startStr).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : "Upcoming";
   
   const weather = brief?.weather;
@@ -33,6 +37,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
   const numWager = parseFloat(wager || "0");
   const toWin = (numWager * parseFloat(payoutDec)).toFixed(2);
   const profit = (numWager * parseFloat(payoutDec) - numWager).toFixed(2);
+  const aiInsight = pick?.why || parlayCand?.reason || parlayCand?.scoreNote;
 
   return (
     <>
@@ -67,27 +72,27 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex size-2.5 rounded-full bg-red-500"></span>
                 </span>
-                <span className="text-xs font-bold text-red-500">
+                <span className="text-xs font-bold text-red-500 font-mono">
                   {awayScore} - {homeScore}
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-xs text-muted">
+              <div className="flex items-center gap-1 text-[10px] font-bold text-muted uppercase tracking-wider">
                 <CalendarDays className="size-3" />
                 <span>{startTime}</span>
               </div>
             )}
           </div>
           
-          <div className="flex justify-between items-center text-xs text-muted">
+          <div className="flex justify-between items-center text-xs text-muted font-bold tracking-wide uppercase">
             {inPlay && period != null ? (
-              <div className="flex items-center gap-1">
-                <Clock className="size-3" />
+              <div className="flex items-center gap-1 text-ink">
+                <Clock className="size-3 text-primary" />
                 <span>Q{period} {clock ? `• ${clock}` : ""}</span>
               </div>
             ) : weather ? (
-              <div className="flex items-center gap-1">
-                <CloudRain className="size-3 text-cyan-500" />
+              <div className="flex items-center gap-1 text-cyan-400">
+                <CloudRain className="size-3" />
                 <span>{weather}</span>
               </div>
             ) : (
@@ -97,29 +102,35 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         </div>
 
         {/* AI Insight */}
-        {parlay.scoreNote && (
+        {aiInsight && (
           <p className="mb-4 text-sm leading-relaxed text-ink/90">
             <span className="font-semibold text-primary">AI Insight: </span>
-            {parlay.scoreNote}
+            {aiInsight}
           </p>
         )}
 
         {/* The Legs */}
         <div className="mb-5 flex-1 space-y-2">
-          {legs.map((leg: any, i: number) => (
-            <div key={i} className="flex items-center justify-between rounded-lg bg-background p-3 border border-line/50">
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-ink">{leg.selection}</span>
-                <span className="text-xs text-muted">{leg.marketType.toUpperCase()} • {leg.sport}</span>
-              </div>
-              {leg.badge && (
-                <div className="flex items-center gap-1 rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                  <Zap className="size-3" />
-                  {leg.badge}
+          {legs.map((leg: any, i: number) => {
+            const legPrice = leg.price != null ? (leg.price > 0 ? `+${leg.price}` : leg.price) : '';
+            return (
+              <div key={i} className="flex items-center justify-between rounded-lg bg-background p-3 border border-line/50">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-ink">{leg.selection}</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] text-muted font-bold tracking-wider uppercase">{leg.marketType} • {leg.sport}</span>
+                    {legPrice && <span className="text-[10px] px-1.5 py-0.5 rounded bg-line text-ink font-mono">{legPrice}</span>}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+                {leg.badge && (
+                  <div className="flex items-center gap-1 rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    <Zap className="size-3" />
+                    {leg.badge}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Wager Calculator */}
@@ -180,22 +191,22 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
 
               <div className="space-y-4 mb-6">
                 <p className="text-sm text-muted">
-                  The SportsLock Engine has simulated this specific game script 10,000 times via Monte Carlo modeling. These props mathematically correlate to the projected outcome.
+                  The SportsLock Engine has simulated this specific game script via Monte Carlo modeling. These props mathematically correlate to the projected outcome.
                 </p>
                 
                 <div className="bg-background rounded-lg p-4 border border-line">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted">Total Wager:</span>
-                    <span className="font-bold text-ink">${numWager.toFixed(2)}</span>
+                    <span className="text-muted font-bold uppercase tracking-wider text-[10px]">Total Wager:</span>
+                    <span className="font-bold text-ink font-mono">${numWager.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted">Payout Ratio:</span>
-                    <span className="font-bold text-ink">{payoutDec}x</span>
+                    <span className="text-muted font-bold uppercase tracking-wider text-[10px]">Payout Ratio:</span>
+                    <span className="font-bold text-ink font-mono">{payoutDec}x</span>
                   </div>
                   <div className="h-px bg-line my-2" />
-                  <div className="flex justify-between text-lg">
-                    <span className="font-bold text-ink">Total Profit:</span>
-                    <span className="font-bold text-primary font-mono">${profit}</span>
+                  <div className="flex justify-between items-end">
+                    <span className="font-bold text-ink text-sm">Total Profit:</span>
+                    <span className="text-2xl font-bold text-primary font-mono">${profit}</span>
                   </div>
                 </div>
               </div>
