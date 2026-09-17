@@ -45,11 +45,11 @@ export function runMonteCarlo(g: GameLatent, n = 10000): GameSimResult[] {
   
   for (let i = 0; i < n; i++) {
     // Generate margin and total independently via Bivariate Normal
-    const margin = randomNormal(g.muH - g.muA, g.sigM);
-    const total = Math.max(0, randomNormal(expectedTotal, g.sigT));
+    let margin = randomNormal(g.muH - g.muA, g.sigM);
+    let total = Math.max(0, randomNormal(expectedTotal, g.sigT));
     
-    const homeScore = Math.max(0, (total + margin) / 2);
-    const awayScore = Math.max(0, (total - margin) / 2);
+    let homeScore = Math.max(0, (total + margin) / 2);
+    let awayScore = Math.max(0, (total - margin) / 2);
     
     // Phase 8: NHL Empty Net Game Script Variance
     if (g.sport === "NHL" && Math.abs(margin) <= 2) {
