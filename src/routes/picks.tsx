@@ -3,6 +3,8 @@ import { useDeskDecision } from "@/lib/market/use-board";
 import { Target, Flame, BarChart2 } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
+import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
+import { useDeskStore } from "@/lib/desk-store";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -10,7 +12,10 @@ export const Route = createFileRoute("/picks")({
 
 function TheLab() {
   const { picks } = useDeskDecision();
-  const props = picks?.props || [];
+  const allProps = picks?.props || [];
+  const sportFilter = useDeskStore((s) => s.sportFilter);
+  const props = applySportFilter(allProps, sportFilter);
+  const liveSports = [...new Set(allProps.map((p: any) => p.sport).filter(Boolean))];
 
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
@@ -18,6 +23,11 @@ function TheLab() {
         <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
           The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">Player Props</span>
         </h1>
+      </div>
+
+      {/* Sport Filter */}
+      <div className="mb-4">
+        <SportFilter sports={liveSports} />
       </div>
 
       <div className="flex flex-col gap-4">

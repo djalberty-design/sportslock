@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
+import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
+import { useDeskStore } from "@/lib/desk-store";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
@@ -62,7 +64,10 @@ function TheMatrix() {
   });
 
   // Filter out the diagnostic "SYS" sport placeholder
-  const games = Array.from(gamesMap.values()).filter(g => g.sport !== "SYS");
+  const allGames = Array.from(gamesMap.values()).filter(g => g.sport !== "SYS");
+  const sportFilter = useDeskStore((s) => s.sportFilter);
+  const games = applySportFilter(allGames, sportFilter);
+  const liveSports = [...new Set(allGames.map((g: any) => g.sport))];
 
   const formatAm = (val: any) => {
     if (val == null || val === 0) return "-";
@@ -81,6 +86,11 @@ function TheMatrix() {
         {snapshot?.sourceNote && (
           <p className="text-xs text-muted">{snapshot.sourceNote}</p>
         )}
+      </div>
+
+      {/* Sport Filter */}
+      <div className="mb-4">
+        <SportFilter sports={liveSports} />
       </div>
 
       {/* Error / crash banner */}

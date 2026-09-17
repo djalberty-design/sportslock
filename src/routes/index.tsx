@@ -2,13 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
 import { Sparkles, Activity } from "lucide-react";
+import { SportFilter } from "@/components/app/sport-filter";
+import { useDeskStore } from "@/lib/desk-store";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
 function SportsLockCommandCenter() {
   const { picks, snapshot } = useDeskDecision();
   
-  const topParlays = picks?.ribbon?.slice(0, 5) || [];
+  const allParlays = picks?.ribbon?.slice(0, 5) || [];
+  const sportFilter = useDeskStore((s) => s.sportFilter);
+  const topParlays = (!sportFilter || sportFilter === "ALL")
+    ? allParlays
+    : allParlays.filter((p: any) => p.sport === sportFilter || p.legs?.some((l: any) => l.sport === sportFilter));
+  const liveSports = [...new Set(allParlays.flatMap((p: any) => [p.sport, ...(p.legs?.map((l: any) => l.sport) || [])]).filter(Boolean))];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -20,6 +27,11 @@ function SportsLockCommandCenter() {
         <p className="text-muted text-sm">
           The AI has scanned the board. Here are the most mathematically sound correlations today.
         </p>
+      </div>
+
+      {/* Sport Filter */}
+      <div>
+        <SportFilter sports={liveSports} />
       </div>
 
       {topParlays.length === 0 ? (
