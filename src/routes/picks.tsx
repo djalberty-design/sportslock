@@ -62,9 +62,7 @@ function TheLab() {
                   {headshotUrl ? (
                     <div className="relative size-12 md:size-14">
                       <img src={headshotUrl} className="size-full rounded-full object-cover ring-2 ring-line bg-obsidian z-10 relative" alt={playerName || ""} />
-                      {teamLogo && (
-                        <img src={teamLogo} className="absolute -bottom-1 -right-1 size-6 rounded-full ring-2 ring-panel bg-white object-contain z-20" alt="" />
-                      )}
+                      
                     </div>
                   ) : teamLogo ? (
                     <img src={teamLogo} className="size-12 md:size-14 object-contain rounded-full ring-2 ring-line bg-white/5 p-1" alt="" />
