@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({ component: SportsLockCommandCenter }
 function SportsLockCommandCenter() {
   const { picks, snapshot } = useDeskDecision();
   
-  const topParlays = picks?.sgp?.slice(0, 5) || [];
+  const topParlays = picks?.ribbon?.slice(0, 5) || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
