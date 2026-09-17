@@ -73,17 +73,15 @@ function ParlayArchitect() {
 
   const handleLock = async () => {
     setIsLocking(true);
-    await lockTicket({
-      data: {
-        legs: top3,
-        combinedOdds: combinedAmerican,
-        trueProb: combinedProb,
-        stake: 25 // Default stake
-      }
-    });
-    setIsLocking(false);
-    setIsLocked(true);
-    setTimeout(() => setIsLocked(false), 2000);
+    try {
+      await lockTicket({ data: { legs: top3, combinedOdds: combinedAmerican, trueProb: combinedProb, stake: 25 } });
+      setIsLocked(true);
+      setTimeout(() => setIsLocked(false), 2000);
+    } catch (e) {
+      alert('Database Insert Failed: ' + e);
+    } finally {
+      setIsLocking(false);
+    }
   };
 
   return (

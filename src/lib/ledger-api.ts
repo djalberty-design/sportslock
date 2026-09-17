@@ -29,7 +29,7 @@ export async function insertLedgerTicket(ticket: LedgerTicket): Promise<void> {
   await sql`
     INSERT INTO desk_ledger (legs, combined_odds, true_prob, stake)
     VALUES (
-      ${JSON.stringify(ticket.legs)},
+      ${JSON.stringify(ticket.legs)}::jsonb,
       ${ticket.combinedOdds},
       ${ticket.trueProb},
       ${ticket.stake}
@@ -39,6 +39,7 @@ export async function insertLedgerTicket(ticket: LedgerTicket): Promise<void> {
 export async function getLedgerTickets() {
   const sql = await getSql();
   await ensureLedgerTable(sql);
-  const rows = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC`;
+  const result = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC`;
+  const rows = result.rows || result;
   return rows;
 }
