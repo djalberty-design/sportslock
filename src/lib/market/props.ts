@@ -4,7 +4,7 @@
  * Same idea as the game-chance stack: the photographed sportsbook number is the
  * prior, then game total, script, weather, park, rest, and injuries nudge it.
  * Last-10 per-game rate is recency-weighted analysis of the live log, blended
- * 60/40 with season — not a hit-rate sticker.
+ * 60/40 with season ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not a hit-rate sticker.
  * Florida: college player bets are illegal. Never a lock.
  */
 
@@ -14,6 +14,8 @@ import { analyzeScores, blendRate } from "./form.ts";
 import { allowedForStat, processFromLooks, underlyingOffense, type TeamLooks } from "./looks.ts";
 import { americanToImplied, twoWayNoVig } from "./engine.ts";
 import { isCollegeSport } from "./universe.ts";
+import { applyNarrativeToProps } from "./narrative.ts";
+import { applyRefereeGrudgeToProps, type OfficialPosting } from "./officials.ts";
 
 export type PropStat =
   | "pass_yds"
@@ -88,6 +90,9 @@ export type PropInput = {
   injuries?: Array<{ player: string; team?: string; status: string }>;
   restDays?: number;
   usageRipple?: number;
+  narrativeTags?: string[]; // Step 6.1: Revenge Games, Milestones
+  officials?: OfficialPosting[]; // Step 6.2: Referee Grudges
+  matchupFoulRate?: number; // Step 6.3: Foul Trouble Ripple
     seasonRate?: number;
   recentRate?: number;
   recentN?: number;
@@ -238,7 +243,7 @@ export function parsePropSelection(
   let player = (fallback?.player ?? "").trim();
   if (!player) {
     const cut = raw.split(/\b(?:over|under|o\/u|anytime|to score|to hit|to record|\d)/i)[0] ?? raw;
-    player = cut.replace(/[-–—]/g, " ").replace(/\s+/g, " ").trim();
+    player = cut.replace(/[-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â]/g, " ").replace(/\s+/g, " ").trim();
   }
   if (!player || player.length < 2) player = fallback?.player?.trim() || "Player";
 
@@ -297,7 +302,7 @@ function pushEmpty(layers: PropLayer[], id: string, label: string, note: string,
 }
 
 function rateOver(stat: PropStat, rate: number, line: number): number {
-  // Yards / points / PRA are continuous — Poisson understates the tails (DMP Learn 2026).
+  // Yards / points / PRA are continuous ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Poisson understates the tails (DMP Learn 2026).
   const sigma: Partial<Record<PropStat, number>> = {
     pass_yds: 68,
     rush_yds: 32,
@@ -445,7 +450,7 @@ export function buildPropChance(input: PropInput): PropReport {
     p: marketOver,
     precision: 14,
     family: "market",
-    note: "The live Hard Rock Bet Florida number, with the extra juice player bets usually carry stripped off. This is the prior — liquid prop markets are hard to beat.",
+    note: "The live Hard Rock Bet Florida number, with the extra juice player bets usually carry stripped off. This is the prior ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â liquid prop markets are hard to beat.",
   });
 
   if (parsed.counting && parsed.line != null && Number.isFinite(parsed.line)) {
@@ -460,7 +465,7 @@ export function buildPropChance(input: PropInput): PropReport {
         precision: usedRecent ? 6.4 : 4.4,
         family: "game",
         note: usedRecent
-          ? `${parsed.player} recency-weighted last ${input.recentN ?? 10}: ${input.recentRate!.toFixed(2)} ${parsed.statLabel} (60%) blended with season ${input.seasonRate != null ? input.seasonRate.toFixed(2) : "n/a"} (40%). Last-10 of THIS stat, not a W-L sticker — books already shade hot streaks.`
+          ? `${parsed.player} recency-weighted last ${input.recentN ?? 10}: ${input.recentRate!.toFixed(2)} ${parsed.statLabel} (60%) blended with season ${input.seasonRate != null ? input.seasonRate.toFixed(2) : "n/a"} (40%). Last-10 of THIS stat, not a W-L sticker ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â books already shade hot streaks.`
           : `Looked up the live last-10 of ${parsed.statLabel}. Gamelog not posted yet, so season rate ${rate.toFixed(2)} vs the ${parsed.line} line. Thin, not a skip.`,
         thin: !usedRecent,
       });
@@ -478,7 +483,7 @@ export function buildPropChance(input: PropInput): PropReport {
       layers,
       "last10",
       "Last 10 of this stat",
-      `Looked up last-10 of ${parsed.statLabel}. Yes/no tickets do not take a counting line — empty counting look, not a skip.`,
+      `Looked up last-10 of ${parsed.statLabel}. Yes/no tickets do not take a counting line ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â empty counting look, not a skip.`,
       "game",
     );
   }
@@ -638,7 +643,7 @@ export function buildPropChance(input: PropInput): PropReport {
       family: "game",
       note: hitting
         ? `Opposing staff ERA/OPS allowed ${input.oppAllowed.toFixed(2)} vs a ${leagueOpp} league mark. Live ESPN team stats, last-7 when posted.`
-        : `Opponent environment ${input.oppAllowed.toFixed(1)} vs typical ${leagueOpp}. Last-10 allowed / live team stats — not a made-up rank.`,
+        : `Opponent environment ${input.oppAllowed.toFixed(1)} vs typical ${leagueOpp}. Last-10 allowed / live team stats ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not a made-up rank.`,
     });
   } else {
     pushEmpty(
@@ -689,7 +694,7 @@ export function buildPropChance(input: PropInput): PropReport {
       precision: 3.4,
       family: "game",
       note: hitting
-        ? `Opposing starter ERA ${input.pitcherEra.toFixed(2)}. Live probable from ESPN — the pitcher-vs-batter number we can actually fetch tonight.`
+        ? `Opposing starter ERA ${input.pitcherEra.toFixed(2)}. Live probable from ESPN ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the pitcher-vs-batter number we can actually fetch tonight.`
         : `Starter ERA ${input.pitcherEra.toFixed(2)} from the live ESPN probable.`,
       thin: Math.abs(z) < 0.02,
     });
@@ -721,7 +726,7 @@ export function buildPropChance(input: PropInput): PropReport {
       p: invLogit(z),
       precision: 1.8,
       family: "game",
-      note: `Season ${input.seasonRate.toFixed(2)} vs last-10 ${input.recentRate.toFixed(2)} ${parsed.statLabel}. Process vs a hot/cold streak — we do not treat 8/10 as a lock.`,
+      note: `Season ${input.seasonRate.toFixed(2)} vs last-10 ${input.recentRate.toFixed(2)} ${parsed.statLabel}. Process vs a hot/cold streak ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we do not treat 8/10 as a lock.`,
       thin: true,
     });
   } else {
@@ -778,10 +783,10 @@ export function buildPropChance(input: PropInput): PropReport {
   const confidence: PropReport["confidence"] =
     layers.length >= 4 && Math.abs(hit - 0.5) >= 0.06 ? "high" : layers.length >= 2 ? "medium" : "low";
 
-  const because = `${parsed.player} — ${parsed.statLabel}. ${layers.length} live looks. Last-10 is EWMA of THIS stat (60/40 with season), plus opponent defense, usage, pitcher, and underlying. Not a generated card. Desk chance-to-hit ${Math.round(hit * 100)}%. Not a lock. Photograph Hard Rock to lock the live number.`;
+  const because = `${parsed.player} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${parsed.statLabel}. ${layers.length} live looks. Last-10 is EWMA of THIS stat (60/40 with season), plus opponent defense, usage, pitcher, and underlying. Not a generated card. Desk chance-to-hit ${Math.round(hit * 100)}%. Not a lock. Photograph Hard Rock to lock the live number.`;
   const customize = photographedIsOver
     ? hit >= 0.52
-      ? `The model agrees with the photographed over. Still confirm the live Hard Rock number — delayed print is not a fill.`
+      ? `The model agrees with the photographed over. Still confirm the live Hard Rock number ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â delayed print is not a fill.`
       : `The photographed over is the side on the slip. The desk is cooler than the juice. Confirm at Hard Rock or sit.`
     : hit >= 0.52
       ? `The model agrees with the photographed under / no. Confirm the live number.`
@@ -835,7 +840,7 @@ function playerIsAway(player: { name?: string; team?: string; homeAway?: string 
   return false;
 }
 
-/** Live ESPN looks for a player ticket — defense, usage, pitcher, underlying, platoon. */
+/** Live ESPN looks for a player ticket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â defense, usage, pitcher, underlying, platoon. */
 export function propContextFromBrief(
   brief: PropLiveBrief | undefined,
   opts: { home: string; away: string; player?: string; playerTeam?: string; stat?: PropStat },

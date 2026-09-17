@@ -8,6 +8,8 @@ export type OfficialPosting = {
   strikeZoneWidth?: number; // MLB
   penaltyRate?: number; // NFL/NHL
   foulRate?: number; // NBA
+  isFatigued?: boolean; // Step 6.2: Grueling back-to-back travel schedules
+  grudgePlayers?: string[]; // Step 6.2: Notoriously antagonistic referee/player relationships
 };
 
 export type OfficialSnap = {
@@ -40,7 +42,7 @@ export type OfficialMeans = {
 
 
 function displayName(o: OfficialPosting): string {
-  return [o.name, o.role].filter(Boolean).join(" · ");
+  return [o.name, o.role].filter(Boolean).join(" Â· ");
 }
 
 export function parseEspnOfficials(raw: unknown): OfficialPosting[] {
@@ -95,7 +97,7 @@ export function officialLayer(snap: OfficialSnap): OfficialLayer {
       home: 0.5,
       precision: 0,
       empty: true,
-      note: `Crew posted: ${names.slice(0, 3).join(", ")}. Tendency file empty — no invented ATS or zone.`,
+      note: `Crew posted: ${names.slice(0, 3).join(", ")}. Tendency file empty â€” no invented ATS or zone.`,
     };
   }
   
@@ -156,20 +158,27 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
         const homeKEdge = clip((homeK - 8.5) / 3, -0.5, 1.0);
         const awayKEdge = clip((awayK - 8.5) / 3, -0.5, 1.0);
 
-        if (o.strikeZoneWidth > 0) {
+        // Step 6.2: Umpire Fatigue
+        // Tired umpires widen their strike zone (to end the game faster and go home)
+        let effectiveZone = o.strikeZoneWidth;
+        if (o.isFatigued) {
+          effectiveZone += 0.03; // Artificially widen the zone
+        }
+
+        if (effectiveZone > 0) {
           // Wide zone (pitcher-friendly): 
           // The AWAY pitcher's K-rate suppresses the HOME team's expected runs!
-          nextH *= 1 - (o.strikeZoneWidth * (1 + awayKEdge));
+          nextH *= 1 - (effectiveZone * (1 + awayKEdge));
           // The HOME pitcher's K-rate suppresses the AWAY team's expected runs!
-          nextA *= 1 - (o.strikeZoneWidth * (1 + homeKEdge));
-        } else if (o.strikeZoneWidth < 0) {
+          nextA *= 1 - (effectiveZone * (1 + homeKEdge));
+        } else if (effectiveZone < 0) {
           // Tight zone (hitter-friendly): 
           // Tight zone heavily hurts K-pitchers (more walks, deep counts)
-          nextH *= 1 - (o.strikeZoneWidth * (1 + awayKEdge)); 
-          nextA *= 1 - (o.strikeZoneWidth * (1 + homeKEdge));
+          nextH *= 1 - (effectiveZone * (1 + awayKEdge)); 
+          nextA *= 1 - (effectiveZone * (1 + homeKEdge));
         }
       }
-      chaosAdd += Math.abs(o.strikeZoneWidth);
+      chaosAdd += Math.abs(effectiveZone);
     }
     
     if (o.penaltyRate != null && Number.isFinite(o.penaltyRate)) {
@@ -205,3 +214,33 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
   };
 }
 
+
+import type { PropLayer } from "./types.ts";
+
+/**
+ * Step 6.2: Referee Grudges
+ * Aggressively fade players facing a referee that statistically penalizes them.
+ */
+export function applyRefereeGrudgeToProps(
+  statCategory: string,
+  playerName: string,
+  officials?: OfficialPosting[]
+): PropLayer | null {
+  if (!officials || officials.length === 0) return null;
+
+  for (const o of officials) {
+    if (o.grudgePlayers && o.grudgePlayers.includes(playerName)) {
+      if (statCategory === "points" || statCategory === "assists" || statCategory === "pra") {
+        return {
+          id: "referee_grudge",
+          label: "Referee Grudge",
+          p: 0.35, // Skews heavily towards UNDER (Foul trouble risk)
+          precision: 4.5,
+          family: "alpha",
+          note: [ALPHA] Foul trouble risk: Officiated by  (Antagonistic History).,
+        };
+      }
+    }
+  }
+  return null;
+}
