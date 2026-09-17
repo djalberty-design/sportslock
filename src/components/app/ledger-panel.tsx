@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { createServerFn } from "@tanstack/react-start";
 import { getLedgerTickets } from "@/lib/ledger-api";
+import { runSweeper } from "@/lib/sweeper-api";
+
+export const executeSweep = createServerFn({ method: "POST" }).handler(async () => { return await runSweeper(); });
 
 export const fetchLedgerTickets = createServerFn({ method: "GET" }).handler(async () => {
   return await getLedgerTickets();
@@ -9,6 +12,7 @@ export const fetchLedgerTickets = createServerFn({ method: "GET" }).handler(asyn
 export function LedgerPanel() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSweeping, setIsSweeping] = useState(false);
 
   useEffect(() => {
     fetchLedgerTickets().then((data) => {
@@ -48,6 +52,22 @@ export function LedgerPanel() {
         </div>
       </div>
 
+            <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-white uppercase tracking-wider">Master Ledger</h3>
+        <button 
+          onClick={async () => {
+            setIsSweeping(true);
+            await executeSweep();
+            const fresh = await fetchLedgerTickets({ data: undefined });
+            setTickets(fresh);
+            setIsSweeping(false);
+          }}
+          disabled={isSweeping}
+          className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md text-xs font-bold uppercase tracking-wider hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
+        >
+          {isSweeping ? 'Sweeping Database...' : 'Run Auto-Sweeper'}
+        </button>
+      </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden">
         <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-800 text-xs font-bold text-zinc-500 uppercase tracking-wider bg-zinc-950/50">
           <div className="col-span-2">Date</div>
