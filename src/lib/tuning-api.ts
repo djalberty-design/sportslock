@@ -1,4 +1,4 @@
-import { db } from "@vercel/postgres";
+import { getSql } from "@/lib/db";
 
 export type TuningConfig = {
   minEdge: number;
@@ -15,9 +15,9 @@ export const DEFAULT_TUNING: TuningConfig = {
 };
 
 export async function getTuning(): Promise<TuningConfig> {
-  const client = await db.connect();
+  const sql = await getSql();
   try {
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS desk_tuning_raw (
         id INTEGER PRIMARY KEY,
         min_edge FLOAT,
@@ -25,14 +25,16 @@ export async function getTuning(): Promise<TuningConfig> {
         max_legs INTEGER,
         feeds TEXT
       )
-    `);
+    `;
     
     // Injecting Date.now() directly into the SQL string physically destroys any query caching
-    const res = await client.query(`SELECT * FROM desk_tuning_raw WHERE id = 1 /* ${Date.now()} */`);
+    const ts = Date.now();
+    const res = await sql`SELECT * FROM desk_tuning_raw WHERE id = 1 AND ${ts} = ${ts}`;
+    const rows = res.rows || res;
     
-    if (res.rows.length === 0) return DEFAULT_TUNING;
+    if (!rows || rows.length === 0) return DEFAULT_TUNING;
     
-    const row = res.rows[0];
+    const row = rows[0];
     return {
       minEdge: row.min_edge,
       kellyMultiplier: row.kelly,
@@ -42,15 +44,13 @@ export async function getTuning(): Promise<TuningConfig> {
   } catch (e) {
     console.error("DB READ ERROR:", e);
     return DEFAULT_TUNING;
-  } finally {
-    client.release();
   }
 }
 
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
-  const client = await db.connect();
+  const sql = await getSql();
   try {
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS desk_tuning_raw (
         id INTEGER PRIMARY KEY,
         min_edge FLOAT,
@@ -58,28 +58,27 @@ export async function updateTuning(config: TuningConfig): Promise<TuningConfig> 
         max_legs INTEGER,
         feeds TEXT
       )
-    `);
+    `;
     
-    await client.query(`
+    await sql`
       INSERT INTO desk_tuning_raw (id, min_edge, kelly, max_legs, feeds)
-      VALUES (1, $1, $2, $3, $4)
+      VALUES (
+        1, 
+        ${config.minEdge}, 
+        ${config.kellyMultiplier}, 
+        ${config.maxLegs}, 
+        ${JSON.stringify(config.activeFeeds)}
+      )
       ON CONFLICT (id) DO UPDATE SET 
         min_edge = EXCLUDED.min_edge,
         kelly = EXCLUDED.kelly,
         max_legs = EXCLUDED.max_legs,
         feeds = EXCLUDED.feeds
-    `, [
-      config.minEdge,
-      config.kellyMultiplier,
-      config.maxLegs,
-      JSON.stringify(config.activeFeeds)
-    ]);
+    `;
     
     return config;
   } catch (e) {
     console.error("DB WRITE ERROR:", e);
     throw e;
-  } finally {
-    client.release();
   }
 }
