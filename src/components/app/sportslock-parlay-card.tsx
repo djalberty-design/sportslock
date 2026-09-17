@@ -23,7 +23,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
 
   const numWager = parseFloat(wager || "0");
   const totalPayout = (numWager * decPayout).toFixed(2);
-  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates."; const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, "â€”");
+  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates."; const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, "Ã¢â‚¬â€");
   
   // Game Context (from first leg)
   const firstLeg = legs[0];
