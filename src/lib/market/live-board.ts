@@ -735,15 +735,15 @@ async function fetchBriefs(
 
 export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promise<DeskSnapshot> {
   let [{ quotes, notes }, kalshiContracts, polyContracts, rawTape, oddsApiMains] = await Promise.all([
-    fetchLiveQuotes(),
+    Promise.resolve({ quotes: [] as QuoteLine[], notes: [] as string[] }), // ESPN completely disabled per user request
     fetchKalshiContracts().catch(() => []),
     fetchPolymarketContracts().catch(() => [] as PolyContract[]),
     fetchActionNetworkTape().catch(() => [] as RawBookTape[]),
-    fetchOddsApiMains().catch(() => []),
+    fetchOddsApiMains().catch(() => []), // cache is respected
   ]);
   if (quotes.length === 0 && oddsApiMains && oddsApiMains.length > 0) {
     quotes = quotesFromOddsApi(oddsApiMains);
-    notes.push("ESPN scraper offline or rate limited. Board schedule and lines powered 100% by The Odds-API.");
+    notes.push("ESPN scraper manually disabled. Board schedule and lines powered 100% by The Odds-API.");
   }
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();

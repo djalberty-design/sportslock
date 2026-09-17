@@ -7,6 +7,9 @@ const globalCache = (globalThis as any).__oddsApiCache || {
   props: {} as Record<string, any>,
   quotaRemaining: null as number | null,
 };
+if (globalCache.mains && globalCache.mains.length === 0) {
+  globalCache.mains = null; // Clear bad cache on module load
+}
 (globalThis as any).__oddsApiCache = globalCache;
 
 function getActiveSports(): string[] {
