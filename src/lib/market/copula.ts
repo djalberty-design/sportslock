@@ -55,9 +55,9 @@ export function sameGameRho(legs: { marketType: string; side: string; fairProb?:
   const mlSpread = types.has("ml") && types.has("spread");
   
   let baseRho = 0;
-  
-  if (mlSpread && sides.size === 1) baseRho = COPULA_CALIBRATION.mlSpreadSame;
-  else if (mlSpread && sides.size > 1) baseRho = COPULA_CALIBRATION.mlSpreadOpp;
+  const mlSpreadSides = new Set(legs.filter(l => l.marketType === "ml" || l.marketType === "spread").map(l => l.side));
+  if (mlSpread && mlSpreadSides.size === 1) baseRho = COPULA_CALIBRATION.mlSpreadSame;
+  else if (mlSpread && mlSpreadSides.size > 1) baseRho = COPULA_CALIBRATION.mlSpreadOpp;
   else if (types.has("total") && (types.has("ml") || types.has("spread"))) {
     const tot = legs.find((l) => l.marketType === "total");
     baseRho = tot?.side === "under" ? COPULA_CALIBRATION.totalUnder : COPULA_CALIBRATION.totalSame;

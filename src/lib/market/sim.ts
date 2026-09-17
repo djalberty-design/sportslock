@@ -144,7 +144,11 @@ export function latentFromScores(opts: {
 }): GameLatent {
   const sport = opts.sport;
   const tot = opts.total > 0 ? opts.total : leagueTotal(sport);
-  const share = Math.min(0.68, Math.max(0.32, 0.5 + (opts.homeWin - 0.5) * 0.28));
+  const spreadScale = sport === "NBA" || sport === "NCAAB" ? 0.08
+    : sport === "MLB" ? 0.06
+    : sport === "NHL" ? 0.06
+    : 0.28;
+  const share = Math.min(0.68, Math.max(0.32, 0.5 + (opts.homeWin - 0.5) * spreadScale));
   const muH = tot * share;
   const muA = tot - muH;
   const chaos = opts.chaos ?? Math.max(0, Math.min(0.22, (tot - leagueTotal(sport)) / (leagueTotal(sport) * 4)));
