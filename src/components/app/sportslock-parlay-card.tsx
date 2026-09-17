@@ -60,7 +60,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
               </span>
               <span className="text-[10px] text-muted flex items-center gap-2">
                 {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "TODAY"}
-                {firstBrief?.weather && <span>&bull; {firstBrief.weather}</span>}
+                {firstBrief?.weather && <span>&bull; {firstBrief.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
               </span>
             </div>
           </div>
