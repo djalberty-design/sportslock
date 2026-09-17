@@ -44,24 +44,31 @@ function TheMatrix() {
     g.homeScore = q.homeScore ?? g.homeScore ?? 0;
     g.awayScore = q.awayScore ?? g.awayScore ?? 0;
     
-    // Assign markets based on QuoteLine data
-    if (q.marketType === 'ml') {
-      if (q.selection === q.home || q.selection === q.homeAbbr) g.markets.homeML = q.price;
-      else g.markets.awayML = q.price;
-    } else if (q.marketType === 'spread') {
-      if (q.selection === q.home || q.selection === q.homeAbbr) g.markets.homeSpread = { point: q.point, price: q.price };
-      else g.markets.awaySpread = { point: q.point, price: q.price };
-    } else if (q.marketType === 'total') {
-      if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
-      else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
-    }
-    
-    gamesMap.set(q.eventId, g);
+                // Assign markets based on QuoteLine data
+      const isHome = q.selection === q.home || q.selection === q.homeAbbr || (g.home && q.selection.includes(g.home)) || (g.homeAbbr && q.selection.includes(g.homeAbbr));
+      
+      if (q.marketType === 'ml') {
+        if (isHome) g.markets.homeML = q.price;
+        else g.markets.awayML = q.price;
+      } else if (q.marketType === 'spread') {
+        if (isHome) g.markets.homeSpread = { point: q.point, price: q.price };
+        else g.markets.awaySpread = { point: q.point, price: q.price };
+      } else if (q.marketType === 'total') {
+        if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
+        else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
+      }
+      
+      gamesMap.set(q.eventId, g);
   });
 
   const games = Array.from(gamesMap.values());
 
-  const formatAm = (dec: number) => dec >= 2.0 ? `+${Math.round((dec - 1) * 100)}` : `-${Math.round(100 / (dec - 1))}`;
+    const formatAm = (val: any) => {
+    if (val == null) return "-";
+    const num = Number(val);
+    if (num <= -100 || num >= 100) return num > 0 ? `+${num}` : `${num}`;
+    return num >= 2.0 ? `+${Math.round((num - 1) * 100)}` : `-${Math.round(100 / (num - 1))}`;
+  };
 
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
