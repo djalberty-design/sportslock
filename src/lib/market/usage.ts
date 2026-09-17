@@ -97,7 +97,14 @@ export function buildUsage(opts: {
   const lostByPos = new Map<string, number>();
 
   for (const p of players) {
-    const hit = injuries.find((i) => i.player.toLowerCase().includes(p.name.split(" ").pop()?.toLowerCase() ?? "___"));
+    const lastName = (p.name.split(" ").pop() ?? "___").toLowerCase();
+    const hit = injuries.find((i) => {
+      const nameMatch = i.player.toLowerCase().includes(lastName);
+      if (!nameMatch) return false;
+      // If injury has team info, require team match to prevent cross-team bleed
+      if (i.team && p.team) return i.team.toLowerCase() === p.team.toLowerCase();
+      return true;
+    });
     const isOut = hit ? listedOut(hit.status) : false;
     const gtd = hit ? questionable(hit.status) && !isOut : false;
     let opp = baseOpp(p);

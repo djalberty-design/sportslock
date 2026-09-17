@@ -200,7 +200,7 @@ function applyHoopsToMeans(input: ChanceInput): { muH: number; muA: number; chao
     muA,
     chaosAdd: 0,
     empty: false,
-    note: "Pace/Eff decoupled (${projectedPace.toFixed(1)} pace)."
+    note: `Pace/Eff decoupled (${projectedPace.toFixed(1)} pace).`
   };
 }
 
