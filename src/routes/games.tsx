@@ -154,14 +154,34 @@ function TheMatrix() {
                   
                   {/* Away Team */}
                   <div className="flex items-center gap-3 h-12">
-                    {(g.awayLogo || g.awayAbbr) ? <img src={g.awayLogo || espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    {(g.awayLogo || g.awayAbbr) ? (
+                      <img
+                        src={g.awayLogo || espnLogoUrl(g.sport || "NFL", g.awayAbbr) || ""}
+                        className="size-8 object-contain"
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                      />
+                    ) : null}
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.awayLogo || g.awayAbbr) ? "hidden" : ""}`}>
+                      {(g.awayAbbr || g.away || "?").substring(0, 3)}
+                    </div>
                     <span className="text-base font-bold text-ink truncate">{g.away}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.awayScore}</span>}
                   </div>
 
                   {/* Home Team */}
                   <div className="flex items-center gap-3 h-12 mt-2">
-                    {(g.homeLogo || g.homeAbbr) ? <img src={g.homeLogo || espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    {(g.homeLogo || g.homeAbbr) ? (
+                      <img
+                        src={g.homeLogo || espnLogoUrl(g.sport || "NFL", g.homeAbbr) || ""}
+                        className="size-8 object-contain"
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                      />
+                    ) : null}
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.homeLogo || g.homeAbbr) ? "hidden" : ""}`}>
+                      {(g.homeAbbr || g.home || "?").substring(0, 3)}
+                    </div>
                     <span className="text-base font-bold text-ink truncate">{g.home}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.homeScore}</span>}
                   </div>

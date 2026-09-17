@@ -10,6 +10,7 @@ import { fetchOddsApiMains, getOddsPropsCache } from "./odds-api.ts";
 import { buildChance, parseEra } from "./chance.ts";
 import { twoWayNoVig } from "./engine.ts";
 import { ALL_SPORTS } from "./universe.ts";
+import { teamAbbrFromName, espnLogoUrl } from "./logos.ts";
 import {
   AN_SPORT,
   analyzeTape,
@@ -835,6 +836,8 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       away: q.away,
       homeAbbr: q.homeAbbr,
       awayAbbr: q.awayAbbr,
+      homeLogo: q.homeLogo,
+      awayLogo: q.awayLogo,
       start: q.start,
       homeRecord: q.homeRecord,
       awayRecord: q.awayRecord,
@@ -997,8 +1000,10 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
       if (!g.home_team || !g.away_team) continue;
       const start = g.commence_time || new Date().toISOString();
       const eventId = `oddsapi-${sport}-${g.id}`;
-      const homeAbbr = g.home_team.split(" ").pop()?.substring(0, 3).toUpperCase() || g.home_team.substring(0, 3).toUpperCase();
-      const awayAbbr = g.away_team.split(" ").pop()?.substring(0, 3).toUpperCase() || g.away_team.substring(0, 3).toUpperCase();
+      const homeAbbr = teamAbbrFromName(g.home_team).toUpperCase();
+      const awayAbbr = teamAbbrFromName(g.away_team).toUpperCase();
+      const homeLogo = espnLogoUrl(sport, homeAbbr) || undefined;
+      const awayLogo = espnLogoUrl(sport, awayAbbr) || undefined;
 
       // Pick best available bookmaker: Hard Rock > DraftKings > FanDuel
       const bookmaker =
@@ -1009,7 +1014,7 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
       const base: Omit<QuoteLine, "marketType" | "side" | "selection" | "price"> = {
         eventId, sport, start,
         home: g.home_team, away: g.away_team,
-        homeAbbr, awayAbbr,
+        homeAbbr, awayAbbr, homeLogo, awayLogo,
         delayed: false, inPlay: false, source: bookmaker?.title || "odds-api",
       };
 
