@@ -645,8 +645,8 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
   const rEffect = restEffect({
     sport,
     start: input.start,
-    homeRestDays: input.homeRestDays,
-    awayRestDays: input.awayRestDays,
+    homeRestDays: input.sport === "MLB" ? (input.homeBullpenRest ?? input.homeRestDays) : input.homeRestDays,
+    awayRestDays: input.sport === "MLB" ? (input.awayBullpenRest ?? input.awayRestDays) : input.awayRestDays,
     homeWinPct: parseWinPct(input.homeRecord),
     awayWinPct: parseWinPct(input.awayRecord)
   });

@@ -16,6 +16,7 @@ export function applyMlbParkToMeans(input: ChanceInput): MlbParkMeans {
     sport,
     parkRunFactor,
     weatherTemp,
+    weatherWind,
     humidity,
     barometricPressure,
   } = input;
@@ -47,8 +48,22 @@ export function applyMlbParkToMeans(input: ChanceInput): MlbParkMeans {
   const humidityDelta = (humidity - 50) / 10;
   const humidityCarry = humidityDelta * 0.001;
 
-  // Base physics carry factor bounded between 0.85 (cold, heavy air) and 1.25 (hot, thin air)
-  const carryFactor = clip(1.0 + tempCarry + pressureCarry + humidityCarry, 0.85, 1.25);
+  // Step 4.2: Advanced Park Factors & Wind (Diamond Alpha)
+  // Wind compounds against the stadium's architectural run factor.
+  // High wind in a hitter's park (like Wrigley or Great American) turns it into a launchpad.
+  // High wind in a pitcher's park (like Oracle) turns it into a dead zone.
+  let windCarry = 0;
+  if (weatherWind != null && weatherWind >= 10) {
+    const windForce = clip((weatherWind - 10) / 10, 0, 1.5);
+    if (parkRunFactor > 1.0) {
+      windCarry = 0.03 * windForce; // Wind blows out/carries in small parks
+    } else if (parkRunFactor < 1.0) {
+      windCarry = -0.03 * windForce; // Wind knocks down in cavernous parks
+    }
+  }
+
+  // Base physics carry factor bounded between 0.85 (cold, heavy air) and 1.30 (hot, thin air, high wind)
+  const carryFactor = clip(1.0 + tempCarry + pressureCarry + humidityCarry + windCarry, 0.85, 1.30);
 
   // Apply park structural run factor (e.g., fence distance, foul territory)
   // Multiply the base team scoring means (muH and muA) by the stadium's specific parkRunFactor

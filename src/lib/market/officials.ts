@@ -15,6 +15,8 @@ export type OfficialSnap = {
   officials?: OfficialPosting[];
   homeFtRate?: number;
   awayFtRate?: number;
+  homeK9?: number;
+  awayK9?: number;
 };
 
 export type OfficialLayer = {
@@ -146,7 +148,28 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
     }
 
     if (o.strikeZoneWidth != null && Number.isFinite(o.strikeZoneWidth)) {
-      chaosAdd += clip(o.strikeZoneWidth, -0.02, 0.04);
+      // Step 4.1: Umpire Zone Compounding (Diamond Alpha)
+      if (snap.sport === "MLB") {
+        const homeK = snap.homeK9 ?? 8.5; // Average K/9 is ~8.5
+        const awayK = snap.awayK9 ?? 8.5;
+        
+        const homeKEdge = clip((homeK - 8.5) / 3, -0.5, 1.0);
+        const awayKEdge = clip((awayK - 8.5) / 3, -0.5, 1.0);
+
+        if (o.strikeZoneWidth > 0) {
+          // Wide zone (pitcher-friendly): 
+          // The AWAY pitcher's K-rate suppresses the HOME team's expected runs!
+          nextH *= 1 - (o.strikeZoneWidth * (1 + awayKEdge));
+          // The HOME pitcher's K-rate suppresses the AWAY team's expected runs!
+          nextA *= 1 - (o.strikeZoneWidth * (1 + homeKEdge));
+        } else if (o.strikeZoneWidth < 0) {
+          // Tight zone (hitter-friendly): 
+          // Tight zone heavily hurts K-pitchers (more walks, deep counts)
+          nextH *= 1 - (o.strikeZoneWidth * (1 + awayKEdge)); 
+          nextA *= 1 - (o.strikeZoneWidth * (1 + homeKEdge));
+        }
+      }
+      chaosAdd += Math.abs(o.strikeZoneWidth);
     }
     
     if (o.penaltyRate != null && Number.isFinite(o.penaltyRate)) {
