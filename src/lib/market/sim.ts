@@ -161,7 +161,7 @@ export function latentFromScores(opts: {
     chaos,
     poolHome: opts.poolHome,
     marketHome: opts.marketHome,
-    ran: tot > 0 && opts.homeWin > 0.08 && opts.homeWin < 0.92,
+    ran: tot > 0 && opts.homeWin > 0.01 && opts.homeWin < 0.99,
     note: "Calculated via continuous CDF. Zero Monte Carlo drag.",
   };
 }

@@ -6,7 +6,7 @@ export function clip01(n: number): number {
   return clip(n, 0, 1);
 }
 
-export function invLogit(z: number, lo = 0.12, hi = 0.88): number {
+export function invLogit(z: number, lo = 0.02, hi = 0.98): number {
   return clip(1 / (1 + Math.exp(-z)), lo, hi);
 }
 

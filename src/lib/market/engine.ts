@@ -216,11 +216,6 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
         awayPitcher: line.awayPitcher,
         homeAbbr: line.homeAbbr,
         awayAbbr: line.awayAbbr,
-          homeScore: line.homeScore,
-          awayScore: line.awayScore,
-          clock: line.clock,
-          statusText: line.statusText,
-          period: line.period,
         homeLogo: line.homeLogo,
         awayLogo: line.awayLogo,
         homeSpread: line.homeSpread,
@@ -305,11 +300,6 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       awayPitcher: line.awayPitcher,
       homeAbbr: line.homeAbbr,
       awayAbbr: line.awayAbbr,
-          homeScore: line.homeScore,
-          awayScore: line.awayScore,
-          clock: line.clock,
-          statusText: line.statusText,
-          period: line.period,
       homeLogo: line.homeLogo,
       awayLogo: line.awayLogo,
       homeSpread: line.homeSpread,
@@ -522,7 +512,7 @@ export function evaluateParlay(
     combinedEv ??
     (() => {
       const fairDec = 1 / Math.max(0.02, combinedFair);
-      return 1 / (fairDec * (1 + juice)) / combinedFair - 1 + (1 - 1 / (1 + juice));
+      return fairDec * (1 - juice) * combinedFair - 1;
     })();
   const pricedAsEntertainment = ev < DEFAULTS.entertainmentEvLt;
   const mapped: ParlayLeg[] = legs.map((l) => ({
@@ -815,12 +805,12 @@ function dynamicBlend(
     const diff = handlePct - ticketPct;
     
     // Sharp divergence (handle > ticket by 10%+)
-    if (diff >= 10) {
+    if (diff >= 0.10) {
       wMarket += 0.2;
       wPool = Math.max(0, wPool - 0.2);
       
       // Extreme divergence (handle > ticket by 20%+)
-      if (diff >= 20) {
+      if (diff >= 0.20) {
         sharpMultiplier = 1.05;
       }
     } else {
@@ -972,10 +962,10 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
       let tPct = r.ticketPct;
       let hPct = r.handlePct;
       if (tPct == null && chanceInput.ticketHome != null) {
-        tPct = r.side === "home" ? chanceInput.ticketHome : 100 - chanceInput.ticketHome;
+        tPct = r.side === "home" ? chanceInput.ticketHome : 1 - chanceInput.ticketHome;
       }
       if (hPct == null && chanceInput.handleHome != null) {
-        hPct = r.side === "home" ? chanceInput.handleHome : 100 - chanceInput.handleHome;
+        hPct = r.side === "home" ? chanceInput.handleHome : 1 - chanceInput.handleHome;
       }
       const fairProb = dynamicBlend(simFair, poolFair, marketFair, r.start, tPct, hPct);
       

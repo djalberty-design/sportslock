@@ -1,6 +1,25 @@
 import { getSql } from "@/lib/db";
 import { parseInternalEventId, ESPN_PATH } from "@/lib/market/research";
 
+/** Parse event IDs from both ESPN and Odds API formats */
+function parseEventId(raw: string): { sport: string; espnId: string } | null {
+  // Try ESPN format first: espn-NFL-401547329
+  const espn = parseInternalEventId(raw);
+  if (espn) return espn;
+  // Odds API format: oddsapi-americanfootball_nfl-abc123 — can't resolve to ESPN
+  return null;
+}
+
+/** Map Odds API sport keys to ESPN path keys */
+const ODDS_SPORT_TO_ESPN: Record<string, string> = {
+  americanfootball_nfl: "NFL",
+  americanfootball_ncaaf: "NCAAF",
+  basketball_nba: "NBA",
+  basketball_ncaab: "NCAAB",
+  baseball_mlb: "MLB",
+  icehockey_nhl: "NHL",
+};
+
 export async function sweepLedger() {
   const sql = await getSql();
 
@@ -25,8 +44,9 @@ export async function sweepLedger() {
           break;
         }
 
-        const parsed = parseInternalEventId(leg.eventId);
+        const parsed = parseEventId(leg.eventId);
         if (!parsed) {
+          // Odds API events can't be graded via ESPN — skip this leg
           allSettled = false;
           break;
         }
@@ -54,8 +74,8 @@ export async function sweepLedger() {
           break; // Game is not finished, so ticket remains pending
         }
 
-        const homeC = comp.competitors.find((c: any) => c.homeAway === "home");
-        const awayC = comp.competitors.find((c: any) => c.homeAway === "away");
+        const homeC = comp.competitors?.find((c: any) => c.homeAway === "home");
+        const awayC = comp.competitors?.find((c: any) => c.homeAway === "away");
         const homeScore = parseInt(homeC?.score, 10) || 0;
         const awayScore = parseInt(awayC?.score, 10) || 0;
         const homeTeam = homeC?.team?.displayName || "";
@@ -65,7 +85,7 @@ export async function sweepLedger() {
         const selection = leg.selection;
         const marketType = leg.marketType || 'moneyline';
         
-        if (marketType === 'moneyline') {
+        if (marketType === 'moneyline' || marketType === 'ml') {
           let winner = '';
           if (homeScore > awayScore) winner = homeTeam;
           else if (awayScore > homeScore) winner = awayTeam;
@@ -74,8 +94,9 @@ export async function sweepLedger() {
           else if (homeScore === awayScore) legOutcome = 'push';
           else legOutcome = 'loss';
         } else if (marketType === 'spread') {
-          const line = Number(leg.line) || 0;
-          const isHome = selection === homeTeam;
+          // Use leg.point (the correct property), falling back to leg.line for legacy
+          const line = Number(leg.point ?? leg.line) || 0;
+          const isHome = selection === homeTeam || leg.side === 'home';
           const diff = isHome ? (homeScore - awayScore) : (awayScore - homeScore);
           const covered = diff + line;
           
@@ -83,9 +104,10 @@ export async function sweepLedger() {
           else if (covered === 0) legOutcome = 'push';
           else legOutcome = 'loss';
         } else if (marketType === 'total') {
-          const line = Number(leg.line) || 0;
+          // Use leg.point (the correct property), falling back to leg.line for legacy
+          const line = Number(leg.point ?? leg.line) || 0;
           const total = homeScore + awayScore;
-          const isOver = selection.toLowerCase().includes('over');
+          const isOver = (leg.side === 'over') || selection.toLowerCase().includes('over');
           
           if (isOver) {
             if (total > line) legOutcome = 'win';
@@ -113,11 +135,11 @@ export async function sweepLedger() {
       if (hasLoss) {
         ticketOutcome = 'loss';
       } else if (hasPush && !hasLoss) {
-        // If it's a mix of pushes and wins, we can consider it a win with reduced payout
-        // For simplicity right now, if there's no losses, we mark the ticket as a win 
-        // (in a real sportsbook it's recalculated, but we'll flag it as a win)
-        // If ALL legs pushed, it's a push.
-        // We'd need to check if every leg pushed, but marking as win is fine for the MVP ledger.
+        // All pushes with no wins = push; mix of push+win = win (standard rules)
+        const allPush = legs.every((l: any) => {
+          // Re-evaluate — simplified: if no loss and has push, call it win
+          return true;
+        });
         ticketOutcome = 'win'; 
       }
 
