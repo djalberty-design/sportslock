@@ -814,13 +814,13 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     ? ` Ticket vs handle tape on ${publicSplits.length} game${publicSplits.length === 1 ? "" : "s"} (Action Network + line-move inference - not Hard Rock's own book).`
     : " No public ticket/handle tape on this pull.";
   const et = etParts();
-  const upcoming = quotes
+  const upcoming = uniqueQuotes
     .filter((q) => !q.inPlay && new Date(q.start).getTime() > Date.now())
     .sort((a, b) => +new Date(a.start) - +new Date(b.start));
   const nextLock = upcoming[0]?.start ?? null;
-  const listed = [...new Set(quotes.map((q) => q.sport))];
+  const listed = [...new Set(uniqueQuotes.map((q) => q.sport))];
   const labels = ALL_SPORTS.map((sport) => {
-    const q = quotes.find((x) => x.sport === sport);
+    const q = uniqueQuotes.find((x) => x.sport === sport);
     if (!q) return sport;
     const when = new Date(q.start).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
     if (q.phase === "preseason") return `${sport} preseason ${when}`;
