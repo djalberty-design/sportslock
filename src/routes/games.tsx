@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Activity, LayoutGrid, Clock, CloudRain } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LayoutGrid, ChevronRight } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
-  const { scan, snapshot } = useDeskDecision();
+  const { snapshot } = useDeskDecision();
   
   // Group by game using the underlying snapshot briefs/quotes
   const gamesMap = new Map();
@@ -19,135 +18,145 @@ function TheMatrix() {
       homeAbbr: b.homeAbbr,
       awayAbbr: b.awayAbbr, 
       weather: b.weather,
-      eventId: b.eventId
+      eventId: b.eventId,
+      start: b.start,
+      markets: { awayML: null, homeML: null, awaySpread: null, homeSpread: null, over: null, under: null }
     });
   });
 
-  // Attach live quotes data to each game
+  // Attach live quotes data and populate markets
   snapshot?.quotes?.forEach((q: any) => {
-    if (gamesMap.has(q.eventId)) {
-      const g = gamesMap.get(q.eventId);
-      g.inPlay = q.inPlay;
-      g.homeScore = q.homeScore ?? 0;
-      g.awayScore = q.awayScore ?? 0;
-      g.period = q.period;
-      g.clock = q.clock;
-      g.start = q.start;
-      g.sport = q.sport || g.sport;
-      g.homeAbbr = q.homeAbbr || g.homeAbbr;
-      g.awayAbbr = q.awayAbbr || g.awayAbbr;
-      g.home = q.home || g.home;
-      g.away = q.away || g.away;
-      gamesMap.set(q.eventId, g);
-    } else {
-      gamesMap.set(q.eventId, {
-        eventId: q.eventId,
-        sport: q.sport || "GAME",
-        home: q.home || "Home",
-        away: q.away || "Away",
-        homeAbbr: q.homeAbbr,
-        awayAbbr: q.awayAbbr,
-        inPlay: q.inPlay,
-        homeScore: q.homeScore ?? 0,
-        awayScore: q.awayScore ?? 0,
-        period: q.period,
-        clock: q.clock,
-        start: q.start,
-      });
+    let g = gamesMap.get(q.eventId);
+    if (!g) {
+      g = {
+        eventId: q.eventId, sport: q.sport || "GAME", home: q.home || "Home", away: q.away || "Away",
+        homeAbbr: q.homeAbbr, awayAbbr: q.awayAbbr, start: q.start,
+        markets: { awayML: null, homeML: null, awaySpread: null, homeSpread: null, over: null, under: null }
+      };
     }
+    
+    // Fill out live info
+    g.inPlay = q.inPlay;
+    g.homeScore = q.homeScore ?? g.homeScore ?? 0;
+    g.awayScore = q.awayScore ?? g.awayScore ?? 0;
+    
+    // Assign markets based on QuoteLine data
+    if (q.marketType === 'ml') {
+      if (q.selection === q.home || q.selection === q.homeAbbr) g.markets.homeML = q.price;
+      else g.markets.awayML = q.price;
+    } else if (q.marketType === 'spread') {
+      if (q.selection === q.home || q.selection === q.homeAbbr) g.markets.homeSpread = { point: q.point, price: q.price };
+      else g.markets.awaySpread = { point: q.point, price: q.price };
+    } else if (q.marketType === 'total') {
+      if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
+      else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
+    }
+
+    gamesMap.set(q.eventId, g);
   });
 
   const games = Array.from(gamesMap.values());
 
+  const formatAm = (dec: number) => dec >= 2.0 ? `+${Math.round((dec - 1) * 100)}` : `-${Math.round(100 / (dec - 1))}`;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 mb-6 border-b border-line pb-4">
         <h1 className="text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
           <LayoutGrid className="size-8 text-primary" />
-          The Matrix
+          Matchups
         </h1>
-        <p className="text-muted text-sm">
-          Monte Carlo simulations and game script projections for upcoming matchups.
-        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="flex flex-col gap-8">
         {games.map(g => {
           const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : "Upcoming";
           
           return (
-            <div key={g.eventId} className="rounded-xl border border-line bg-panel p-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-3 opacity-10">
-                <Activity className="size-16" />
-              </div>
+            <div key={g.eventId} className="flex flex-col border-b border-line pb-6">
               
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-muted uppercase tracking-widest">{g.sport}</span>
-                {g.inPlay ? (
-                  <div className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 border border-red-500/30">
-                    <span className="relative flex size-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex size-2 rounded-full bg-red-500"></span>
-                    </span>
-                    <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Live</span>
-                  </div>
-                ) : g.weather ? (
-                  <div className="flex items-center gap-1 text-[10px] text-cyan-400 font-medium">
-                    <CloudRain className="size-3" />
-                    {g.weather}
-                  </div>
-                ) : (
-                  <span className="text-[10px] text-muted">{startTime}</span>
-                )}
-              </div>
-              
-              <div className="flex flex-col gap-2 relative z-10">
-                <div className="flex justify-between items-center text-lg font-display font-bold text-ink">
-                  <div className="flex items-center gap-3">
-                    {g.awayAbbr && <img src={espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} alt="" className="size-8 object-contain" />}
-                    <span>{g.away}</span>
-                  </div>
-                  {g.inPlay ? (
-                    <span className="text-primary font-mono text-2xl">{g.awayScore}</span>
-                  ) : (
-                    <span className="text-muted text-sm mx-4">@</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center text-lg font-display font-bold text-ink">
-                  <div className="flex items-center gap-3">
-                    {g.homeAbbr && <img src={espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} alt="" className="size-8 object-contain" />}
-                    <span>{g.home}</span>
-                  </div>
-                  {g.inPlay && (
-                    <span className="text-primary font-mono text-2xl">{g.homeScore}</span>
-                  )}
+              {/* Header Titles for Markets */}
+              <div className="flex mb-3">
+                <div className="w-[40%]"></div>
+                <div className="w-[60%] flex text-[10px] font-bold text-muted uppercase tracking-wider text-center">
+                  <div className="flex-1">Spread</div>
+                  <div className="flex-1">Total</div>
+                  <div className="flex-1">Winner</div>
                 </div>
               </div>
 
-              {g.inPlay && g.period != null && (
-                <div className="mt-4 flex items-center gap-1 text-xs text-primary font-bold uppercase tracking-wider">
-                  <Clock className="size-3" />
-                  <span>Q{g.period} {g.clock ? `• ${g.clock}` : ""}</span>
-                </div>
-              )}
+              {/* Grid Content */}
+              <div className="flex">
+                {/* Left Column: Teams */}
+                <div className="w-[40%] flex flex-col justify-between py-1 pr-4">
+                  
+                  {/* Away Team */}
+                  <div className="flex items-center gap-3 h-12">
+                    {g.awayAbbr ? <img src={espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    <span className="text-base font-medium text-ink truncate">{g.away}</span>
+                  </div>
 
-              <div className="mt-6 pt-4 border-t border-line/50">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted">Monte Carlo Projection</span>
-                  <span className="font-bold text-primary">Simulating Scripts...</span>
+                  {/* Home Team */}
+                  <div className="flex items-center gap-3 h-12 mt-2">
+                    {g.homeAbbr ? <img src={espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
+                    <span className="text-base font-medium text-ink truncate">{g.home}</span>
+                  </div>
                 </div>
-                <div className="h-1 w-full bg-line mt-2 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-primary/80" style={{ width: '45%' }} title="Shootout"></div>
-                  <div className="h-full bg-blue-500/80" style={{ width: '35%' }} title="Normal"></div>
-                  <div className="h-full bg-rose-500/80" style={{ width: '20%' }} title="Blowout"></div>
+
+                {/* Right Column: Odds Grid */}
+                <div className="w-[60%] flex gap-2">
+                  
+                  {/* SPREAD Column */}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-ink">{g.markets.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
+                    </div>
+                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-ink">{g.markets.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
+                    </div>
+                  </div>
+
+                  {/* TOTAL Column */}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-ink">{g.markets.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets.over?.price ? formatAm(g.markets.over.price) : ""}</span>
+                    </div>
+                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-ink">{g.markets.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets.under?.price ? formatAm(g.markets.under.price) : ""}</span>
+                    </div>
+                  </div>
+
+                  {/* WINNER Column */}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-primary">{g.markets.awayML ? formatAm(g.markets.awayML) : "-"}</span>
+                    </div>
+                    <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
+                      <span className="text-sm font-bold text-primary">{g.markets.homeML ? formatAm(g.markets.homeML) : "-"}</span>
+                    </div>
+                  </div>
+
                 </div>
               </div>
+
+              {/* Footer row */}
+              <div className="flex items-center justify-between mt-3 text-sm text-muted">
+                <span>{startTime}</span>
+                <button className="flex items-center text-primary font-medium hover:underline">
+                  More wagers <ChevronRight className="size-4 ml-1" />
+                </button>
+              </div>
+
             </div>
           );
         })}
         {games.length === 0 && (
-          <div className="col-span-full text-center p-12 text-muted border border-dashed border-line rounded-xl">
-            No games currently on the board.
+          <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
+            No active games to display.
           </div>
         )}
       </div>
