@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { ShieldCheck, Flame, Zap, BarChart2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, Flame, Zap, BarChart2, X, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
@@ -57,7 +57,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
               </span>
               <span className="text-[10px] text-muted flex items-center gap-2">
                 {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "TODAY"}
-                {firstBrief?.weather && <span>• 🌤️ {firstBrief.weather}</span>}
+                {firstBrief?.weather && <span>Ã¢â‚¬Â¢ Ã°Å¸Å’Â¤Ã¯Â¸Â {firstBrief.weather}</span>}
               </span>
             </div>
           </div>
