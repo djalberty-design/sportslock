@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
 import { ALL_SPORTS } from "@/lib/market/universe";
@@ -37,20 +36,7 @@ export function AdminPage() {
   const { isAdmin, access } = useAccess();
   const [tab, setTab] = useState<Tab>("allowlist");
 
-  if (!isAdmin) {
-    return (
-      <div className="space-y-4">
-        <h1 className="font-display text-3xl text-ink">Admin</h1>
-        <p className="text-sm text-muted">
-          Signed in as {access?.email || "a user"}. Admin settings are only for the owner. View AI Picks, photograph
-          Hard Rock, and keep your own log.
-        </p>
-        <Link to="/today" className="font-medium text-gold underline-offset-4 hover:underline">
-          Back to AI Picks
-        </Link>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
