@@ -21,7 +21,7 @@ async function handleSweep() {
 
   try {
     const snapshot = await buildLiveSnapshot();
-    const scan = buildScan(snapshot, false);
+    const scan = await buildScan(snapshot, false);
     const bag = buildDeskPicks(scan, snapshot);
 
     const now = Date.now();

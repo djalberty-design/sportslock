@@ -27,9 +27,9 @@ import {
   type DeskPick,
 } from "./picks.ts";
 
-function bag() {
+async function bag() {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const picks = buildDeskPicks(scan, snapshot);
   return { snapshot, scan, picks };
 }
@@ -59,8 +59,8 @@ function stubPick(over: Partial<DeskPick> & { selection: string }): DeskPick {
   };
 }
 
-test("hero has a chance-to-hit and a payout when one qualifies", () => {
-  const { picks } = bag();
+test("hero has a chance-to-hit and a payout when one qualifies", async () => {
+  const { picks } = await bag();
   if (picks.hero) {
     assert.ok(picks.hero.chance > 0.08 && picks.hero.chance < 1);
     assert.ok(picks.hero.decimalPayout >= 1.55);
@@ -70,8 +70,8 @@ test("hero has a chance-to-hit and a payout when one qualifies", () => {
   }
 });
 
-test("catalog covers popular, player, and period tickets", () => {
-  const { picks } = bag();
+test("catalog covers popular, player, and period tickets", async () => {
+  const { picks } = await bag();
   assert.ok(picks.popular.length >= 1);
   assert.ok(picks.periods.length >= 1 || picks.props.length >= 0);
   for (const p of [...picks.popular, ...picks.props, ...picks.periods]) {
@@ -81,8 +81,8 @@ test("catalog covers popular, player, and period tickets", () => {
   }
 });
 
-test("Popular mains stay on the lane even when The Call sits down", () => {
-  const { scan, picks } = bag();
+test("Popular mains stay on the lane even when The Call sits down", async () => {
+  const { scan, picks } = await bag();
   const mains = scan.rows.filter(
     (r) =>
       !r.isProp &&
@@ -98,8 +98,8 @@ test("Popular mains stay on the lane even when The Call sits down", () => {
   );
 });
 
-test("parlay ticket ids are URL-safe and still round-trip through lookup", () => {
-  const { scan, snapshot, picks } = bag();
+test("parlay ticket ids are URL-safe and still round-trip through lookup", async () => {
+  const { scan, snapshot, picks } = await bag();
   const two = picks.two[0] ?? picks.ribbon[0];
   assert.ok(two?.parlay);
   const id = two!.id;
@@ -119,23 +119,23 @@ test("parlay ticket ids are URL-safe and still round-trip through lookup", () =>
   assert.equal(decodeTicketId(encodeURIComponent(id)), id);
 });
 
-test("every named ticket has a hitting percentage and a payout", () => {
-  const { picks } = bag();
+test("every named ticket has a hitting percentage and a payout", async () => {
+  const { picks } = await bag();
   for (const p of picks.all) {
     assert.ok(p.chance > 0 && p.chance < 1, p.selection);
     assert.ok(p.decimalPayout > 1, p.selection);
   }
 });
 
-test("college player props stay off the catalog", () => {
-  const { picks } = bag();
+test("college player props stay off the catalog", async () => {
+  const { picks } = await bag();
   for (const p of picks.props) {
     assert.equal(isCollegeSport(p.sport), false);
   }
 });
 
-test("lookup roundtrip finds the named ticket", () => {
-  const { snapshot, scan, picks } = bag();
+test("lookup roundtrip finds the named ticket", async () => {
+  const { snapshot, scan, picks } = await bag();
   const target = picks.hero ?? picks.popular[0];
   assert.ok(target);
   const hit = lookupPick(target!.id, scan, snapshot);
@@ -143,8 +143,8 @@ test("lookup roundtrip finds the named ticket", () => {
   assert.equal(hit!.id, target!.id);
 });
 
-test("2-leg and 3-leg parlays are named; 4-leg is catalog only", () => {
-  const { picks } = bag();
+test("2-leg and 3-leg parlays are named; 4-leg is catalog only", async () => {
+  const { picks } = await bag();
   assert.ok(picks.two.length >= 1);
   assert.ok(picks.three.length >= 1);
   for (const p of [...picks.two, ...picks.three]) {
@@ -157,7 +157,7 @@ test("2-leg and 3-leg parlays are named; 4-leg is catalog only", () => {
   }
 });
 
-test("The Call prefers high-info markets — a 1st-inning 0.5 cannot beat a moneyline", () => {
+test("The Call prefers high-info markets — a 1st-inning 0.5 cannot beat a moneyline", async () => {
   const qInning = infoQuality({ bucket: "period", selection: "1st inning under 0.5", point: 0.5 });
   const qMl = infoQuality({ bucket: "popular", selection: "Baltimore to win", marketType: "ml" });
   assert.ok(qMl > 0.9);
@@ -167,8 +167,8 @@ test("The Call prefers high-info markets — a 1st-inning 0.5 cannot beat a mone
   assert.ok(ml > inn, `ML ${ml} should beat noisy inning ${inn}`);
 });
 
-test("hero is not a period slice, a parlay, or live", () => {
-  const { picks } = bag();
+test("hero is not a period slice, a parlay, or live", async () => {
+  const { picks } = await bag();
   if (picks.hero) {
     assert.notEqual(picks.hero.bucket, "period");
     assert.ok(!picks.hero.parlay);
@@ -177,7 +177,7 @@ test("hero is not a period slice, a parlay, or live", () => {
   }
 });
 
-test("calibrated chance keeps a moneyline, shrinks a thin period toward the book", () => {
+test("calibrated chance keeps a moneyline, shrinks a thin period toward the book", async () => {
   const fair = 0.57;
   const implied = 0.524;
   const ml = calibratedChance(fair, implied, 1);
@@ -187,14 +187,14 @@ test("calibrated chance keeps a moneyline, shrinks a thin period toward the book
   assert.ok(inn > implied);
 });
 
-test("NFL dog +3.5 is a better key-number ticket than +2.5", () => {
+test("NFL dog +3.5 is a better key-number ticket than +2.5", async () => {
   assert.ok(keyNumberTilt("NFL", 3.5) > keyNumberTilt("NFL", 2.5));
   assert.ok(keyNumberTilt("NFL", -2.5) > keyNumberTilt("NFL", -3.5));
   assert.equal(keyNumberTilt("MLB", 3.5), 0);
 });
 
-test("Safest mood still refuses a period as The Call", () => {
-  const { picks } = bag();
+test("Safest mood still refuses a period as The Call", async () => {
+  const { picks } = await bag();
   const singles = [picks.hero, ...picks.popular, ...picks.props, ...picks.periods].filter(
     (p): p is NonNullable<typeof p> => Boolean(p),
   );
@@ -202,12 +202,12 @@ test("Safest mood still refuses a period as The Call", () => {
   if (safe) assert.notEqual(safe.bucket, "period");
 });
 
-test("in-play tickets cannot be The Call and take a quality haircut", () => {
+test("in-play tickets cannot be The Call and take a quality haircut", async () => {
   const qLive = infoQuality({ bucket: "popular", selection: "Jays to win", marketType: "ml", inPlay: true });
   const qPre = infoQuality({ bucket: "popular", selection: "Jays to win", marketType: "ml" });
   assert.ok(qPre >= 0.99);
   assert.ok(qLive < 0.55);
-  const { snapshot, scan } = bag();
+  const { snapshot, scan } = await bag();
   for (const r of scan.rows) r.inPlay = true;
   const picks = buildDeskPicks(scan, snapshot);
   if (picks.hero) {
@@ -218,9 +218,9 @@ test("in-play tickets cannot be The Call and take a quality haircut", () => {
   if (hero) assert.notEqual(hero.row?.inPlay, true);
 });
 
-test("same board twice produces the same ranking", () => {
-  const a = bag();
-  const b = bag();
+test("same board twice produces the same ranking", async () => {
+  const a = await bag();
+  const b = await bag();
   assert.equal(a.picks.hero?.id, b.picks.hero?.id);
   assert.deepEqual(
     a.picks.all.map((p) => p.id),
@@ -228,8 +228,8 @@ test("same board twice produces the same ranking", () => {
   );
 });
 
-test("seeded sim is deterministic and unknown markets stand down", () => {
-  const { scan, picks } = bag();
+test("seeded sim is deterministic and unknown markets stand down", async () => {
+  const { scan, picks } = await bag();
   assert.equal(
     picks.all.map((p) => `${p.id}|${p.chance.toFixed(6)}|${p.score.toFixed(6)}`).join("\n"),
     picks.all.map((p) => `${p.id}|${p.chance.toFixed(6)}|${p.score.toFixed(6)}`).join("\n"),
@@ -245,26 +245,26 @@ test("seeded sim is deterministic and unknown markets stand down", () => {
   }
 });
 
-test("ribbon is 2- or 3-leg mains only — no 4-leg gold badge", () => {
-  const { picks } = bag();
+test("ribbon is 2- or 3-leg mains only — no 4-leg gold badge", async () => {
+  const { picks } = await bag();
   for (const p of picks.ribbon) {
     assert.ok(p.parlay);
     assert.ok(p.parlay!.legs.length === 2 || p.parlay!.legs.length === 3);
   }
 });
 
-test("closed-form quality is capped at 0.64 when sim does not emit", () => {
-  const r = bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair == null);
+test("closed-form quality is capped at 0.64 when sim does not emit", async () => {
+  const r = await bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair == null);
   if (!r) {
-    const withSim = bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair != null);
+    const withSim = await bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair != null);
     assert.ok(withSim, "sample board should emit sim on mains when latent.ran");
     return;
   }
-  const p = bag().picks.popular.find((x) => x.row?.eventId === r.eventId);
+  const p = await bag().picks.popular.find((x) => x.row?.eventId === r.eventId);
   if (p) assert.ok(p.infoQuality <= 0.64);
 });
 
-test("Alvarez over 2.5 (Looked, quality 0.64, edge −2) cannot be The Call", () => {
+test("Alvarez over 2.5 (Looked, quality 0.64, edge −2) cannot be The Call", async () => {
   const alvarez = stubPick({
     id: "alvarez-over-2.5",
     bucket: "prop",
@@ -282,7 +282,7 @@ test("Alvarez over 2.5 (Looked, quality 0.64, edge −2) cannot be The Call", ()
   assert.equal(pickHero([alvarez], [], "pay"), null);
 });
 
-test("missing process stamp is Looked and cannot steal The Call", () => {
+test("missing process stamp is Looked and cannot steal The Call", async () => {
   const missing = stubPick({
     id: "missing-process",
     selection: "Orioles to win",
@@ -295,7 +295,7 @@ test("missing process stamp is Looked and cannot steal The Call", () => {
   assert.equal(pickHero([missing], [], "value"), null);
 });
 
-test("a high-info ML with process Ran and a non-negative edge can be The Call", () => {
+test("a high-info ML with process Ran and a non-negative edge can be The Call", async () => {
   const ml = stubPick({
     id: "bal-ml",
     bucket: "popular",
@@ -355,8 +355,8 @@ test("a high-info ML with process Ran and a non-negative edge can be The Call", 
   assert.equal(pickHero([alvarez, live, period, underBook], [], "safe"), null);
 });
 
-test("Load this ticket id round-trips through lookup and reconstructs custom legs", () => {
-  const { scan, snapshot, picks } = bag();
+test("Load this ticket id round-trips through lookup and reconstructs custom legs", async () => {
+  const { scan, snapshot, picks } = await bag();
   const two = picks.two[0] ?? picks.ribbon[0];
   assert.ok(two?.parlay);
   const id = two!.id;
@@ -378,8 +378,8 @@ test("Load this ticket id round-trips through lookup and reconstructs custom leg
   }
 });
 
-test("unknown parlay leg still opens the slip and stands that leg down", () => {
-  const { scan, snapshot } = bag();
+test("unknown parlay leg still opens the slip and stands that leg down", async () => {
+  const { scan, snapshot } = await bag();
   const row = scan.rows.find((r) => r.marketType === "ml" && !r.inPlay);
   assert.ok(row);
   const id = parlayTicketIdFromLegs([
@@ -392,8 +392,8 @@ test("unknown parlay leg still opens the slip and stands that leg down", () => {
   assert.match(hit!.why, /Stood down/i);
 });
 
-test("forced live parlay still opens with a combined quality haircut", () => {
-  const { scan } = bag();
+test("forced live parlay still opens with a combined quality haircut", async () => {
+  const { scan } = await bag();
   const mls = scan.rows.filter((r) => r.marketType === "ml" && !r.isProp && r.tag !== "illegal_fl");
   const a = mls[0];
   const b = mls.find((r) => r.eventId !== a?.eventId);
@@ -406,8 +406,8 @@ test("forced live parlay still opens with a combined quality haircut", () => {
   assert.match(hit.why, /Live/);
 });
 
-test("4-leg catalog id opens a parlay ticket", () => {
-  const { scan, snapshot, picks } = bag();
+test("4-leg catalog id opens a parlay ticket", async () => {
+  const { scan, snapshot, picks } = await bag();
   const four = picks.four[0];
   if (!four?.parlay) return;
   const hit = lookupPick(four.id, scan, snapshot);
@@ -416,8 +416,8 @@ test("4-leg catalog id opens a parlay ticket", () => {
   assert.match(four.id, /^p\d+__/);
 });
 
-test("Popular keeps tonight's mains even when live games flood the board", () => {
-  const { scan, snapshot } = bag();
+test("Popular keeps tonight's mains even when live games flood the board", async () => {
+  const { scan, snapshot } = await bag();
   const events = [...new Set(scan.rows.filter((r) => r.marketType === "ml" && !r.isProp).map((r) => r.eventId))];
   const keep = events[0];
   assert.ok(keep);
@@ -432,8 +432,8 @@ test("Popular keeps tonight's mains even when live games flood the board", () =>
   );
 });
 
-test("ribbon tap reconstructs a 2-leg slip — combined ticket plus each leg on the board", () => {
-  const { scan, snapshot, picks } = bag();
+test("ribbon tap reconstructs a 2-leg slip — combined ticket plus each leg on the board", async () => {
+  const { scan, snapshot, picks } = await bag();
   const slip = picks.ribbon[0] ?? picks.two[0];
   assert.ok(slip?.parlay, "sample board should name a 2-leg slip");
   assert.ok(slip!.parlay!.legs.length === 2 || slip!.parlay!.legs.length === 3);
@@ -450,7 +450,7 @@ test("ribbon tap reconstructs a 2-leg slip — combined ticket plus each leg on 
   }
 });
 
-test("Safest does not lead with a low-quality research 94% total", () => {
+test("Safest does not lead with a low-quality research 94% total", async () => {
   const junk = stubPick({
     id: "u12.5",
     selection: "Under 12.5 runs",
@@ -475,8 +475,8 @@ test("Safest does not lead with a low-quality research 94% total", () => {
   assert.notEqual(ranked[0].id, "u12.5");
 });
 
-test("spread parlay id reconstructs spreads, not moneyline TBA", () => {
-  const { scan, snapshot, picks } = bag();
+test("spread parlay id reconstructs spreads, not moneyline TBA", async () => {
+  const { scan, snapshot, picks } = await bag();
   const two = picks.two[0] ?? picks.ribbon[0];
   assert.ok(two?.parlay);
   const spreads = two!.parlay!.legs.every((l) => l.marketType === "spread")
@@ -495,7 +495,7 @@ test("spread parlay id reconstructs spreads, not moneyline TBA", () => {
   assert.ok(Math.abs(hit!.chance - target!.chance) < 0.02);
 });
 
-test("quality badge is High ≥0.72, Med 0.55–0.71, Low <0.55 — chance does not rewrite it", () => {
+test("quality badge is High ≥0.72, Med 0.55–0.71, Low <0.55 — chance does not rewrite it", async () => {
   assert.equal(qualityBand(0.72), "high");
   assert.equal(qualityBand(0.7), "medium");
   assert.equal(qualityBand(0.62), "medium");
@@ -506,8 +506,8 @@ test("quality badge is High ≥0.72, Med 0.55–0.71, Low <0.55 — chance does 
   assert.equal(confidenceOf(0.54, 0.94, 0.2), "low");
 });
 
-test("catalog, lookup, and store-leg display share one combined %", () => {
-  const { scan, snapshot, picks } = bag();
+test("catalog, lookup, and store-leg display share one combined %", async () => {
+  const { scan, snapshot, picks } = await bag();
   const two = picks.two[0];
   assert.ok(two?.parlay);
   const shown = shownParlayChance(two!.parlay!);
@@ -519,8 +519,8 @@ test("catalog, lookup, and store-leg display share one combined %", () => {
   assert.ok(Math.abs(fromStore - shown) < 0.03);
 });
 
-test("reason line prints the displayed integer, not raw combinedFair", () => {
-  const { scan, snapshot, picks } = bag();
+test("reason line prints the displayed integer, not raw combinedFair", async () => {
+  const { scan, snapshot, picks } = await bag();
   const slips = [...(picks.two ?? []), ...(picks.sgp ?? [])].filter(
     (p) => p.parlay && /Combined chance/i.test(p.parlay.reason),
   );
@@ -541,7 +541,7 @@ test("reason line prints the displayed integer, not raw combinedFair", () => {
   }
 });
 
-test("Safest column prefers 65% and falls back to the single highest if nobody clears it", () => {
+test("Safest column prefers 65% and falls back to the single highest if nobody clears it", async () => {
   const a = stubPick({ id: "a", selection: "A", chance: 0.71 });
   const b = stubPick({ id: "b", selection: "B", chance: 0.66 });
   const c = stubPick({ id: "c", selection: "C", chance: 0.52 });
@@ -560,7 +560,7 @@ test("Safest column prefers 65% and falls back to the single highest if nobody c
   assert.equal(highestTodayLabel(fallback[0]!), "Highest Probability Today (52%)");
 });
 
-test("belowSixty flags under 60% and not 60%+", () => {
+test("belowSixty flags under 60% and not 60%+", async () => {
   assert.equal(belowSixty(stubPick({ id: "u", selection: "U", chance: 0.59 })), true);
   assert.equal(belowSixty(stubPick({ id: "s", selection: "S", chance: 0.6 })), false);
 });

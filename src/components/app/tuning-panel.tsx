@@ -1,31 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createServerFn } from "@tanstack/react-start";
+import { getTuning, updateTuning, type TuningConfig, DEFAULT_TUNING } from "@/lib/tuning-api";
+
+export const fetchTuningConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return await getTuning();
+});
+
+export const saveTuningConfig = createServerFn({ method: "POST" })
+  .validator((d: TuningConfig) => d)
+  .handler(async ({ data }) => {
+    return await updateTuning(data);
+  });
 
 export function TuningPanel() {
-  const [minEdge, setMinEdge] = useState(2.5);
-  const [kellyMultiplier, setKellyMultiplier] = useState(0.25);
-  const [maxLegs, setMaxLegs] = useState(3);
-  const [activeFeeds, setActiveFeeds] = useState({
-    MLB: true,
-    NFL: true,
-    NCAAF: true,
-  });
+  const [minEdge, setMinEdge] = useState(DEFAULT_TUNING.minEdge);
+  const [kellyMultiplier, setKellyMultiplier] = useState(DEFAULT_TUNING.kellyMultiplier);
+  const [maxLegs, setMaxLegs] = useState(DEFAULT_TUNING.maxLegs);
+  const [activeFeeds, setActiveFeeds] = useState<Record<string, boolean>>(DEFAULT_TUNING.activeFeeds);
   
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  const toggleFeed = (feed: "MLB" | "NFL" | "NCAAF") => {
+  useEffect(() => {
+    fetchTuningConfig().then((config) => {
+      setMinEdge(config.minEdge);
+      setKellyMultiplier(config.kellyMultiplier);
+      setMaxLegs(config.maxLegs);
+      setActiveFeeds(config.activeFeeds);
+      setIsLoading(false);
+    }).catch(err => {
+      console.error("Failed to load tuning config", err);
+      setIsLoading(false);
+    });
+  }, []);
+
+  const toggleFeed = (feed: string) => {
     setActiveFeeds(prev => ({ ...prev, [feed]: !prev[feed] }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await saveTuningConfig({ data: { minEdge, kellyMultiplier, maxLegs, activeFeeds } });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
-    }, 400);
+    } catch (err) {
+      console.error("Failed to save tuning config", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="text-zinc-500 font-mono text-sm p-6">Loading algorithmic parameters...</div>;
+  }
 
   return (
     <div className="rounded-md bg-zinc-900 border border-zinc-800 p-6 font-mono text-sm max-w-2xl">
@@ -84,7 +113,7 @@ export function TuningPanel() {
         <div className="space-y-3 pt-4 border-t border-zinc-800">
           <label className="text-zinc-300 font-bold uppercase tracking-wider text-xs block mb-4">Active Market Feeds</label>
           <div className="flex gap-4">
-            {(["MLB", "NFL", "NCAAF"] as const).map(feed => (
+            {(["MLB", "NFL", "NCAAF"]).map(feed => (
               <button
                 key={feed}
                 type="button"

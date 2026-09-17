@@ -77,19 +77,19 @@ function scrubPicks(picks: DeskPicks): DeskPicks {
   };
 }
 
-export function rankDesk(
+export async function rankDesk(
   snapshot: DeskSnapshot,
   halt: boolean,
   settings?: RankSettings,
-): { scan: ScanBundle; picks: DeskPicks } {
-  const scan = applyFloridaLaw(buildScan(snapshot, halt, settings));
+): Promise<{ scan: ScanBundle; picks: DeskPicks }> {
+  const scan = applyFloridaLaw(await buildScan(snapshot, halt, settings));
   const picks = scrubPicks(buildDeskPicks(scan, snapshot));
   return { scan, picks };
 }
 
-export function runRankJob(req: RankRequest): RankResult {
+export async function runRankJob(req: RankRequest): Promise<RankResult> {
   const t0 = Date.now();
-  const { scan, picks } = rankDesk(req.snapshot, req.halt, req.settings);
+  const { scan, picks } = await rankDesk(req.snapshot, req.halt, req.settings);
   return { id: req.id, scan, picks, ms: Date.now() - t0 };
 }
 

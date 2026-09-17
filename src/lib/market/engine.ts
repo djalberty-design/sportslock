@@ -27,10 +27,12 @@ import { processFromLooks } from "./looks.ts";
 import { parlayInfoQuality, shownCombinedChance } from "./calibrate.ts";
 import { formatChancePct } from "../copy.ts";
 import { DEFAULT_COMBO_LEG_CAP, type RankSettings } from "../desk-settings.ts";
+import { getTuning } from "../tuning-api.ts";
 
 export const COMBO_SEED_CAP = DEFAULT_COMBO_LEG_CAP;
 
 let activeKelly = 1;
+let activeMinEdge = 0.025;
 let activeComboCap = COMBO_SEED_CAP;
 
 export function americanToImplied(odds: number): number {
@@ -151,7 +153,7 @@ function tagFor(ev: number, hold: number, row: Omit<ScanRow, "tag" | "action" | 
   if (row.isProp && isCollegeSport(row.sport)) return "illegal_fl";
   if (row.isProp && !isKnownMarket(row.selection, row.marketType)) return "unknown_market";
   if (row.inPlay) return "in_play";
-  if (Number.isFinite(ev) && ev >= 0 && row.hardRockPrice != null) return "fair_or_better";
+  if (Number.isFinite(ev) && ev >= activeMinEdge && row.hardRockPrice != null) return "fair_or_better";
   if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
     return "close_enough";
   }
@@ -1004,14 +1006,16 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
   return out;
 }
 
-export function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings?: RankSettings): ScanBundle {
-  activeKelly = settings?.kellyMultiplier ?? 1;
-  activeComboCap = Math.min(20, Math.max(8, settings?.comboLegCap ?? COMBO_SEED_CAP));
+export async function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings?: RankSettings): Promise<ScanBundle> {
+  const tuning = await getTuning();
+  activeKelly = tuning.kellyMultiplier;
+  activeComboCap = tuning.maxLegs;
+  activeMinEdge = tuning.minEdge / 100;
   const scored = scoreQuotes(snapshot);
   const stamped = stampRows(scored, snapshot.publicSplits ?? []);
   let rows = applyEnsemble(stamped, snapshot);
-  if (settings?.sportFeeds) {
-    rows = rows.filter((r) => settings.sportFeeds[r.sport as keyof typeof settings.sportFeeds] !== false);
+  if (tuning.activeFeeds) {
+    rows = rows.filter((r) => tuning.activeFeeds[r.sport as keyof typeof tuning.activeFeeds] !== false);
   }
   const missingBoard = snapshot.quotes.length === 0;
   const bestMain = missingBoard ? null : pickAnyMain(rows);

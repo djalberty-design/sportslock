@@ -76,7 +76,7 @@ function playsFrom(opts: Partial<BuildPlaysInput> & Pick<BuildPlaysInput, "bankr
   });
 }
 
-test("american implied and no-vig hold on -110/-110", () => {
+test("american implied and no-vig hold on -110/-110", async () => {
   const p = americanToImplied(-110);
   assert.ok(Math.abs(p - 110 / 210) < 1e-10);
   const nv = twoWayNoVig(-110, -110);
@@ -84,7 +84,7 @@ test("american implied and no-vig hold on -110/-110", () => {
   assert.ok(nv.hold > 0.04 && nv.hold < 0.05);
 });
 
-test("chance-to-hit is the desk language, not raw American odds", () => {
+test("chance-to-hit is the desk language, not raw American odds", async () => {
   assert.equal(formatChancePct(0.57), "57%");
   assert.equal(formatChancePct(0.084), "8.4%");
   assert.equal(formatChancePct(0.995), "99%");
@@ -92,9 +92,9 @@ test("chance-to-hit is the desk language, not raw American odds", () => {
   assert.equal(formatChancePct(undefined), null);
 });
 
-test("1. $50 seed, any board: recommended safe is a real one-game ticket, not Don't bet", () => {
+test("1. $50 seed, any board: recommended safe is a real one-game ticket, not Don't bet", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 50, scan, snapshot });
   assert.equal(board.recommended, "safe");
   assert.notEqual(board.safe.symbol, "SIT");
@@ -106,9 +106,9 @@ test("1. $50 seed, any board: recommended safe is a real one-game ticket, not Do
   assert.notEqual(board.verdict.lane, "risky");
 });
 
-test("2. $2,000 halt off, today's one-game is a real ticket with a payout", () => {
+test("2. $2,000 halt off, today's one-game is a real ticket with a payout", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const best = pickBestMain(scan.rows);
   assert.ok(best, "expected a today one-game");
   assert.ok(isTodayEt(best!.start), "today's pick must be a game playing today");
@@ -128,7 +128,7 @@ test("2. $2,000 halt off, today's one-game is a real ticket with a payout", () =
   assert.ok(board.threeLegs.length >= 1);
 });
 
-test("3. $2,000 all mains juiced on KC/BAL: safest is still a real ticket, never Don't bet", () => {
+test("3. $2,000 all mains juiced on KC/BAL: safest is still a real ticket, never Don't bet", async () => {
   const snapshot = sampleSnapshot();
   snapshot.quotes = snapshot.quotes.map((q) => {
     if (q.eventId === "nfl-kc-bal" && q.marketType === "ml") {
@@ -136,7 +136,7 @@ test("3. $2,000 all mains juiced on KC/BAL: safest is still a real ticket, never
     }
     return q;
   });
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   assert.notEqual(board.safe.symbol, "SIT");
   assert.doesNotMatch(board.safe.title, /don't bet/i);
@@ -144,9 +144,9 @@ test("3. $2,000 all mains juiced on KC/BAL: safest is still a real ticket, never
   assert.equal(board.recommended, "safe");
 });
 
-test("4. Daily stop never blocks a paper lock — this site does not place bets", () => {
+test("4. Daily stop never blocks a paper lock — this site does not place bets", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, true);
+  const scan = await buildScan(snapshot, true);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot, halt: true });
   assert.equal(board.safe.liveFits, true);
   assert.doesNotMatch(board.safe.because, /daily stop|loss limit/i);
@@ -155,7 +155,7 @@ test("4. Daily stop never blocks a paper lock — this site does not place bets"
   assert.equal(allowed.ok, true);
 });
 
-test("5. 3-leg each fairProb 0.58, combined EV −12%: entertainment, not recommended, prints ~19.5%", () => {
+test("5. 3-leg each fairProb 0.58, combined EV −12%: entertainment, not recommended, prints ~19.5%", async () => {
   const legs = [
     row({ eventId: "g1", selection: "A ML", fairProb: 0.58 }),
     row({ eventId: "g2", selection: "B ML", fairProb: 0.58 }),
@@ -172,7 +172,7 @@ test("5. 3-leg each fairProb 0.58, combined EV −12%: entertainment, not recomm
   assert.equal(approx, "19.5%");
 
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   scan.bestSpicy = cand;
   scan.topThrees = [cand];
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
@@ -183,7 +183,7 @@ test("5. 3-leg each fairProb 0.58, combined EV −12%: entertainment, not recomm
   assert.equal(board.risky.symbol, "3LEG");
 });
 
-test("6. 3-leg with a 0.51 fair leg: illegal for the risky card", () => {
+test("6. 3-leg with a 0.51 fair leg: illegal for the risky card", async () => {
   const legs = [
     row({ eventId: "g1", selection: "A ML", fairProb: 0.58 }),
     row({ eventId: "g2", selection: "B ML", fairProb: 0.58 }),
@@ -196,7 +196,7 @@ test("6. 3-leg with a 0.51 fair leg: illegal for the risky card", () => {
   assert.equal("ok" in built && built.ok === false, true);
 });
 
-test("7. 4-leg: illegal on the Today ribbon. Legal on the Parlay catalog.", () => {
+test("7. 4-leg: illegal on the Today ribbon. Legal on the Parlay catalog.", async () => {
   const legs = [
     row({ eventId: "g1", selection: "A", fairProb: 0.6 }),
     row({ eventId: "g2", selection: "B", fairProb: 0.6 }),
@@ -213,9 +213,9 @@ test("7. 4-leg: illegal on the Today ribbon. Legal on the Parlay catalog.", () =
   assert.ok(cand.score != null);
 });
 
-test("8. College player prop: market check blocks. No Gators QB card", () => {
+test("8. College player prop: market check blocks. No Gators QB card", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   const market = board.verdict.checks.find((c) => c.id === "market");
   const props = board.verdict.checks.find((c) => c.id === "props");
@@ -234,9 +234,9 @@ test("8. College player prop: market check blocks. No Gators QB card", () => {
   assert.equal(statuses.find((s) => s.kind === "prop")?.status, "blocked");
 });
 
-test("9. DK Sportsbook moneyline as live Florida ticket: venue check blocks", () => {
+test("9. DK Sportsbook moneyline as live Florida ticket: venue check blocks", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   const venue = board.verdict.checks.find((c) => c.id === "venue");
   assert.ok(venue);
@@ -247,9 +247,9 @@ test("9. DK Sportsbook moneyline as live Florida ticket: venue check blocks", ()
   assert.equal(illegal!.tag, "illegal_fl");
 });
 
-test("10. Public 80% tickets / 54% handle: board check noted. No fade/tail card", () => {
+test("10. Public 80% tickets / 54% handle: board check noted. No fade/tail card", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   const boardCheck = board.verdict.checks.find((c) => c.id === "board");
   assert.ok(boardCheck);
@@ -264,7 +264,7 @@ test("10. Public 80% tickets / 54% handle: board check noted. No fade/tail card"
   assert.equal(kc?.tapeLean, "public");
 });
 
-test("11. Screenshot parse unconfirmed does not enter scan", () => {
+test("11. Screenshot parse unconfirmed does not enter scan", async () => {
   const snapshot = emptySnap();
   snapshot.quotes = [
     {
@@ -284,11 +284,11 @@ test("11. Screenshot parse unconfirmed does not enter scan", () => {
   ];
   const usable = snapshot.quotes.filter((q) => q.confirmed !== false && q.source !== "screenshot" || q.confirmed);
   assert.equal(usable.length, 0);
-  const scan = buildScan({ ...snapshot, quotes: snapshot.quotes.filter((q) => q.confirmed) }, false);
+  const scan = await buildScan({ ...snapshot, quotes: snapshot.quotes.filter((q) => q.confirmed) }, false);
   assert.equal(scan.missingBoard, true);
 });
 
-test("12. Learn: next from 0 → 1; last lesson Next disabled helper", () => {
+test("12. Learn: next from 0 → 1; last lesson Next disabled helper", async () => {
   assert.equal(LESSONS.length, 13);
   assert.equal(nextLearnIndex(0), 1);
   assert.equal(nextLearnIndex(12), 12);
@@ -296,7 +296,7 @@ test("12. Learn: next from 0 → 1; last lesson Next disabled helper", () => {
   assert.equal(isLastLesson(11), false);
 });
 
-test("13. Paper size: 1% of $80 book is under $1 → dust error", () => {
+test("13. Paper size: 1% of $80 book is under $1 → dust error", async () => {
   const unit = unitDollars(80, 0.01);
   assert.ok(unit < 1);
   const r = canPlacePaper({ stake: unit, paperCash: 80, halted: false, dustUsd: 1 });
@@ -304,20 +304,20 @@ test("13. Paper size: 1% of $80 book is under $1 → dust error", () => {
   if (!r.ok) assert.match(r.error, /dust|under|too small/i);
 });
 
-test("14. Same-position keepers, FAAB, VOO, USDC are not live cards", () => {
+test("14. Same-position keepers, FAAB, VOO, USDC are not live cards", async () => {
   const kinds = OPTION_CATALOG.map((o) => o.kind).join(",");
   assert.doesNotMatch(kinds, /FAAB|VOO|USDC|keeper/i);
   const titles = OPTION_CATALOG.map((o) => `${o.title} ${o.symbol}`).join(" ");
   assert.doesNotMatch(titles, /\bVOO\b|\bUSDC\b|FAAB/);
 });
 
-test("15. Auth off is a product constant (no sign-in gate on /)", () => {
+test("15. Auth off is a product constant (no sign-in gate on /)", async () => {
   assert.equal(LESSONS[0]?.id, "venue");
 });
 
-test("16. Eleven checks always present in order; delay=blocks; board=noted; news=discarded", () => {
+test("16. Eleven checks always present in order; delay=blocks; board=noted; news=discarded", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 200, scan, snapshot });
   const ids = board.verdict.checks.map((c) => c.id);
   assert.deepEqual(ids, [...CHECK_ORDER]);
@@ -328,16 +328,16 @@ test("16. Eleven checks always present in order; delay=blocks; board=noted; news
   assert.equal(board.verdict.checks.find((c) => c.id === "stack")?.used, "supports");
 });
 
-test("17. Pin / ignore ribbon does not change the call", () => {
+test("17. Pin / ignore ribbon does not change the call", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const a = playsFrom({ bankroll: 50, scan, snapshot, ignoreRibbon: false });
   const b = playsFrom({ bankroll: 50, scan, snapshot, ignoreRibbon: true });
   assert.equal(a.recommended, b.recommended);
   assert.equal(a.verdict.symbol, b.verdict.symbol);
 });
 
-test("same-game 3-leg SGP is blocked", () => {
+test("same-game 3-leg SGP is blocked", async () => {
   const legs = [
     row({ eventId: "same", selection: "ML", fairProb: 0.6, marketType: "ml" }),
     row({ eventId: "same", selection: "Spread", fairProb: 0.6, marketType: "spread" }),
@@ -348,7 +348,7 @@ test("same-game 3-leg SGP is blocked", () => {
   assert.match(reason!, /same-game|SGP/i);
 });
 
-test("unconfirmed slate does not lock a lineup", () => {
+test("unconfirmed slate does not lock a lineup", async () => {
   const players = parseSlateTable(
     "Mahomes,QB,KC,7800,24\nKelce,TE,KC,6200,14\nPacheco,RB,KC,5800,13",
     "NFL",
@@ -366,7 +366,7 @@ test("unconfirmed slate does not lock a lineup", () => {
   assert.equal(bundle.gpp, null);
 });
 
-test("path table shrinks a $200 book at −4% EV", () => {
+test("path table shrinks a $200 book at −4% EV", async () => {
   const t = pathTable(200, 0.01);
   const u100 = t.find((p) => p.units === 100)!;
   assert.ok(u100.evNeg4 < 200);
@@ -375,23 +375,23 @@ test("path table shrinks a $200 book at −4% EV", () => {
   assert.match(PATH_HONESTY, /not a path to \$1M/i);
 });
 
-test("combined fair product of three 0.58 legs is ~19.5%", () => {
+test("combined fair product of three 0.58 legs is ~19.5%", async () => {
   assert.ok(Math.abs(product([0.58, 0.58, 0.58]) * 100 - 19.5112) < 1e-3);
 });
 
-test("evPct of a fair-or-better plus-money dog", () => {
+test("evPct of a fair-or-better plus-money dog", async () => {
   const nv = twoWayNoVig(-150, 130);
   const ev = evPct(160, nv.fairAway);
   assert.ok(ev > 0);
 });
 
-test("ML is never shown raw — shortPick says 'to win'", () => {
+test("ML is never shown raw — shortPick says 'to win'", async () => {
   assert.equal(shortPick("Baltimore ML", "ml"), "Baltimore to win");
   assert.equal(shortPick("Detroit ML", "ml"), "Detroit to win");
   assert.match(GLOSSARY.find((t) => t.id === "ml")!.meaning, /who wins/i);
 });
 
-test("profit on a $10 bet at -150 and +130 is in dollars", () => {
+test("profit on a $10 bet at -150 and +130 is in dollars", async () => {
   const fav = profitOnStake(10, -150);
   assert.ok(Math.abs(fav.profit - 10 * (100 / 150)) < 1e-9);
   assert.ok(Math.abs(fav.total - (10 + fav.profit)) < 1e-9);
@@ -400,9 +400,9 @@ test("profit on a $10 bet at -150 and +130 is in dollars", () => {
   assert.ok(Math.abs(dog.total - 23) < 1e-9);
 });
 
-test("riskiest card is a 3-game parlay, never Don't bet", () => {
+test("riskiest card is a 3-game parlay, never Don't bet", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   assert.ok(scan.topThrees.length >= 1, "expected ranked 3-leg parlays");
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   assert.equal(board.risky.symbol, "3LEG");
@@ -423,7 +423,7 @@ test("riskiest card is a 3-game parlay, never Don't bet", () => {
   }
 });
 
-test("DFS buy-in tracks 1% of bankroll", () => {
+test("DFS buy-in tracks 1% of bankroll", async () => {
   assert.equal(targetDfsFee(200), 2);
   const rec = suggestContests(200, []);
   assert.ok(rec.cash);
@@ -431,9 +431,9 @@ test("DFS buy-in tracks 1% of bankroll", () => {
   assert.match(rec.note, /1%/);
 });
 
-test("tickets name home, away, and Eastern kickoff", () => {
+test("tickets name home, away, and Eastern kickoff", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const board = playsFrom({ bankroll: 2_000, scan, snapshot });
   assert.ok(board.safe.home);
   assert.ok(board.safe.away);
@@ -445,7 +445,7 @@ test("tickets name home, away, and Eastern kickoff", () => {
   assert.equal(matchupLine("Baltimore", "Kansas City"), "Baltimore (away) at Kansas City (home)");
 });
 
-test("fantasy points use the same game-lean research as the sports desk", () => {
+test("fantasy points use the same game-lean research as the sports desk", async () => {
   const players = parseSlateTable("Mahomes,QB,KC,7800,20\nHenry,RB,BAL,8000,18", "NFL");
   const nudged = applyGameLean(players, [
     { team: "KC", also: "Kansas City Chiefs", winChance: 0.7, total: 48, sport: "NFL", favoriteName: "Chiefs" },
@@ -458,7 +458,7 @@ test("fantasy points use the same game-lean research as the sports desk", () => 
   assert.match(mahomes!.researchNote ?? "", /70 in 100/);
 });
 
-test("value score prefers a real payout over a −400 favorite", () => {
+test("value score prefers a real payout over a −400 favorite", async () => {
   assert.ok(valueScore(0.58, -110) > valueScore(0.8, -400));
   assert.ok(valueScore(0.7, -150) > valueScore(0.82, -400));
   assert.ok(payoutMultiple(-400) < 0.5);
@@ -466,9 +466,9 @@ test("value score prefers a real payout over a −400 favorite", () => {
   assert.ok(payoutMultiple(-110) > 0.8);
 });
 
-test("today's pick never uses a later-week blowout", () => {
+test("today's pick never uses a later-week blowout", async () => {
   const snapshot = sampleSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   assert.ok(scan.bestMain);
   assert.ok(isTodayEt(scan.bestMain!.start));
   assert.notEqual(scan.bestMain!.eventId, "nfl-thu-blowout");
@@ -479,10 +479,10 @@ test("today's pick never uses a later-week blowout", () => {
   }
 });
 
-test("pickBestMain is empty when the only games are later this week", () => {
+test("pickBestMain is empty when the only games are later this week", async () => {
   const snapshot = sampleSnapshot();
   snapshot.quotes = snapshot.quotes.filter((q) => q.eventId === "nfl-thu-blowout");
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   assert.equal(scan.bestMain, null);
   assert.equal(scan.bestFlip, null);
   assert.equal(scan.bestTwo, null);

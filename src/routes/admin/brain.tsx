@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 const getBrainData = createServerFn({ method: 'GET' }).handler(async () => {
   const snapshot = await buildLiveSnapshot();
-  const scan = buildScan(snapshot, false);
+  const scan = await buildScan(snapshot, false);
   const bag = buildDeskPicks(scan, snapshot);
   return bag.all;
 });
