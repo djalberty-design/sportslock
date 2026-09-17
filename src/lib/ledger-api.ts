@@ -36,3 +36,9 @@ export async function insertLedgerTicket(ticket: LedgerTicket): Promise<void> {
     )
   `;
 }
+export async function getLedgerTickets() {
+  const sql = await getSql();
+  await ensureLedgerTable(sql);
+  const rows = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC`;
+  return rows;
+}

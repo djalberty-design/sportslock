@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TuningPanel } from "./tuning-panel";
+import { LedgerPanel } from "./ledger-panel";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
@@ -228,69 +229,6 @@ function AllowlistPanel() {
 }
 
 
-function LedgerPanel() {
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["master-ledger"], queryFn: () => listMasterLedger(), staleTime: 15_000 });
-  const rows = q.data?.rows ?? [];
-  const a = q.data?.analytics;
-
-  return (
-    <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-4">
-        <MiniStat label="Tickets" value={String(a?.tickets ?? 0)} />
-        <MiniStat label="Hit rate" value={a?.hitRate != null ? `${Math.round(a.hitRate * 100)}%` : "—"} />
-        <MiniStat label="Hits / misses" value={`${a?.hits ?? 0} / ${a?.misses ?? 0}`} />
-        <MiniStat label="Stake logged" value={formatBetUsd(a?.stake ?? 0)} />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" onClick={() => downloadLedger(rows)}>
-          Download my bets JSON
-        </Button>
-      </div>
-      <ul className="space-y-3">
-        {rows.map((row) => (
-          <li key={row.id} className="paper-card p-4">
-            <p className="stamp text-gold">{row.result}</p>
-            <h3 className="font-display mt-1 text-lg text-ink">{row.ticketName}</h3>
-            <p className="text-xs text-muted">
-              {row.userEmail || row.userId} · {formatBetUsd(row.stakeDollars)} · {formatChancePct(row.deskTrueProbability) ?? "—"}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(["HIT", "MISS", "PUSH", "PENDING"] as LedgerResult[]).map((result) => (
-                <Button
-                  key={result}
-                  type="button"
-                  size="sm"
-                  variant={row.result === result ? "primary" : "outline"}
-                  onClick={() => {
-                    void updateLedgerBet({ data: { id: row.id, result } }).then((next) => {
-                      qc.setQueryData(["master-ledger"], next);
-                    });
-                  }}
-                >
-                  {result === "HIT" ? "Hit" : result === "MISS" ? "Miss" : result === "PUSH" ? "Void" : "Open"}
-                </Button>
-              ))}
-              <Button
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={() => {
-                  void updateLedgerBet({ data: { id: row.id, delete: true } }).then((next) => {
-                    qc.setQueryData(["master-ledger"], next);
-                  });
-                }}
-              >
-                Delete
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {!rows.length ? <p className="text-sm text-muted">No tickets in the master ledger yet.</p> : null}
-    </section>
-  );
-}
 
 function StatusPanel() {
   const q = useQuery({ queryKey: ["feed-health"], queryFn: () => getFeedHealth(), staleTime: 30_000 });
