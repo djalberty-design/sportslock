@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { LayoutGrid, ChevronRight, BarChart2 } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
@@ -94,7 +94,7 @@ function TheMatrix() {
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
-                  {g.weather && <span className="text-xs text-muted">🌤️ {g.weather}</span>}
+                  {g.weather && <span className="text-xs text-muted">ðŸŒ¤ï¸ {g.weather}</span>}
                 </div>
                 
                 {/* AI Macro Projection */}
@@ -177,9 +177,7 @@ function TheMatrix() {
               {/* Footer row */}
               <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
                  <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
-                 <button className="flex items-center text-primary text-xs font-bold hover:underline">
-                   Open Game Ticket <ChevronRight className="size-3 ml-1" />
-                 </button>
+                 <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
               </div>
 
             </div>

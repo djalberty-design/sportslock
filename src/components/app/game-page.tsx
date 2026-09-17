@@ -1,500 +1,238 @@
-import { useState, type ReactNode } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { shortPick } from "@/lib/copy";
-import { useDeskStore } from "@/lib/desk-store";
-import { payoutMultiple } from "@/lib/market/engine";
-import {
-  assembleChanceInput,
-  gradeParlay,
-  leanEnglish,
-  predictFor,
-  researchedFavorite,
-  type EventResearch,
-} from "@/lib/market/research";
-import { buildChance } from "@/lib/market/chance";
-import { getEventResearch } from "@/lib/market/server";
-import type { QuoteLine, ScanRow } from "@/lib/market/types";
+import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, Camera } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { shownCombinedChance } from "@/lib/market/calibrate";
-import type { ParlayPick } from "@/lib/market/picks";
-import { WagerMeter } from "./wager-meter";
-import { HardRockSheet } from "./hard-rock-sheet";
-import { LiveBanner } from "./live-stamp";
+import { espnLogoUrl } from "@/lib/market/logos";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function GamePage({ eventId }: { eventId: string }) {
-  const { scan, snapshot } = useDeskDecision();
-  const addParlayLeg = useDeskStore((s) => s.addParlayLeg);
-  const removeParlayLeg = useDeskStore((s) => s.removeParlayLeg);
-  const legs = useDeskStore((s) => s.parlayLegs);
-  const [wager, setWager] = useState<ScanRow | null>(null);
-  const rows = (scan?.rows ?? []).filter((r) => r.eventId === eventId);
-  const quote = snapshot?.quotes.find((q) => q.eventId === eventId);
-  const first: ScanRow | QuoteLine | undefined = rows[0] ?? quote;
-  const brief = snapshot?.briefs?.find((b) => b.eventId === eventId);
-  const q = useQuery({
-    queryKey: ["research", eventId],
-    queryFn: () => getEventResearch({ data: { eventId } }),
-    enabled: Boolean(eventId),
-    staleTime: 120_000,
-  });
-  const research: EventResearch | null = q.data && q.data.ok ? q.data.research : null;
-  const home = first?.home ?? research?.home ?? "Home";
-  const away = first?.away ?? research?.away ?? "Away";
-  const start = first?.start ?? research?.start ?? "";
-  const sport = (first && "sport" in first ? first.sport : research?.sport) ?? "";
-  const mlHome = rows.find((r) => r.marketType === "ml" && r.side === "home");
-  const espnHome = research?.espnHomeWin ?? brief?.espnHomeWin;
-  const predict = predictFor(snapshot?.predict, eventId);
-  const report = buildChance(
-    assembleChanceInput({
-      rows,
-      brief,
-      research: research ?? undefined,
-      predict,
-      home,
-      away,
-      extra: {
-        ticketHome: brief?.ticketHome ?? snapshot?.publicSplits.find((s) => s.eventId === eventId)?.ticketPct,
-        handleHome: brief?.handleHome ?? snapshot?.publicSplits.find((s) => s.eventId === eventId)?.handlePct,
-        steam: brief?.steam ?? snapshot?.publicSplits.find((s) => s.eventId === eventId)?.steam,
-      },
-    }),
-  );
-  const fav = report
-    ? {
-        side: report.favorite,
-        name: report.favoriteName,
-        chance: report.chance,
-        homeChance: report.home,
-        report,
-      }
-    : researchedFavorite(rows, brief, { home, away });
-  const lean = leanEnglish({
-    home,
-    away,
-    oddsHome: mlHome?.fairProb,
-    espnHome,
-    ensembleHome: fav?.homeChance,
-    crowdHome: report?.crowdHome ?? predict?.kalshiHome ?? predict?.polyHome,
-  });
-  const liveWager =
-    wager && scan
-      ? (scan.rows.find(
-          (r) => r.eventId === wager.eventId && r.marketType === wager.marketType && r.side === wager.side,
-        ) ?? wager)
-      : wager;
+  const { snapshot } = useDeskDecision();
+  const [activeTab, setActiveTab] = useState("popular");
+  const [sgpSlip, setSgpSlip] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [wager, setWager] = useState("50");
 
-  function pickOneGame(row: ScanRow) {
-    setWager(row);
+  const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
+  const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
+  
+  if (gameQuotes.length === 0) {
+    return <div className="p-8 text-center text-muted">Game not found or loading...</div>;
   }
 
-  if (!first && !q.isLoading) {
+  const firstQuote = gameQuotes[0];
+  const homeLogo = firstQuote?.homeLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.homeAbbr);
+  const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.awayAbbr);
+  const isLive = firstQuote?.inPlay;
+
+  const toggleLeg = (quote: any) => {
+    setSgpSlip(prev => {
+      const exists = prev.find(p => p.selection === quote.selection && p.marketType === quote.marketType);
+      if (exists) return prev.filter(p => p !== exists);
+      return [...prev, quote];
+    });
+  };
+
+  const isSelected = (quote: any) => !!sgpSlip.find(p => p.selection === quote.selection && p.marketType === quote.marketType);
+
+  // Fast Frontend Math
+  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || 0.5), 1) : 0;
+  const hitProbPct = Math.round(combinedProb * 100);
+
+  // Fake Vegas multiplier for demo
+  const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
+      let p = leg.hardRockPrice || leg.consensusPrice || leg.price || -110;
+      let prob = p < 0 ? (-p / (-p + 100)) : (100 / (p + 100));
+      return acc * prob;
+  }, 1) : 0;
+  const vegasPct = Math.round(vegasImplied * 100);
+  const edgeVal = (hitProbPct - vegasPct).toFixed(1);
+  
+  // Decimal to American
+  let decPayout = 1 / (vegasImplied || 0.5);
+  let americanOdds = decPayout >= 2.0 
+    ? `+${Math.round((decPayout - 1) * 100)}`
+    : `-${Math.round(100 / (decPayout - 1))}`;
+  if (sgpSlip.length === 0) americanOdds = "";
+
+  const renderGrid = (type: string) => {
+    let items = gameQuotes;
+    if (type === "popular") items = gameQuotes.slice(0, 10);
+    if (type === "props") items = gameQuotes.filter(q => q.isProp);
+    if (type === "lines") items = gameQuotes.filter(q => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
+
     return (
-      <div className="space-y-4">
-        <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-emerald-500">
-          <ChevronLeft className="size-4" strokeWidth={1.75} />
-          Games
+      <div className="flex flex-col gap-3 pb-24">
+        {items.map((q, i) => {
+          let amOdds = "";
+          let rawP = q.hardRockPrice || q.consensusPrice || q.price;
+          if (rawP && (rawP < -100 || rawP > 100)) amOdds = rawP > 0 ? `+${rawP}` : `${rawP}`;
+          else {
+             const d = (q.fairProb) ? (1/q.fairProb) : 2.0;
+             amOdds = d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
+          }
+
+          return (
+            <div key={i} className="bg-panel border border-line rounded-lg p-3 flex items-center justify-between hover:border-primary/30 transition-colors">
+               <div className="flex flex-col">
+                  <span className="font-bold text-ink text-sm">{q.selection} {q.point ? (q.point > 0 ? `+${q.point}` : q.point) : ""}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted font-bold">{q.marketType}</span>
+               </div>
+               <button 
+                 onClick={() => toggleLeg(q)}
+                 className={cn("flex flex-col items-center justify-center min-w-[70px] h-10 rounded-md border transition-colors", 
+                   isSelected(q) ? "bg-primary border-primary text-primary-foreground" : "bg-obsidian border-line text-primary hover:border-primary/50"
+                 )}
+               >
+                 <span className="font-mono text-sm font-bold">{amOdds}</span>
+               </button>
+            </div>
+          )
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 w-full max-w-4xl mx-auto animate-in fade-in duration-500 min-h-dvh relative bg-background">
+      
+      {/* Header */}
+      <div className="sticky top-0 sm:top-7 z-40 bg-background/95 backdrop-blur border-b border-line px-4 pt-4 pb-0">
+        <Link to="/games" className="inline-flex items-center text-sm font-bold text-primary mb-4 hover:underline">
+          <ChevronLeft className="size-4 mr-1" /> Back to Matchups
         </Link>
-        <p className="text-ink">That game is not on the live board.</p>
-      </div>
-    );
-  }
-
-  const researchPanel: ReactNode = (
-    <div className="space-y-4">
-      <section className="paper-card p-5">
-        <p className="stamp text-emerald-500">Who is more likely to win?</p>
-        <h2 className="font-display mt-2 text-2xl text-ink">{lean.title}</h2>
-        <p className="mt-2 text-sm text-ink/90">{lean.because}</p>
-        {fav ? (
-          <WagerMeter
-            className="mt-4"
-            size="lg"
-            chance={fav.chance}
-            price={rows.find((r) => r.marketType === "ml" && r.side === fav.side)?.price ?? mlHome?.price}
-            label={`${fav.name} to win`}
-          />
-        ) : null}
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <ChanceBar label="Sportsbook (cut removed)" home={home} away={away} homeP={mlHome?.fairProb} />
-          <ChanceBar
-            label="Kalshi prediction market"
-            home={home}
-            away={away}
-            homeP={predict?.kalshiHome ?? brief?.kalshiHomeWin}
-          />
-          <ChanceBar label="Polymarket" home={home} away={away} homeP={predict?.polyHome ?? brief?.polyHomeWin} />
-          <ChanceBar label="ESPN matchup model" home={home} away={away} homeP={espnHome} />
-          <ChanceBar label="Full ensemble" home={home} away={away} homeP={fav?.homeChance} />
-          <ChanceBar
-            label="Ticket count (bets %)"
-            home={home}
-            away={away}
-            homeP={brief?.ticketHome ?? rows.find((r) => r.marketType === "ml" && r.side === "home")?.ticketPct}
-          />
-          <ChanceBar
-            label="Handle (money %)"
-            home={home}
-            away={away}
-            homeP={brief?.handleHome ?? rows.find((r) => r.marketType === "ml" && r.side === "home")?.handlePct}
-          />
-        </div>
-        <p className="mt-3 text-xs text-muted">
-          {report?.because ??
-            "Looks are pooled in log-odds. Ticket count vs handle is a layer â€” we never copy 80% of bets. Kalshi and Polymarket are research, not a Hard Rock ticket. This is not a lock."}
-        </p>
-        <p className="mt-1 text-xs text-emerald-500">
-          Confidence {report?.confidence ?? "low"}
-          {report ? ` Â· ${report.layers.length} looks Â· agreement ${Math.round(report.agreement * 100)} in 100` : ""}
-        </p>
-      </section>
-
-      {q.isLoading ? <p className="text-sm text-muted">Loading injuries, form, and the ESPN modelâ€¦</p> : null}
-      {q.data && !q.data.ok ? <p className="text-sm text-down">{q.data.error}</p> : null}
-
-      {research?.pitchers.length ? (
-        <section className="paper-card p-5">
-          <h2 className="font-display text-xl text-ink">Starting pitchers</h2>
-          <ul className="mt-2 space-y-1 text-sm">
-            {research.pitchers.map((p) => (
-              <li key={p.team}>
-                <span className="text-muted">{p.team}: </span>
-                {p.line}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : quote?.homePitcher || quote?.awayPitcher ? (
-        <section className="paper-card p-5">
-          <h2 className="font-display text-xl text-ink">Starting pitchers</h2>
-          <p className="mt-2 text-sm">Away: {quote?.awayPitcher ?? "TBA"}</p>
-          <p className="text-sm">Home: {quote?.homePitcher ?? "TBA"}</p>
-        </section>
-      ) : null}
-
-      {research?.lastFive.length ? (
-        <section className="paper-card p-5">
-          <h2 className="font-display text-xl text-ink">Last five games</h2>
-          <ul className="mt-3 space-y-3 text-sm">
-            {research.lastFive.map((b) => (
-              <li key={b.team}>
-                <p className="font-medium">{b.team}</p>
-                <p className="font-mono text-emerald-500">{b.results.join(" ")}</p>
-                <p className="text-muted">{b.line}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {research?.injuries.length ? (
-        <section className="paper-card p-5">
-          <h2 className="font-display text-xl text-ink">Injuries and listings</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {research.injuries.map((inj, i) => (
-              <li key={`${inj.player}-${i}`}>
-                <span className="text-emerald-500">{inj.status}</span>
-                {" Â· "}
-                <span className="font-medium">{inj.player}</span>
-                <span className="text-muted"> ({inj.team})</span>
-                {inj.detail ? <span className="text-muted"> Â· {inj.detail}</span> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {research?.series ? <p className="text-sm text-ink">Series: {research.series}</p> : null}
-
-      {research?.headlines.length ? (
-        <section className="paper-card p-5">
-          <h2 className="font-display text-xl text-ink">Headlines (context only)</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink/90">
-            {research.headlines.map((h) => (
-              <li key={h.title}>{h.title}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <p className="text-xs text-muted">{research?.note ?? "Research, not a promise. Confirm every live number at Hard Rock Bet."}</p>
-    </div>
-  );
-
-  const eventLegs = legs.filter((l) => l.eventId === eventId);
-  const sgpGrade = eventLegs.length >= 2 ? gradeParlay(eventLegs) : null;
-  const showSlip = Boolean(liveWager) || Boolean(sgpGrade);
-
-  return (
-    <div className={showSlip ? "space-y-4 pb-40" : "space-y-4"}>
-      <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-emerald-500">
-        <ChevronLeft className="size-4" strokeWidth={1.75} />
-        Games
-      </Link>
-
-      <LiveBanner row={first && "inPlay" in first ? first : rows[0]} />
-
-      <HardRockSheet
-        sport={sport}
-        home={home}
-        away={away}
-        homeAbbr={first && "homeAbbr" in first ? first.homeAbbr : undefined}
-        awayAbbr={first && "awayAbbr" in first ? first.awayAbbr : undefined}
-        homeLogo={first && "homeLogo" in first ? first.homeLogo : undefined}
-        awayLogo={first && "awayLogo" in first ? first.awayLogo : undefined}
-        start={start}
-        phase={first && "phase" in first ? first.phase : undefined}
-        scheduleOnly={first && "scheduleOnly" in first ? first.scheduleOnly : undefined}
-        rows={rows}
-        selected={wager}
-        legs={legs}
-        onPick={pickOneGame}
-        addLeg={addParlayLeg}
-        removeLeg={removeParlayLeg}
-        research={researchPanel}
-        eventResearch={research}
-        homeWin={report?.home ?? mlHome?.fairProb ?? 0.5}
-        researchLoading={q.isLoading}
-      />
-
-      {first && "scheduleOnly" in first && first.scheduleOnly ? (
-        <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-emerald-500">
-          ESPN listed this matchup but has not posted a two-way price. Fast Log when the number
-          drops.
-        </p>
-      ) : null}
-
-      {sgpGrade ? (
-        <section id="one-game-wager" className="fixed inset-x-0 bottom-[4.75rem] z-50 mx-auto max-w-6xl px-3">
-          <SgpSlip sgpGrade={sgpGrade} eventLegs={eventLegs} />
-        </section>
-      ) : liveWager ? (
-        <section id="one-game-wager" className="fixed inset-x-0 bottom-[4.75rem] z-50 mx-auto max-w-6xl px-3">
-          <BetSlip row={liveWager} onCancel={() => setWager(null)} />
-        </section>
-      ) : null}
-
-      {!liveWager && !sgpGrade ? (
-        <p className="px-1 text-sm text-muted">
-          Tap a number — same layout as the book. Every cell already shows chance it hits and what you collect.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function BetSlip({ row, onCancel }: { row: ScanRow; onCancel: () => void }) {
-  const [stake, setStake] = useState(5);
-  const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
-  const price = row.price ?? -110;
-  const multi = payoutMultiple(price);
-  const toWin = stake * (multi - 1);
-
-  const handleLock = () => {
-    placePaperTicket({
-      kind: "main",
-      description: `${row.selection} ${row.marketType.toUpperCase()} (${price})`,
-      stake,
-      price,
-      status: "open",
-      fastLog: true,
-      legs: [
-        {
-          eventId: row.eventId,
-          sport: row.sport,
-          start: row.start,
-          home: row.home,
-          away: row.away,
-          marketType: row.marketType,
-          selection: row.selection,
-          side: row.side,
-          price,
-          status: "open"
-        }
-      ]
-    });
-    onCancel();
-  };
-
-  return (
-    <div className="rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
-      <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
-        <div>
-          <p className="text-xs text-muted font-bold uppercase">{row.sport} • {row.marketType}</p>
-          <p className="text-lg font-bold">{row.selection}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-mono-numbers text-neon">{price > 0 ? `+${price}` : price}</p>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex-1">
-          <label className="text-xs text-muted font-bold uppercase">Wager</label>
-          <div className="relative mt-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
-            <input 
-              type="number" 
-              value={stake} 
-              onChange={(e) => setStake(Number(e.target.value))}
-              className="w-full rounded-md bg-obsidian border border-panel-border py-2 pl-7 pr-3 font-mono-numbers text-ink focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon"
-            />
+        
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+             <div className="flex items-center -space-x-3">
+                {awayLogo ? <img src={awayLogo} className="size-12 rounded-full ring-4 ring-background bg-panel" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
+                {homeLogo ? <img src={homeLogo} className="size-12 rounded-full ring-4 ring-background bg-panel" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
+             </div>
+             <div className="flex flex-col">
+                <span className="text-xl font-display font-bold text-ink">{firstQuote?.awayAbbr} @ {firstQuote?.homeAbbr}</span>
+                <span className="text-xs text-muted">{gameBrief?.weather ? `ðŸŒ¤ï¸ ${gameBrief.weather}` : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}</span>
+             </div>
           </div>
+          {isLive && (
+             <div className="flex flex-col items-end">
+               <span className="font-mono text-2xl font-bold text-ink">{firstQuote.awayScore} - {firstQuote.homeScore}</span>
+               <span className="text-[10px] text-red-500 font-bold uppercase tracking-widest animate-pulse">LIVE</span>
+             </div>
+          )}
         </div>
-        <div className="flex-1 text-right">
-          <label className="text-xs text-muted font-bold uppercase">To Win</label>
-          <p className="mt-2 text-xl font-mono-numbers text-ink">${toWin.toFixed(2)}</p>
-        </div>
-      </div>
 
-      <div className="flex gap-2">
-        <button 
-          onClick={handleLock}
-          className="flex-1 flex min-h-12 items-center justify-center rounded-lg bg-neon text-obsidian font-bold text-lg hover:bg-neon/90 transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)]"
-        >
-          Lock It
-        </button>
-        <button 
-          onClick={onCancel}
-          className="px-4 min-h-12 rounded-lg border border-panel-border text-muted hover:text-ink hover:bg-panel-border transition-colors font-bold uppercase text-sm"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SgpSlip({ 
-  sgpGrade, 
-  eventLegs,
-}: { 
-  sgpGrade: ReturnType<typeof gradeParlay>; 
-  eventLegs: ParlayPick[]; 
-}) {
-  const [stake, setStake] = useState(5);
-  const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
-  const removeParlayLeg = useDeskStore((s) => s.removeParlayLeg);
-  const price = sgpGrade.americanPayout;
-  const multi = sgpGrade.decimalPayout;
-  const toWin = stake * (multi - 1);
-
-  const handleLock = () => {
-    placePaperTicket({
-      kind: "parlay",
-      description: `Same Game Parlay (${eventLegs.length} legs) (${price > 0 ? '+' : ''}${price})`,
-      stake,
-      price,
-      status: "open",
-      fastLog: true,
-      legs: eventLegs.map(l => ({
-        eventId: l.eventId,
-        sport: l.sport,
-        start: l.start,
-        home: l.home,
-        away: l.away,
-        marketType: l.marketType,
-        selection: l.selection,
-        side: l.side,
-        price: l.price,
-        status: "open"
-      }))
-    });
-    eventLegs.forEach(l => removeParlayLeg(l.key || l.selection));
-  };
-
-  const handleCancel = () => {
-    eventLegs.forEach(l => removeParlayLeg(l.key || l.selection));
-  };
-
-  return (
-    <div className="rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
-      <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
-        <div>
-          <p className="text-xs text-muted font-bold uppercase">Same Game Parlay • {eventLegs.length} Legs</p>
-          <p className="text-lg font-bold">Combined Odds</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-mono-numbers text-neon">{price > 0 ? `+${price}` : price}</p>
+        {/* Tabs */}
+        <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-line/0">
+           {["popular", "lines", "props"].map(tab => (
+              <button 
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn("pb-3 text-sm font-bold uppercase tracking-wider transition-colors relative whitespace-nowrap", activeTab === tab ? "text-primary" : "text-muted hover:text-ink")}
+              >
+                 {tab === "lines" ? "Game Lines" : tab === "props" ? "Player Props" : tab}
+                 {activeTab === tab && <motion.div layoutId="sgptab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              </button>
+           ))}
         </div>
       </div>
-      
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex-1">
-          <label className="text-xs text-muted font-bold uppercase">Wager</label>
-          <div className="relative mt-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
-            <input 
-              type="number" 
-              value={stake} 
-              onChange={(e) => setStake(Number(e.target.value))}
-              className="w-full rounded-md bg-obsidian border border-panel-border py-2 pl-7 pr-3 font-mono-numbers text-ink focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon"
-            />
+
+      <div className="p-4">
+        {renderGrid(activeTab)}
+      </div>
+
+      {/* Dynamic SGP Ticker (Fixed Bottom) */}
+      <AnimatePresence>
+        {sgpSlip.length > 0 && (
+          <motion.div 
+            initial={{ y: "100%" }} 
+            animate={{ y: 0 }} 
+            exit={{ y: "100%" }}
+            className="fixed bottom-0 left-0 right-0 z-50 md:left-64 p-4 pointer-events-none"
+          >
+             <div className="max-w-4xl mx-auto bg-obsidian border border-primary/30 shadow-[0_0_30px_rgba(0,0,0,0.8)] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 pointer-events-auto">
+                <div className="flex flex-col flex-1 w-full">
+                   <div className="flex items-center justify-between mb-1.5">
+                     <span className="text-xs font-bold uppercase tracking-wider text-muted">{sgpSlip.length}-Leg SGP <span className="text-primary ml-2">{americanOdds}</span></span>
+                     <span className="text-xs font-bold text-primary font-mono">{hitProbPct}% PROB</span>
+                   </div>
+                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
+                     <div className="h-full bg-primary rounded-full relative transition-all duration-300" style={{ width: `${hitProbPct}%` }}>
+                       <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
+                     </div>
+                   </div>
+                   <div className="flex items-center justify-between mt-1 text-[9px] font-mono text-muted">
+                     <span>Vegas Implied: {vegasPct}%</span>
+                     <span className="text-primary bg-primary/10 px-1 rounded">Delta: {parseFloat(edgeVal) > 0 ? `+${edgeVal}` : edgeVal}%</span>
+                   </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <button className="flex-1 md:w-12 h-12 bg-panel border border-line rounded-lg flex items-center justify-center text-muted hover:text-ink transition-colors" title="Magic Scan (Screenshot)">
+                    <Camera className="size-5" />
+                  </button>
+                  <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex-1 md:w-40 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    Lock It In
+                  </button>
+                </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lock It In Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="w-full max-w-md bg-panel border border-line rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-4 border-b border-line flex items-center justify-between">
+                <h3 className="font-display font-bold text-lg flex items-center gap-2"><ShieldCheck className="text-primary size-5" /> Ledger Confirmation</h3>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-obsidian rounded-full transition-colors"><X className="size-5 text-muted" /></button>
+              </div>
+              
+              <div className="p-6">
+                 <p className="text-sm text-muted mb-4">Edit to precisely match Hard Rock odds before saving.</p>
+                 <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Final Odds (American)</label>
+                      <input type="text" defaultValue={americanOdds} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Wager Amount ($)</label>
+                      <div className="flex gap-2">
+                        <input type="number" value={wager} onChange={(e) => setWager(e.target.value)} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary text-lg" />
+                        <button className="shrink-0 bg-primary/10 text-primary border border-primary/20 px-4 rounded-lg font-bold text-xs flex flex-col items-center justify-center hover:bg-primary/20 transition-colors group">
+                           <span className="group-hover:scale-105 transition-transform">SMART</span>
+                           <span className="group-hover:scale-105 transition-transform">WAGER</span>
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="p-4 bg-obsidian border-t border-line">
+                <button 
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSgpSlip([]);
+                  }}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  Save to SportsLock Ledger <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-        <div className="flex-1 text-right">
-          <label className="text-xs text-muted font-bold uppercase">To Win</label>
-          <p className="mt-2 text-xl font-mono-numbers text-ink">${toWin.toFixed(2)}</p>
-        </div>
-      </div>
+        )}
+      </AnimatePresence>
 
-      <div className="flex gap-2">
-        <button 
-          onClick={handleLock}
-          className="flex-1 flex min-h-12 items-center justify-center rounded-lg bg-neon text-obsidian font-bold text-lg hover:bg-neon/90 transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)]"
-        >
-          Lock It
-        </button>
-        <button 
-          onClick={handleCancel}
-          className="px-4 min-h-12 rounded-lg border border-panel-border text-muted hover:text-ink hover:bg-panel-border transition-colors font-bold uppercase text-sm"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ChanceBar({
-  label,
-  home,
-  away,
-  homeP,
-}: {
-  label: string;
-  home: string;
-  away: string;
-  homeP?: number;
-}) {
-  if (homeP == null || !Number.isFinite(homeP)) {
-    return (
-      <div className="rounded-md bg-wash px-3 py-3 text-sm">
-        <p className="text-muted">{label}</p>
-        <p className="mt-1 text-ink">Not posted yet</p>
-      </div>
-    );
-  }
-  const h = Math.round(homeP * 100);
-  const a = 100 - h;
-  return (
-    <div className="rounded-md bg-wash px-3 py-3 text-sm">
-      <p className="text-muted">{label}</p>
-      <p className="mt-2 flex justify-between text-xs">
-        <span>
-          {away} {a}%
-        </span>
-        <span>
-          {home} {h}%
-        </span>
-      </p>
-      <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-navy-deep">
-        <span className="bg-ink/40" style={{ width: `${a}%` }} />
-        <span className="bg-emerald-500" style={{ width: `${h}%` }} />
-      </div>
     </div>
   );
 }
