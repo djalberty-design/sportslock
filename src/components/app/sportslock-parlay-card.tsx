@@ -23,7 +23,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
 
   const numWager = parseFloat(wager || "0");
   const totalPayout = (numWager * decPayout).toFixed(2);
-  const aiInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
+  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates."; const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, "â€”");
   
   // Game Context (from first leg)
   const firstLeg = legs[0];
@@ -57,7 +57,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
               </span>
               <span className="text-[10px] text-muted flex items-center gap-2">
                 {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "TODAY"}
-                {firstBrief?.weather && <span>Ã¢â‚¬Â¢ Ã°Å¸Å’Â¤Ã¯Â¸Â {firstBrief.weather}</span>}
+                {firstBrief?.weather && <span>&bull; {firstBrief.weather}</span>}
               </span>
             </div>
           </div>
@@ -91,9 +91,11 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         {/* The Legs */}
         <div className="mb-4 flex-1 space-y-4">
           {legs.map((leg: any, i: number) => {
-            const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
-            const teamAbbr = leg.selection.includes(leg.home) ? legQuote?.homeAbbr : legQuote?.awayAbbr;
-            const logo = legQuote?.homeLogo || legQuote?.awayLogo || espnLogoUrl(leg.sport || "MLB", teamAbbr || legQuote?.homeAbbr);
+                        const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
+            const isHome = leg.selection.includes(leg.home) || leg.selection.includes(legQuote?.homeAbbr);
+            const teamAbbr = isHome ? legQuote?.homeAbbr : legQuote?.awayAbbr;
+            const fallbackLogo = isHome ? legQuote?.homeLogo : legQuote?.awayLogo;
+            const logo = fallbackLogo || espnLogoUrl(leg.sport || "MLB", teamAbbr);
             
             return (
               <div key={i} className="flex items-start gap-3 relative">
