@@ -2,20 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { Activity, LayoutGrid, Clock, CloudRain } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { espnLogoUrl } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
   const { scan, snapshot } = useDeskDecision();
-  const rows = scan?.rows || [];
   
   // Group by game using the underlying snapshot briefs/quotes
   const gamesMap = new Map();
   snapshot?.briefs?.forEach((b: any) => {
     gamesMap.set(b.eventId, { 
       sport: b.sport || "GAME", 
-      home: b.homeAbbr || b.home || "Home", 
-      away: b.awayAbbr || b.away || "Away", 
+      home: b.home || "Home", 
+      away: b.away || "Away",
+      homeAbbr: b.homeAbbr,
+      awayAbbr: b.awayAbbr, 
       weather: b.weather,
       eventId: b.eventId
     });
@@ -32,13 +34,19 @@ function TheMatrix() {
       g.clock = q.clock;
       g.start = q.start;
       g.sport = q.sport || g.sport;
+      g.homeAbbr = q.homeAbbr || g.homeAbbr;
+      g.awayAbbr = q.awayAbbr || g.awayAbbr;
+      g.home = q.home || g.home;
+      g.away = q.away || g.away;
       gamesMap.set(q.eventId, g);
     } else {
       gamesMap.set(q.eventId, {
         eventId: q.eventId,
         sport: q.sport || "GAME",
-        home: q.homeAbbr || q.home || "Home",
-        away: q.awayAbbr || q.away || "Away",
+        home: q.home || "Home",
+        away: q.away || "Away",
+        homeAbbr: q.homeAbbr,
+        awayAbbr: q.awayAbbr,
         inPlay: q.inPlay,
         homeScore: q.homeScore ?? 0,
         awayScore: q.awayScore ?? 0,
@@ -93,25 +101,31 @@ function TheMatrix() {
                 )}
               </div>
               
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 relative z-10">
                 <div className="flex justify-between items-center text-lg font-display font-bold text-ink">
-                  <span>{g.away}</span>
+                  <div className="flex items-center gap-3">
+                    {g.awayAbbr && <img src={espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} alt="" className="size-8 object-contain" />}
+                    <span>{g.away}</span>
+                  </div>
                   {g.inPlay ? (
-                    <span className="text-primary font-mono">{g.awayScore}</span>
+                    <span className="text-primary font-mono text-2xl">{g.awayScore}</span>
                   ) : (
                     <span className="text-muted text-sm mx-4">@</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center text-lg font-display font-bold text-ink">
-                  <span>{g.home}</span>
+                  <div className="flex items-center gap-3">
+                    {g.homeAbbr && <img src={espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} alt="" className="size-8 object-contain" />}
+                    <span>{g.home}</span>
+                  </div>
                   {g.inPlay && (
-                    <span className="text-primary font-mono">{g.homeScore}</span>
+                    <span className="text-primary font-mono text-2xl">{g.homeScore}</span>
                   )}
                 </div>
               </div>
 
               {g.inPlay && g.period != null && (
-                <div className="mt-2 flex items-center gap-1 text-xs text-muted">
+                <div className="mt-4 flex items-center gap-1 text-xs text-primary font-bold uppercase tracking-wider">
                   <Clock className="size-3" />
                   <span>Q{g.period} {g.clock ? `• ${g.clock}` : ""}</span>
                 </div>
