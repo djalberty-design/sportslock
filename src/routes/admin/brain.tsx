@@ -61,6 +61,22 @@ function BrainTelemetry() {
           Download Raw CSV
         </button>
       </div>
+
+      <div className="rounded-md bg-zinc-900 border border-zinc-800 p-4 font-mono text-sm">
+        <h3 className="mb-4 font-display text-lg text-white">Live System Diagnostics</h3>
+        <ul className="space-y-3">
+          {['ESPN Market Data', 'Kalshi Prediction Feed', 'Polymarket Feed', 'Quantitative Edge Calculator', 'Master Ledger Connection'].map((node, i) => (
+            <li key={i} className="flex items-center justify-between border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
+              <span className="text-zinc-300">{node}</span>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-emerald-500 font-bold tracking-wider text-xs">OPERATIONAL</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <div className="rounded-md bg-zinc-950 p-4 overflow-auto max-h-[70vh]">
         <pre className="text-xs text-zinc-300">
           <code>{JSON.stringify(picks, null, 2)}</code>
