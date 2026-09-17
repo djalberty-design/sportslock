@@ -1,9 +1,9 @@
 /**
- * AI Picks desk ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â rank every ticket the book posts, not just game winners.
+ * AI Picks desk ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â rank every ticket the book posts, not just game winners.
  *
  * Popular (ML / spread / total), player props, period markets, same-game
  * parlays, and cross-game 2/3/4-legs all go through ticketScore:
- * chance ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â payout ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â market-quality ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â edge vs the juice.
+ * chance ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â payout ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â market-quality ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â edge vs the juice.
  * Tape is a layer. Never a lock.
  */
 import { formatChancePct, shortPick } from "../copy.ts";
@@ -86,11 +86,11 @@ export type DeskPicks = {
   ribbon: DeskPick[];
   all: DeskPick[];
   allProps?: DeskPick[];
-};;
+};
 
 const BUCKETS: PickBucket[] = ["popular", "prop", "period", "sgp", "parlay2", "parlay3", "parlay4"];
 
-/** Unique market cell (no bucket) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â used to de-dupe sheet vs posted rows. */
+/** Unique market cell (no bucket) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â used to de-dupe sheet vs posted rows. */
 export function rowTicketId(row: {
   eventId: string;
   marketType: string;
@@ -212,24 +212,12 @@ export function parseParlayTicketId(
     if (!chunks.length) return null;
     return chunks.map((chunk) => {
       const [eventId, marketType, side] = chunk.split("~");
-      const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
-  return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
-  };
+      return {
+        eventId: eventId ?? "",
+        marketType: marketType || "ml",
+        side: side ?? "",
+        selection: "",
+      };
     });
   }
 
@@ -242,24 +230,12 @@ export function parseParlayTicketId(
     if (!chunks.length) return null;
     return chunks.map((chunk) => {
       const [eventId, marketType, side, ...sel] = chunk.split("~");
-      const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
-  return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
-  };
+      return {
+        eventId: eventId ?? "",
+        marketType: marketType || "ml",
+        side: side ?? "",
+        selection: sel.join("~"),
+      };
     });
   }
 
@@ -301,7 +277,7 @@ function sameLegSet(
  * How much information this market actually carries.
  * Sharps do not treat a 1st-inning 0.5 the same as a full-game moneyline.
  * Period slices are shrunk in the sheet; this stops them from stealing The Call.
- * NFL/CFB spreads get a key-number tilt (3 and 7) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Dimers / CLV desks treat those as physics.
+ * NFL/CFB spreads get a key-number tilt (3 and 7) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Dimers / CLV desks treat those as physics.
  */
 export function infoQuality(opts: {
   bucket: PickBucket;
@@ -383,7 +359,7 @@ export function edgePts(chance: number, price?: number): number {
 export { calibratedChance, parlayInfoQuality, shownCombinedChance } from "./calibrate.ts";
 
 /**
- * Ranking score. deskScore (chanceÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â² ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡payout, tape nudge) is the core.
+ * Ranking score. deskScore (chanceÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â² ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡payout, tape nudge) is the core.
  * Quality haircuts noisy slices. Edge vs the juice is the sharp overlay.
  */
 export function ticketScore(
@@ -400,7 +376,7 @@ export function ticketScore(
   return s;
 }
 
-/** Quality badge is one scale. High ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥0.72, Med 0.55ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ0.71, Low <0.55. Chance does not rewrite the label. */
+/** Quality badge is one scale. High ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥0.72, Med 0.55ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“0.71, Low <0.55. Chance does not rewrite the label. */
 export function qualityBand(quality: number): DeskConfidence {
   const q = Number(quality);
   if (!Number.isFinite(q)) return "low";
@@ -436,23 +412,41 @@ function fromRow(row: ScanRow, bucket: PickBucket, why: string): DeskPick {
   const shown = calibratedChance(row.fairProb, implied, quality);
   const gap =
     row.simFair != null && row.poolFair != null ? Math.abs(row.simFair - row.poolFair) : undefined;
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
   return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
+    id: pickId(row, bucket),
+    bucket,
+    selection,
+    chance: shown,
+    price: row.price,
+    decimalPayout: Number.isFinite(pay) ? pay : 1,
+    score: ticketScore(row.fairProb, row.price, row.tapeLean, quality, edge),
+    row,
+    sport: row.sport,
+    eventId: row.eventId,
+    home: row.home,
+    away: row.away,
+    start: row.start,
+    why,
+    ticketPct: row.ticketPct,
+    handlePct: row.handlePct,
+    tapeLean: row.tapeLean,
+    tapeNote: row.tapeNote,
+    player: row.player,
+    researchOnly: row.researchOnly,
+    implied: implied != null && Number.isFinite(implied) ? implied : undefined,
+    edge,
+    infoQuality: quality,
+    confidence: qualityBand(quality),
+    homeAbbr: row.homeAbbr,
+    awayAbbr: row.awayAbbr,
+    homeLogo: row.homeLogo,
+    awayLogo: row.awayLogo,
+    tapeStamp: row.tapeStamp ?? (row.hardRockPrice != null ? "hr-fl" : "research"),
+    simFair: row.simFair,
+    poolFair: row.poolFair,
+    processLooked: row.processLooked !== false,
+    processSource: row.processSource,
+    earlyMover: false,
   };
 }
 
@@ -464,23 +458,28 @@ function fromParlay(p: ParlayCandidate, bucket: PickBucket): DeskPick {
   const edge = implied != null ? p.combinedFair - implied : 0;
   const price = p.legs[0]?.price;
   const shown = calibratedChance(p.combinedFair, implied, quality);
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
   return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
+    id: parlayTicketId(p),
+    bucket,
+    selection: names,
+    chance: shown,
+    price,
+    decimalPayout: Number.isFinite(dec) && dec > 1 ? dec : 1,
+    score: (p.score ?? parlayScore(p.combinedFair, dec > 1 ? dec : 1.01)) * quality,
+    parlay: p,
+    sport: p.sports?.[0] ?? p.legs[0]?.sport ?? "",
+    eventId: p.sameGame ? p.legs[0]?.eventId : undefined,
+    home: p.sameGame ? p.legs[0]?.home : undefined,
+    away: p.sameGame ? p.legs[0]?.away : undefined,
+    start: p.legs.map((l) => l.start).sort()[0],
+    why: stampDisplayedChance(p.reason, shown),
+    researchOnly: p.researchOnly,
+    implied,
+    edge,
+    infoQuality: quality,
+    confidence: qualityBand(quality),
+    tapeStamp: p.researchOnly ? "research" : "hr-fl",
+    earlyMover: false,
   };
 }
 
@@ -494,12 +493,12 @@ function stampDisplayedChance(reason: string, shown: number): string {
   const pct = formatChancePct(shown);
   if (!reason || !pct) return reason;
   const next = reason
-    .replace(/Combined chance[^.]*ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â \s*[\d.]+(?:\s*in 100)?%?\.?/gi, `Combined chance ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â  ${pct}.`)
+    .replace(/Combined chance[^.]*ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â \s*[\d.]+(?:\s*in 100)?%?\.?/gi, `Combined chance ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  ${pct}.`)
     .replace(/about [\d.]+ in 100 tickets/gi, `about ${pct.replace("%", "")} in 100 tickets`);
   return next;
 }
 
-/** Displayed combined % from builder legs ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â same fromParlay calibration the catalog and /ticket use. */
+/** Displayed combined % from builder legs ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â same fromParlay calibration the catalog and /ticket use. */
 export function shownParlayFromStoreLegs(
   legs: Array<{
     eventId: string;
@@ -618,30 +617,74 @@ function uniqueTodayGames(rows: ScanRow[]): ScanRow[] {
 
 function briefAsResearch(brief?: EventBrief, row?: ScanRow): EventResearch | undefined {
   if (!brief && !row) return undefined;
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
   return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
+    eventId: brief?.eventId ?? row?.eventId ?? "",
+    sport: row?.sport ?? "",
+    espnId: "",
+    home: row?.home ?? "",
+    away: row?.away ?? "",
+    start: row?.start,
+    venue: brief?.venue,
+    weather: brief?.weather,
+    weatherTemp: brief?.weatherTemp,
+    weatherWind: brief?.weatherWind,
+    weatherPrecip: brief?.weatherPrecip,
+    homeRecord: brief?.homeRecord,
+    awayRecord: brief?.awayRecord,
+    espnHomeWin: brief?.espnHomeWin,
+    espnAwayWin: brief?.espnAwayWin,
+    bookHomeWin: brief?.bookHomeWin,
+    openHomeWin: brief?.openHomeWin,
+    kalshiHomeWin: brief?.kalshiHomeWin,
+    polyHomeWin: brief?.polyHomeWin,
+    homeEra: brief?.homeEra,
+    awayEra: brief?.awayEra,
+    homeWhip: brief?.homeWhip,
+    awayWhip: brief?.awayWhip,
+    homeOuts: brief?.homeOuts,
+    awayOuts: brief?.awayOuts,
+    homeQuestionable: brief?.homeQuestionable,
+    awayQuestionable: brief?.awayQuestionable,
+    homePf: brief?.homePf,
+    homePa: brief?.homePa,
+    awayPf: brief?.awayPf,
+    awayPa: brief?.awayPa,
+    homeSpread: brief?.homeSpread,
+    total: brief?.total,
+    series: brief?.series,
+    seriesHomeWins: brief?.seriesHomeWins,
+    seriesAwayWins: brief?.seriesAwayWins,
+    homeRestDays: brief?.homeRestDays,
+    awayRestDays: brief?.awayRestDays,
+    pitchers: [],
+    lastFive: [],
+    injuries: [],
+    headlines: [],
+    players: (brief?.players ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      team: p.team,
+      homeAway: p.homeAway,
+      position: p.position,
+      headshot: p.headshot,
+      starter: p.starter,
+      stats: p.stats ?? {},
+      recentStats: p.recentStats,
+      recentN: p.recentN,
+      usageMin: p.usageMin,
+    })),
+    homeLooks: brief?.homeLooks,
+    awayLooks: brief?.awayLooks,
+    homePitcherHand: brief?.homePitcherHand,
+    awayPitcherHand: brief?.awayPitcherHand,
+    note: "",
   };
 }
 
 function expandSheet(scan: ScanBundle, snapshot: DeskSnapshot): ScanRow[] {
   const extra: ScanRow[] = [];
   for (const g of uniqueTodayGames(scan.rows)) {
-    // if (g.inPlay) continue; // Allow live games to generate props
+    // // if (g.inPlay) continue;
     const gameRows = scan.rows.filter((r) => r.eventId === g.eventId);
     const brief = snapshot.briefs?.find((b) => b.eventId === g.eventId);
     const ml = gameRows.find((r) => r.marketType === "ml" && r.side === "home");
@@ -688,11 +731,11 @@ function popularWhy(r: ScanRow): string {
     if (r.leftover) {
       return `Live remaining-stat. Leftover mean from score + clock, not a haircut of the pre-game %. Photograph Hard Rock now. Last-10 still ran. Not The Call.${tape}`;
     }
-    return `Live ticket. The public number is delayed ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â photograph Hard Rock now. Last-10 scores and the full ensemble still run; quality is haircut because a delayed live fill is not a prior. Not The Call.${tape}`;
+    return `Live ticket. The public number is delayed ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â photograph Hard Rock now. Last-10 scores and the full ensemble still run; quality is haircut because a delayed live fill is not a prior. Not The Call.${tape}`;
   }
   const m =
     r.marketType === "ml"
-      ? "Who wins the game ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â moneyline. Highest-info market on the board."
+      ? "Who wins the game ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â moneyline. Highest-info market on the board."
       : r.marketType === "spread"
         ? "Spread. The favorite must cover the number. NFL/college: 3 and 7 are the key numbers."
         : "Over/under on the combined score. Last-10 combined scoring nudges the mean. Weather and pace move this more than a moneyline.";
@@ -700,17 +743,17 @@ function popularWhy(r: ScanRow): string {
 }
 
 function propWhy(r: ScanRow): string {
-  return `${r.player ?? "This player"} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ${shortPick(r.selection, r.marketType)}. Last-10 games (when we have them) blended with season rate, today's total, script, park, weather, and who is listed out. College player bets are blocked in Florida. Photograph the live Hard Rock number ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â analysis, not a fill.`;
+  return `${r.player ?? "This player"} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ${shortPick(r.selection, r.marketType)}. Last-10 games (when we have them) blended with season rate, today's total, script, park, weather, and who is listed out. College player bets are blocked in Florida. Photograph the live Hard Rock number ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â analysis, not a fill.`;
 }
 
 function periodWhy(r: ScanRow): string {
   return `${shortPick(r.selection, r.marketType)} is a slice of the game. Last-10 scores still feed the full-game ensemble, then this period is shrunk toward 50/50 because one inning/quarter is noisier than the whole game. Not The Call. Not a lock.`;
 }
 
-/** The Call must be a high-info ticket that still pays ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â not a noisy 0.5 inning. */
+/** The Call must be a high-info ticket that still pays ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â not a noisy 0.5 inning. */
 function heroEligible(p: DeskPick): boolean {
   if (p.parlay) return false;
-  // Use isLiveDeskPick ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â checks inPlay flag, in_play tag, AND start time so
+  // Use isLiveDeskPick ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â checks inPlay flag, in_play tag, AND start time so
   // a game that has kicked off but not yet flipped the feed doesn't slip through.
   if (isLiveDeskPick(p)) return false;
   if (p.bucket === "period") return false;
@@ -786,24 +829,21 @@ function stampGameTape(cells: ScanRow[], gameRows: ScanRow[]): ScanRow[] {
   if (!donor || donor.ticketPct == null) return cells;
   return cells.map((c) => {
     if (c.ticketPct != null) return c;
-    const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
-  return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
-  };
+    return {
+      ...c,
+      ticketPct: donor.ticketPct,
+      handlePct: donor.handlePct,
+      tapeLean: donor.tapeLean,
+      tapeNote: donor.tapeNote
+        ? `Colleague tape on this game (wagers vs dollars), not this specific market. ${donor.tapeNote}`
+        : "Colleague tape on this game (wagers vs dollars). Analyzed, not copied.",
+      homeAbbr: c.homeAbbr ?? donor.homeAbbr,
+      awayAbbr: c.awayAbbr ?? donor.awayAbbr,
+      homeLogo: c.homeLogo ?? donor.homeLogo,
+      awayLogo: c.awayLogo ?? donor.awayLogo,
+      processLooked: c.processLooked ?? donor.processLooked,
+      processSource: c.processSource ?? donor.processSource,
+    };
   });
 }
 
@@ -923,23 +963,24 @@ function syntheticRow(leg: {
   home?: string;
   away?: string;
 }): ScanRow {
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
   return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
+    eventId: leg.eventId || `unknown-${leg.selection}`,
+    sport: leg.sport || "",
+    start: leg.start || "",
+    home: leg.home || "",
+    away: leg.away || "",
+    marketType: (leg.marketType as MarketType) || "ml",
+    side: leg.side,
+    selection: leg.selection,
+    price: Number.isFinite(leg.price) ? (leg.price as number) : -110,
+    fairProb: Number.isFinite(leg.fairProb) ? (leg.fairProb as number) : 0.5,
+    evPct: 0,
+    hold: 0,
+    tag: "unknown_market",
+    action: "stand_down",
+    reason: "This leg could not be priced on the delayed board.",
+    conviction: "low",
+    spark: "",
   };
 }
 
@@ -961,23 +1002,20 @@ function fallbackParlay(rows: ScanRow[], reason: string): ParlayCandidate {
     home: l.home,
     away: l.away,
   }));
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
-
   return {
-    hero: hero ? stamp(hero) : null,
-    popular: dropHero(popular).map(stamp),
-    props: dropHero(props).map(stamp),
-    periods: dropHero(periods).map(stamp),
-    sgp: sgp.map(stamp),
-    two: two.map(stamp),
-    three: three.map(stamp),
-    four: four.map(stamp),
-    ribbon: ribbon.map(stamp),
-    all,
-    allProps,
+    legs: mapped,
+    combinedFair,
+    combinedEv: combinedFair * (decimalPayout > 1 ? decimalPayout : 1) - 1,
+    pricedAsEntertainment: rows.length >= 4 || combinedFair < 0.25,
+    researchOnly: rows.some((l) => l.hardRockPrice == null),
+    sameGame,
+    title: `${rows.length}-game${sameGame ? " same-game" : ""} parlay`,
+    reason: `${reason} Combined chance ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  ${formatChancePct(calibratedChance(combinedFair, decimalPayout > 1 ? 1 / decimalPayout : undefined, parlayInfoQuality(rows.length, sameGame))) ?? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}. Combined is closed form. Quality capped at 0.64. No fake sim %.`,
+    score: parlayScore(combinedFair, decimalPayout > 1 ? decimalPayout : 1.01),
+    mix: sameGame ? "same-game" : sports.length > 1 ? "cross-sport" : "same-sport",
+    decimalPayout,
+    sports,
+    correlation: corr,
   };
 }
 
@@ -1026,7 +1064,7 @@ export function deskPickFromLegRefs(
     pick.confidence = qualityBand(pick.infoQuality);
   }
   if (live) {
-    pick.why = `${pick.why} Live leg on the slip ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â combined quality haircut. Never The Call. Never the gold ribbon.`;
+    pick.why = `${pick.why} Live leg on the slip ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â combined quality haircut. Never The Call. Never the gold ribbon.`;
   }
   if (stood.length) {
     pick.why = `${pick.why} Stood down: ${stood.join("; ")}. Still opened the slip.`;
@@ -1035,7 +1073,7 @@ export function deskPickFromLegRefs(
 }
 
 export function correlationFlag(corr?: ParlayCandidate["correlation"], sameGame?: boolean): string {
-  if (corr === "shared-latent") return "joint-path ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· shared-latent";
+  if (corr === "shared-latent") return "joint-path ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· shared-latent";
   if (corr === "fallback-haircut") return "Thin fallback-haircut";
   if (sameGame) return "Same-game";
   return "near-independent";
@@ -1050,22 +1088,22 @@ export function ribbonSitWhy(p: DeskPick, rows?: ScanRow[]): string {
   }
   const live = parlay.legs.some((l) => matchLegRow(rows ?? [], l)?.inPlay);
   if (live) {
-    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â live legs cannot load onto the ribbon. Combined quality is haircut. Never The Call.";
+    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â live legs cannot load onto the ribbon. Combined quality is haircut. Never The Call.";
   }
   if (parlay.legs.some((l) => isCollegeSport(l.sport) && l.marketType === "prop")) {
     return "College player legs cannot load. Florida compact blocks them. Stood that leg down.";
   }
   if (parlay.legs.some((l) => l.marketType === "prop")) {
-    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â player props are custom builder, never the gold badge.";
+    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â player props are custom builder, never the gold badge.";
   }
   if (parlay.sameGame) {
-    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â same-game lives as SGP catalog, not the gold badge. Joint-path or Thin fallback-haircut still prints on the ticket.";
+    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â same-game lives as SGP catalog, not the gold badge. Joint-path or Thin fallback-haircut still prints on the ticket.";
   }
   if (parlay.legs.some((l) => /1st inning|first inning/i.test(l.selection) && /0\.5/.test(l.selection))) {
-    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â a period 0.5 cannot be a ribbon leg.";
+    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â a period 0.5 cannot be a ribbon leg.";
   }
   if (!ribbonEligible(p)) {
-    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â a leg missed the 56%/60% displayed floor, the combined floor, payout 1.45, or quality 0.72.";
+    return "Not on the gold ribbon ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â a leg missed the 56%/60% displayed floor, the combined floor, payout 1.45, or quality 0.72.";
   }
   return "On the gold ribbon: 2- or 3-leg mains, floors cleared, no live, no college player, no period 0.5.";
 }
@@ -1101,10 +1139,7 @@ export function buildDeskPicks(scan: ScanBundle, snapshot: DeskSnapshot): DeskPi
     .filter((p): p is DeskPick => Boolean(p))
     .map(stamp);
 
-  const allProps = propRows
-    .filter(legalRow)
-    .filter(onHorizon)
-    .map(r => fromRow(r, "prop", propWhy(r)));
+  const allProps = propRows.filter(legalRow).filter(onHorizon).map(r => fromRow(r, "prop", propWhy(r)));
 
   return {
     hero: hero ? stamp(hero) : null,
@@ -1195,7 +1230,7 @@ export function lookupPick(id: string, scan: ScanBundle, snapshot: DeskSnapshot)
 export function pickMatchup(p: DeskPick): string {
   if (p.away && p.home) return matchupLine(p.away, p.home);
   if (p.parlay) {
-    return p.parlay.legs.map((l) => `${l.away} at ${l.home}`).join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+    return p.parlay.legs.map((l) => `${l.away} at ${l.home}`).join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
   }
   return p.sport || "Ticket";
 }
@@ -1210,7 +1245,7 @@ export function pickInSport(p: DeskPick, sport: string | undefined): boolean {
   return p.sport === sport;
 }
 
-/** Same board in ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ same string out. No clock, no random. */
+/** Same board in ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ same string out. No clock, no random. */
 export function picksFingerprint(bag: DeskPicks): string {
   return bag.all
     .map((p) => `${p.id}|${p.chance.toFixed(6)}|${p.score.toFixed(6)}|${p.bucket}`)
