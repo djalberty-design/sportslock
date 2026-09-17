@@ -52,9 +52,9 @@ export async function getTuning(): Promise<TuningConfig> {
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
   const sql = await getSql();
   
-  // Nuke the old table to guarantee schema is up-to-date and wipe stale rows
-  await sql`DELETE FROM desk_tuning`;
+  // FIX: Ensure the table physically exists BEFORE attempting to delete old rows
   await ensureTuningTable(sql);
+  await sql`DELETE FROM desk_tuning`;
 
   await sql`
     INSERT INTO desk_tuning (min_edge, kelly_multiplier, max_legs, active_feeds)
