@@ -99,6 +99,7 @@ export type PropInput = {
   vsHandOps?: number;
   homeLooks?: TeamLooks;
   awayLooks?: TeamLooks;
+    ownLooks?: TeamLooks;
 };
 
 export type PropReport = {
@@ -520,34 +521,74 @@ export function buildPropChance(input: PropInput): PropReport {
   const wind = input.weatherWind;
   const precip = input.weatherPrecip;
   const temp = input.weatherTemp;
-  if (parsed.stat === "pass_yds" || parsed.stat === "rec_yds" || parsed.stat === "ks" || parsed.stat === "hr" || parsed.stat === "hits") {
+  const isPassing = parsed.stat === "pass_yds" || parsed.stat === "rec_yds" || parsed.stat === "receptions";
+  const isRushing = parsed.stat === "rush_yds" || parsed.stat === "rush_att";
+  const isGridiron = isPassing || isRushing;
+  const isBaseball = parsed.stat === "ks" || parsed.stat === "hr" || parsed.stat === "hits";
+
+  if (isGridiron || isBaseball) {
     let z = 0;
     const bits: string[] = [];
-    if (wind != null && wind >= 12) {
-      if (parsed.stat === "pass_yds" || parsed.stat === "rec_yds") {
-        z -= clip((wind - 10) * 0.012, 0, 0.16);
-        bits.push(`wind ${wind} mph cuts the air game`);
-      } else if (parsed.stat === "hr") {
-        z += clip((wind - 10) * 0.006, 0, 0.08);
-        bits.push(`wind ${wind} mph`);
+
+    // Gridiron Weather Compounding
+    if (isGridiron) {
+      let runRatio = 0.5;
+      const passYds = input.ownLooks?.season?.passYdsG;
+      const rushYds = input.ownLooks?.season?.rushYdsG;
+      if (passYds && rushYds) {
+         runRatio = rushYds / (passYds + rushYds);
+      }
+
+      if (wind != null && wind >= 12) {
+        const passReliance = Math.max(0, 0.7 - runRatio);
+        const windPenalty = clip((wind - 10) * 0.02 * passReliance, 0, 0.25);
+        
+        if (isPassing) {
+          z -= windPenalty;
+          bits.push(\wind \ mph (Pass Reliance: \%)\);
+        } else if (isRushing) {
+          z += (windPenalty * 0.5); 
+          bits.push(\wind \ mph forces ground game\);
+        }
+      }
+
+      if (precip != null && precip >= 40) {
+         if (isPassing) {
+           z -= 0.05;
+           bits.push(\ain \% cuts air game\);
+         } else if (isRushing) {
+           z += 0.03;
+           bits.push(\ain \% forces ground game\);
+         }
       }
     }
-    if (precip != null && precip >= 40 && (parsed.stat === "pass_yds" || parsed.stat === "rec_yds" || parsed.stat === "hits")) {
-      z -= 0.05;
-      bits.push(`rain ${precip}%`);
+
+    // Baseball Weather
+    if (isBaseball) {
+      if (wind != null && wind >= 12) {
+        if (parsed.stat === "hr") {
+          z += clip((wind - 10) * 0.006, 0, 0.08);
+          bits.push(\wind \ mph\);
+        }
+      }
+      if (precip != null && precip >= 40 && parsed.stat === "hits") {
+        z -= 0.05;
+        bits.push(\ain \%\);
+      }
+      if (temp != null && temp >= 85 && (parsed.stat === "hr" || parsed.stat === "hits")) {
+        z += 0.04;
+        bits.push(\\F\);
+      }
     }
-    if (temp != null && temp >= 85 && (parsed.stat === "hr" || parsed.stat === "hits")) {
-      z += 0.04;
-      bits.push(`${temp}°F`);
-    }
-    if (bits.length) {
+
+    if (bits.length && Math.abs(z) > 0.01) {
       push(layers, {
         id: "weather",
-        label: "Weather",
+        label: "Weather Compounding",
         p: invLogit(z),
-        precision: 3.4,
-        family: "context",
-        note: bits.join(" · ") + ". Weather moves totals and hitting more than moneylines.",
+        precision: 4.5,
+        family: "alpha",
+        note: \[ALPHA] \ + bits.join(" | ") + \. Dynamically compounds weather against team's offensive identity.\,
       });
     }
   }
@@ -769,6 +810,7 @@ const HIT_STATS = new Set<PropStat>(["hits", "hr", "rbi", "runs", "total_bases",
 export type PropLiveBrief = {
   homeLooks?: TeamLooks;
   awayLooks?: TeamLooks;
+    ownLooks?: TeamLooks;
   homeEra?: number;
   awayEra?: number;
   homePitcherHand?: "L" | "R";
@@ -810,6 +852,7 @@ export function propContextFromBrief(
   | "recentN"
   | "homeLooks"
   | "awayLooks"
+    | "ownLooks"
     | "usageRipple"
 > {
   const player = (brief?.players ?? []).find((p) => opts.player && namesHit(p.name, opts.player));

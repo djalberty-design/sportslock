@@ -633,7 +633,23 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     });
   }
 
-  const rEffect = restEffect({ sport, start: input.start, homeRestDays: input.homeRestDays, awayRestDays: input.awayRestDays });
+  const parseWinPct = (record?: string) => {
+    if (!record) return undefined;
+    const m = record.match(/(\d+)-(\d+)/);
+    if (!m) return undefined;
+    const w = parseInt(m[1], 10);
+    const l = parseInt(m[2], 10);
+    if (w + l === 0) return undefined;
+    return w / (w + l);
+  };
+  const rEffect = restEffect({
+    sport,
+    start: input.start,
+    homeRestDays: input.homeRestDays,
+    awayRestDays: input.awayRestDays,
+    homeWinPct: parseWinPct(input.homeRecord),
+    awayWinPct: parseWinPct(input.awayRecord)
+  });
   if (!rEffect.empty) {
     pushLayer(layers, {
       id: "rest",

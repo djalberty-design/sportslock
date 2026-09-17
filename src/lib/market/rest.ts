@@ -5,6 +5,8 @@ export type RestSnap = {
   start?: string;
   homeRestDays?: number;
   awayRestDays?: number;
+  homeWinPct?: number;
+  awayWinPct?: number;
 };
 
 export type RestEffect = {
@@ -90,8 +92,10 @@ export function restEffect(input: RestSnap): RestEffect {
     }
     if (awayShort && !homeShort) {
       z += 0.07;
-      awayMeanMul *= 0.99;
-      notes.push("Away short week.");
+      // [ALPHA] Short Week Travel Disadvantage
+      z += 0.03; 
+      awayMeanMul *= 0.98;
+      notes.push("Away short-week travel disadvantage. Brutal spot for road teams.");
     }
     if (homeBye && !awayBye) {
       z += 0.04;
@@ -99,9 +103,20 @@ export function restEffect(input: RestSnap): RestEffect {
     }
     if (awayBye && !homeBye) {
       z -= 0.03;
-      notes.push("Away off a bye — rust vs rest.");
+      notes.push("Away off a bye (Rust vs Rest).");
     }
     if (homeShort || awayShort) totalMul *= 0.995;
+
+    // [ALPHA] Lookahead / Trap Spots
+    if (input.awayWinPct != null && input.homeWinPct != null) {
+      if (input.awayWinPct >= 0.75 && input.homeWinPct <= 0.35) {
+        z += 0.06; // Boost the home dog
+        notes.push("[ALPHA] Lookahead/Trap Spot: Elite road team facing weak home team. Often caught looking ahead to next week.");
+      } else if (input.homeWinPct >= 0.75 && input.awayWinPct <= 0.35) {
+        z -= 0.03;
+        notes.push("[ALPHA] Lookahead Spot: Elite home team may coast or rest starters late.");
+      }
+    }
   } else if (sport === "MLB") {
     if (h < 1.15) {
       z -= 0.05;
