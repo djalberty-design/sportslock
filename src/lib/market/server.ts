@@ -24,6 +24,9 @@ export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async 
       sourceNote: "FATAL SERVER ERROR: " + (err?.stack || err?.message || String(err)),
     };
   }
+});
+
+export const getEventResearch = createServerFn({ method: "GET" })
   .validator((d: { eventId: string }) => d)
   .handler(async ({ data }): Promise<{ ok: true; research: EventResearch } | { ok: false; error: string }> => {
     const parsed = parseInternalEventId(data.eventId);
