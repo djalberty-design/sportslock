@@ -545,20 +545,20 @@ export function buildPropChance(input: PropInput): PropReport {
         
         if (isPassing) {
           z -= windPenalty;
-          bits.push(\wind \ mph (Pass Reliance: \%)\);
+          bits.push(`wind ${wind} mph (Pass Reliance: ${(passReliance * 100).toFixed(0)}%)`);
         } else if (isRushing) {
           z += (windPenalty * 0.5); 
-          bits.push(\wind \ mph forces ground game\);
+          bits.push(`wind ${wind} mph forces ground game`);
         }
       }
 
       if (precip != null && precip >= 40) {
          if (isPassing) {
            z -= 0.05;
-           bits.push(\ain \% cuts air game\);
+           bits.push(`rain ${precip}% cuts air game`);
          } else if (isRushing) {
            z += 0.03;
-           bits.push(\ain \% forces ground game\);
+           bits.push(`rain ${precip}% forces ground game`);
          }
       }
     }
@@ -568,16 +568,16 @@ export function buildPropChance(input: PropInput): PropReport {
       if (wind != null && wind >= 12) {
         if (parsed.stat === "hr") {
           z += clip((wind - 10) * 0.006, 0, 0.08);
-          bits.push(\wind \ mph\);
+          bits.push(`wind ${wind} mph`);
         }
       }
       if (precip != null && precip >= 40 && parsed.stat === "hits") {
         z -= 0.05;
-        bits.push(\ain \%\);
+        bits.push(`rain ${precip}%`);
       }
       if (temp != null && temp >= 85 && (parsed.stat === "hr" || parsed.stat === "hits")) {
         z += 0.04;
-        bits.push(\\F\);
+        bits.push(`${temp}F`);
       }
     }
 
