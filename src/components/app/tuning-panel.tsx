@@ -145,7 +145,7 @@ export function TuningPanel() {
             disabled={isSaving}
             className="w-full py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
           >
-            {saved ? "✔ Master Engine Updated" : isSaving ? "Locking..." : "Save Variables"}
+            {saved ? "✔ Master Engine Updated" : isSaving ? "Locking..." : "Sync Tuning to Postgres"}
           </button>
         </div>
       </div>
