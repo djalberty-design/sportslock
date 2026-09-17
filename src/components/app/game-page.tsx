@@ -114,14 +114,31 @@ export function GamePage({ eventId }: { eventId: string }) {
              amOdds = d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
           }
           
-          const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+                    const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
           const playerName = q.player || q.row?.player;
           const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
+          const headshotUrl = (q.row as any)?.headshot;
 
           return (
             <div key={i} className="bg-panel border border-line rounded-lg p-3 flex items-center justify-between hover:border-primary/30 transition-colors">
-               <div className="flex flex-col">
-                  {playerName ? (
+               <div className="flex items-center gap-3">
+                  {headshotUrl && (
+                    <div className="shrink-0 size-10">
+                      <img src={headshotUrl} className="size-full rounded-full object-cover ring-1 ring-line bg-obsidian" alt={playerName || ""} />
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                     {playerName ? (
+                       <>
+                         <span className="font-bold text-ink text-sm">{playerName}</span>
+                         <span className="text-muted text-xs">{label} {pointText}</span>
+                       </>
+                     ) : (
+                       <span className="font-bold text-ink text-sm">{label} {pointText}</span>
+                     )}
+                     <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-1">{q.marketType || q.row?.marketType}</span>
+                  </div>
+               </div>
                     <>
                       <span className="font-bold text-ink text-sm">{playerName}</span>
                       <span className="text-muted text-xs">{label} {pointText}</span>

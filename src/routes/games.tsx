@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { LayoutGrid, ChevronRight, BarChart2 } from "lucide-react";
+import { LayoutGrid, ChevronRight, BarChart2, CloudSun } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
@@ -94,7 +94,7 @@ function TheMatrix() {
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
-                  {g.weather && <span className="text-xs text-muted">ðŸŒ¤ï¸ {g.weather}</span>}
+                  {g.weather && <span className="text-xs text-muted flex items-center gap-1"><CloudSun className="size-3" /> {g.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
                 </div>
                 
                 {/* AI Macro Projection */}
