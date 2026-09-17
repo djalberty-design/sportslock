@@ -1,47 +1,48 @@
 import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, Camera, CloudSun } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function GamePage({ eventId }: { eventId: string }) {
-  const { snapshot } = useDeskDecision();
+  const { snapshot, picks } = useDeskDecision();
   const [activeTab, setActiveTab] = useState("popular");
   const [sgpSlip, setSgpSlip] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wager, setWager] = useState("50");
 
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
+  const gameProps = useMemo(() => picks?.props?.filter((p: any) => p.row?.eventId === eventId || p.eventId === eventId) || [], [picks, eventId]);
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   
-  if (gameQuotes.length === 0) {
+  if (gameQuotes.length === 0 && gameProps.length === 0) {
     return <div className="p-8 text-center text-muted">Game not found or loading...</div>;
   }
 
-  const firstQuote = gameQuotes[0];
+  const firstQuote = gameQuotes[0] || gameProps[0]?.row;
   const homeLogo = firstQuote?.homeLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.homeAbbr);
   const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.awayAbbr);
   const isLive = firstQuote?.inPlay;
 
   const toggleLeg = (quote: any) => {
     setSgpSlip(prev => {
-      const exists = prev.find(p => p.selection === quote.selection && p.marketType === quote.marketType);
+      const exists = prev.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
       if (exists) return prev.filter(p => p !== exists);
       return [...prev, quote];
     });
   };
 
-  const isSelected = (quote: any) => !!sgpSlip.find(p => p.selection === quote.selection && p.marketType === quote.marketType);
+  const isSelected = (quote: any) => !!sgpSlip.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
 
   // Fast Frontend Math
-  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || 0.5), 1) : 0;
+  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || leg.chance || 0.5), 1) : 0;
   const hitProbPct = Math.round(combinedProb * 100);
 
   // Fake Vegas multiplier for demo
   const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
-      let p = leg.hardRockPrice || leg.consensusPrice || leg.price || -110;
+      let p = leg.hardRockPrice || leg.consensusPrice || leg.price || leg.row?.hardRockPrice || -110;
       let prob = p < 0 ? (-p / (-p + 100)) : (100 / (p + 100));
       return acc * prob;
   }, 1) : 0;
@@ -56,27 +57,40 @@ export function GamePage({ eventId }: { eventId: string }) {
   if (sgpSlip.length === 0) americanOdds = "";
 
   const renderGrid = (type: string) => {
-    let items = gameQuotes;
-    if (type === "popular") items = gameQuotes.slice(0, 10);
-    if (type === "props") items = gameQuotes.filter(q => q.isProp);
-    if (type === "lines") items = gameQuotes.filter(q => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
+    let items: any[] = [];
+    const lines = gameQuotes.filter((q: any) => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
+    
+    if (type === "popular") items = [...lines.slice(0, 4), ...gameProps.slice(0, 6)];
+    else if (type === "props") items = gameProps;
+    else if (type === "lines") items = lines;
 
     return (
       <div className="flex flex-col gap-3 pb-24">
         {items.map((q, i) => {
           let amOdds = "";
-          let rawP = q.hardRockPrice || q.consensusPrice || q.price;
+          let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice;
           if (rawP && (rawP < -100 || rawP > 100)) amOdds = rawP > 0 ? `+${rawP}` : `${rawP}`;
           else {
-             const d = (q.fairProb) ? (1/q.fairProb) : 2.0;
+             const d = (q.fairProb) ? (1/q.fairProb) : (q.decimalPayout || 2.0);
              amOdds = d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
           }
+          
+          const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+          const playerName = q.player || q.row?.player;
+          const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
 
           return (
             <div key={i} className="bg-panel border border-line rounded-lg p-3 flex items-center justify-between hover:border-primary/30 transition-colors">
                <div className="flex flex-col">
-                  <span className="font-bold text-ink text-sm">{q.selection} {q.point ? (q.point > 0 ? `+${q.point}` : q.point) : ""}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted font-bold">{q.marketType}</span>
+                  {playerName ? (
+                    <>
+                      <span className="font-bold text-ink text-sm">{playerName}</span>
+                      <span className="text-muted text-xs">{label} {pointText}</span>
+                    </>
+                  ) : (
+                    <span className="font-bold text-ink text-sm">{label} {pointText}</span>
+                  )}
+                  <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-1">{q.marketType || q.row?.marketType}</span>
                </div>
                <button 
                  onClick={() => toggleLeg(q)}
@@ -89,6 +103,11 @@ export function GamePage({ eventId }: { eventId: string }) {
             </div>
           )
         })}
+        {items.length === 0 && (
+          <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
+            No markets available in this category.
+          </div>
+        )}
       </div>
     );
   }
@@ -105,12 +124,15 @@ export function GamePage({ eventId }: { eventId: string }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
              <div className="flex items-center -space-x-3">
-                {awayLogo ? <img src={awayLogo} className="size-12 rounded-full ring-4 ring-background bg-panel" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
-                {homeLogo ? <img src={homeLogo} className="size-12 rounded-full ring-4 ring-background bg-panel" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
+                {awayLogo ? <img src={awayLogo} className="size-12 rounded-full ring-4 ring-background bg-panel object-contain" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
+                {homeLogo ? <img src={homeLogo} className="size-12 rounded-full ring-4 ring-background bg-panel object-contain" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
              </div>
              <div className="flex flex-col">
-                <span className="text-xl font-display font-bold text-ink">{firstQuote?.awayAbbr} @ {firstQuote?.homeAbbr}</span>
-                <span className="text-xs text-muted">{gameBrief?.weather ? `ðŸŒ¤ï¸ ${gameBrief.weather}` : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}</span>
+                <span className="text-xl font-display font-bold text-ink">{firstQuote?.awayAbbr || "AWAY"} @ {firstQuote?.homeAbbr || "HOME"}</span>
+                <span className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                  {gameBrief?.weather && <CloudSun className="size-3" />}
+                  {gameBrief?.weather ? gameBrief.weather : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}
+                </span>
              </div>
           </div>
           {isLive && (
