@@ -15,6 +15,8 @@ export type JointLeg = {
   simFair?: number;
   price?: number;
   isProp?: boolean;
+  selection?: string;
+  sport?: string;
 };
 
 function product(xs: number[]): number {
