@@ -87,7 +87,8 @@ export type PropInput = {
   venue?: string;
   injuries?: Array<{ player: string; team?: string; status: string }>;
   restDays?: number;
-  seasonRate?: number;
+  usageRipple?: number;
+    seasonRate?: number;
   recentRate?: number;
   recentN?: number;
   usageMin?: number;
@@ -809,6 +810,7 @@ export function propContextFromBrief(
   | "recentN"
   | "homeLooks"
   | "awayLooks"
+    | "usageRipple"
 > {
   const player = (brief?.players ?? []).find((p) => opts.player && namesHit(p.name, opts.player));
   const awaySide = playerIsAway(player, opts.home, opts.away, opts.playerTeam);
@@ -843,6 +845,35 @@ export function propContextFromBrief(
   }
 
   const vsHand = oppHand === "L" ? ownLooks?.vsLeft : oppHand === "R" ? ownLooks?.vsRight : undefined;
+
+  let usageRipple = 0;
+  if (player && (stat === "rec_yds" || stat === "receptions" || stat === "rush_yds" || stat === "rush_att" || stat === "pass_yds" || stat === "pass_td" || stat === "points" || stat === "assists" || stat === "rebounds")) {
+    const isOut = (st: string) => /out|il|doubtful|suspended|pup|ir/i.test(st ?? "");
+    const ownInjuries = (brief?.injuries ?? []).filter(i => {
+       const p = (brief?.players ?? []).find(p2 => p2.name && i.player && (p2.name === i.player || p2.name.includes(i.player) || i.player.includes(p2.name)));
+       if (!p) return false;
+       const pAway = p.team ? (p.team.toLowerCase() === opts.away.toLowerCase() || opts.away.toLowerCase().includes(p.team.toLowerCase())) : playerIsAway(p, opts.home, opts.away, p.team);
+       return pAway === awaySide && isOut(i.status) && p.name !== player.name;
+    });
+
+    for (const inj of ownInjuries) {
+       const p = (brief?.players ?? []).find(p2 => p2.name && inj.player && (p2.name === inj.player || p2.name.includes(inj.player)));
+       if (!p) continue;
+       const pos = (p.position || "").toUpperCase();
+       const isGridiron = brief?.sport === "NFL" || brief?.sport === "NCAAF";
+       const isHardwood = brief?.sport === "NBA" || brief?.sport === "NCAAB";
+       
+       if (isGridiron) {
+         if (stat === "rec_yds" || stat === "receptions") {
+           if (pos === "WR" || pos === "TE") usageRipple += 0.08; 
+         } else if (stat === "rush_yds" || stat === "rush_att") {
+           if (pos === "RB") usageRipple += 0.12; 
+         } else if (stat === "pass_yds" || stat === "pass_td") {
+           if (pos === "WR" || pos === "TE") usageRipple -= 0.04;
+         }
+       }
+    }
+  }
 
   return {
     usageMin: player?.usageMin,
