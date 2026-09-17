@@ -51,8 +51,8 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         <div className="flex items-center justify-between mb-4 border-b border-line/50 pb-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center -space-x-2">
-              {awayLogo ? <img src={awayLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Away" /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
-              {homeLogo ? <img src={homeLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Home" /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
+              {awayLogo ? <img src={awayLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Away" onError={e => { e.currentTarget.style.display = 'none'; }} /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
+              {homeLogo ? <img src={homeLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Home" onError={e => { e.currentTarget.style.display = 'none'; }} /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-muted uppercase tracking-wider">
@@ -111,11 +111,11 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
                 
                 {legQuote?.headshot ? (
                    <div className="relative size-8 shrink-0">
-                     <img src={legQuote.headshot} className="size-8 rounded-full object-cover ring-1 ring-line bg-obsidian" alt="" />
-                     {logo && <img src={logo} className="absolute -bottom-1 -right-1 size-4 rounded-full ring-1 ring-panel bg-white object-contain" alt="" />}
+                     <img src={legQuote.headshot} className="size-8 rounded-full object-cover ring-1 ring-line bg-obsidian" alt="" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                     {logo && <img src={logo} className="absolute -bottom-1 -right-1 size-4 rounded-full ring-1 ring-panel bg-white object-contain" alt="" onError={e => { e.currentTarget.style.display = 'none'; }} />}
                    </div>
                 ) : logo ? (
-                  <img src={logo} className="size-7 object-contain shrink-0 mt-0.5" alt="" />
+                  <img src={logo} className="size-7 object-contain shrink-0 mt-0.5" alt="" onError={e => { e.currentTarget.style.display = 'none'; }} />
                 ) : (
                   <div className="size-7 rounded-full bg-line shrink-0 mt-0.5" />
                 )}

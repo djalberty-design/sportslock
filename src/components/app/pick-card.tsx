@@ -329,8 +329,8 @@ function TeamMarks({ pick }: { pick: DeskPick }) {
   if (!home && !away) return null;
   return (
     <span className="flex -space-x-2">
-      {away ? <img src={away} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
-      {home ? <img src={home} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
+      {away ? <img src={away} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+      {home ? <img src={home} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
     </span>
   );
 }

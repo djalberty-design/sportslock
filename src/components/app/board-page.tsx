@@ -476,8 +476,8 @@ function GameCard({
           </div>
           {(homeLogo || awayLogo) ? (
             <span className="flex -space-x-2">
-              {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
-              {homeLogo ? <img src={homeLogo} alt="" className="size-8 rounded-full bg-panel object-contain" /> : null}
+              {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+              {homeLogo ? <img src={homeLogo} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
             </span>
           ) : null}
         </div>
