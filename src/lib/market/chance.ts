@@ -414,7 +414,7 @@ function pushEmpty(layers: ChanceLayer[], id: string, label: string, note: strin
     home: 0.5,
     precision: 0,
     family: "context",
-    note: `${note} Status: Looked (Empty). Missing data has zero weight — no 50/50 drag.`,
+    note: `${note} Status: Looked (Empty). Missing data has zero weight â€” no 50/50 drag.`,
     thin: true,
     empty: true,
   });
@@ -472,7 +472,7 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     });
   }
 
-  // Tape: tickets % vs handle % — sharp tell when they split (BIBLE §tape rule)
+  // Tape: tickets % vs handle % â€” sharp tell when they split (BIBLE Â§tape rule)
   for (const layer of tapeLayers({
     home: input.home,
     oddsHome: input.oddsHome,
@@ -696,7 +696,7 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     empty: process.empty,
   });
 
-  // Availability layer — injury outs / questionable count (BIBLE §1 context stack)
+  // Availability layer â€” injury outs / questionable count (BIBLE Â§1 context stack)
   {
     const avail = availabilityEffect({
       sport,
@@ -717,14 +717,14 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     });
   }
 
-  // Officials / crew tendency layer (BIBLE §1 context stack)
+  // Officials / crew tendency layer (BIBLE Â§1 context stack)
   {
     const layer = officialLayer({ sport, officials: input.officials });
     if (layer.empty) pushEmpty(layers, layer.id, layer.label, layer.note);
     else pushLayer(layers, { ...layer, family: "context" });
   }
 
-  // H2H + venue-split layers from splits-g (BIBLE §h2h + venue-split rules)
+  // H2H + venue-split layers from splits-g (BIBLE Â§h2h + venue-split rules)
   for (const layer of splitLayers({
     sport,
     home: input.home,
@@ -737,7 +737,7 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     else pushLayer(layers, { ...layer, family: "context" });
   }
 
-  // Defense / underlying / platoon / pitcher layers from matchup-g (BIBLE §defense + platoon rules)
+  // Defense / underlying / platoon / pitcher layers from matchup-g (BIBLE Â§defense + platoon rules)
   for (const layer of matchupLayers({
     sport,
     homeLooks: input.homeLooks,
@@ -909,7 +909,7 @@ export function priceDiscretePlayerProp(
 ): { overProb: number; underProb: number } | null {
   const mu = calculatePlayerPropMean(propType, baseline, teamExpectedPace);
   
-  // Empty Look — no baseline data. Return null; never inject 50/50 drag. (BIBLE §0.1)
+  // Empty Look â€” no baseline data. Return null; never inject 50/50 drag. (BIBLE Â§0.1)
   if (mu === 0) return null;
   
   const probOver = poissonOver(mu, line);
@@ -930,7 +930,7 @@ export function priceContinuousPlayerProp(
 ): { overProb: number; underProb: number } | null {
   const mu = calculatePlayerPropMean(propType, baseline, teamExpectedPace);
   
-  // Empty Look — no baseline data. Return null; never inject 50/50 drag. (BIBLE §0.1)
+  // Empty Look â€” no baseline data. Return null; never inject 50/50 drag. (BIBLE Â§0.1)
   if (mu === 0) return null;
   
   // Standard deviation scales sub-linearly with expected volume

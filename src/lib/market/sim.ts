@@ -51,6 +51,15 @@ export function runMonteCarlo(g: GameLatent, n = 10000): GameSimResult[] {
     const homeScore = Math.max(0, (total + margin) / 2);
     const awayScore = Math.max(0, (total - margin) / 2);
     
+    // Phase 8: NHL Empty Net Game Script Variance
+    if (g.sport === "NHL" && Math.abs(margin) <= 2) {
+      if (Math.random() > 0.6) {
+        total += 1;
+        if (margin > 0) homeScore += 1; else awayScore += 1;
+        margin = homeScore - awayScore;
+      }
+    }
+
     let script: GameSimResult["script"] = "normal";
     
     // Classify the game script

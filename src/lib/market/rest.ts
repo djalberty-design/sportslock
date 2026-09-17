@@ -7,6 +7,7 @@ export type RestSnap = {
   awayRestDays?: number;
   homeWinPct?: number;
   awayWinPct?: number;
+  venue?: string;
 };
 
 export type RestEffect = {
