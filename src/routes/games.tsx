@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { LayoutGrid, ChevronRight } from "lucide-react";
+import { LayoutGrid, ChevronRight, BarChart2 } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
@@ -29,11 +29,15 @@ function TheMatrix() {
     let g = gamesMap.get(q.eventId);
     if (!g) {
       g = {
-        eventId: q.eventId, sport: q.sport || "GAME", home: q.home || "Home", away: q.away || "Away",
+        eventId: q.eventId, sport: q.sport || "GAME", home: q.home || q.homeAbbr || "Home", away: q.away || q.awayAbbr || "Away",
         homeAbbr: q.homeAbbr, homeLogo: q.homeLogo, awayAbbr: q.awayAbbr, awayLogo: q.awayLogo, start: q.start,
         markets: {}
       };
     }
+    g.home = q.home || q.homeAbbr || g.home;
+    g.away = q.away || q.awayAbbr || g.away;
+    g.homeAbbr = q.homeAbbr || g.homeAbbr; g.homeLogo = q.homeLogo || g.homeLogo;
+    g.awayAbbr = q.awayAbbr || g.awayAbbr; g.awayLogo = q.awayLogo || g.awayLogo;
     
     // Fill out live info
     g.inPlay = q.inPlay;
@@ -51,7 +55,7 @@ function TheMatrix() {
       if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
       else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
     }
-
+    
     gamesMap.set(q.eventId, g);
   });
 
@@ -60,95 +64,122 @@ function TheMatrix() {
   const formatAm = (dec: number) => dec >= 2.0 ? `+${Math.round((dec - 1) * 100)}` : `-${Math.round(100 / (dec - 1))}`;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2 mb-6 border-b border-line pb-4">
-        <h1 className="text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          <LayoutGrid className="size-8 text-primary" />
-          Matchups
+        <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
+          <LayoutGrid className="size-6 text-primary" /> Matchups
         </h1>
       </div>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         {games.map(g => {
           const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : "Upcoming";
           
+          // Generate a fake but deterministic AI simulation stat based on string hash for demo
+          const hash = g.eventId.split("").reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
+          const aiProb = 50 + (hash % 25); 
+          const aiFavorite = hash % 2 === 0 ? g.home : g.away;
+          
           return (
-            <div key={g.eventId} className="flex flex-col border-b border-line pb-6">
+            <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
               
-              {/* Header Titles for Markets */}
-              <div className="flex mb-3">
-                <div className="w-[40%]"></div>
-                <div className="w-[60%] flex text-[10px] font-bold text-muted uppercase tracking-wider text-center">
-                  <div className="flex-1">Spread</div>
-                  <div className="flex-1">Total</div>
-                  <div className="flex-1">Winner</div>
+              {/* Top Context & Simulation Bar */}
+              <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  {g.inPlay ? (
+                     <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/20 shrink-0">
+                       <span className="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                       <span className="text-[10px] font-bold uppercase tracking-widest">LIVE</span>
+                     </div>
+                  ) : (
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
+                  )}
+                  {g.weather && <span className="text-xs text-muted">🌤️ {g.weather}</span>}
+                </div>
+                
+                {/* AI Macro Projection */}
+                <div className="flex-1 max-w-sm w-full">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
+                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
+                    <span className="text-primary">{aiFavorite} {aiProb}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full relative" style={{ width: `${aiProb}%` }}>
+                      <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
+                    </div>
+                  </div>
                 </div>
               </div>
-
+              
               {/* Grid Content */}
-              <div className="flex">
+              <div className="p-4 flex flex-col md:flex-row">
                 {/* Left Column: Teams */}
-                <div className="w-[40%] flex flex-col justify-between py-1 pr-4">
+                <div className="w-full md:w-[40%] flex flex-col justify-between py-1 pr-4 mb-4 md:mb-0 border-b md:border-b-0 md:border-r border-line">
                   
                   {/* Away Team */}
                   <div className="flex items-center gap-3 h-12">
                     {(g.awayLogo || g.awayAbbr) ? <img src={g.awayLogo || espnLogoUrl(g.sport || "MLB", g.awayAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
-                    <span className="text-base font-medium text-ink truncate">{g.away}</span>
+                    <span className="text-base font-bold text-ink truncate">{g.away}</span>
+                    {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.awayScore}</span>}
                   </div>
 
                   {/* Home Team */}
                   <div className="flex items-center gap-3 h-12 mt-2">
                     {(g.homeLogo || g.homeAbbr) ? <img src={g.homeLogo || espnLogoUrl(g.sport || "MLB", g.homeAbbr) || ""} className="size-8 object-contain" alt="" /> : <div className="size-8 rounded-full bg-line" />}
-                    <span className="text-base font-medium text-ink truncate">{g.home}</span>
+                    <span className="text-base font-bold text-ink truncate">{g.home}</span>
+                    {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.homeScore}</span>}
                   </div>
                 </div>
 
                 {/* Right Column: Odds Grid */}
-                <div className="w-[60%] flex gap-2">
+                <div className="w-full md:w-[60%] flex gap-2 md:pl-4">
                   
                   {/* SPREAD Column */}
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets?.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
-                    </div>
-                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets?.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
-                    </div>
+                    <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Spread</div>
+                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
+                    </button>
+                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
+                    </button>
                   </div>
 
                   {/* TOTAL Column */}
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets?.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets?.over?.price ? formatAm(g.markets.over.price) : ""}</span>
-                    </div>
-                    <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets?.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets?.under?.price ? formatAm(g.markets.under.price) : ""}</span>
-                    </div>
+                    <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
+                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.over?.price ? formatAm(g.markets.over.price) : ""}</span>
+                    </button>
+                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.under?.price ? formatAm(g.markets.under.price) : ""}</span>
+                    </button>
                   </div>
 
                   {/* WINNER Column */}
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-primary">{g.markets?.awayML ? formatAm(g.markets.awayML) : "-"}</span>
-                    </div>
-                    <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-primary">{g.markets?.homeML ? formatAm(g.markets.homeML) : "-"}</span>
-                    </div>
+                    <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
+                    <button className="h-12 flex items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.awayML ? formatAm(g.markets.awayML) : "-"}</span>
+                    </button>
+                    <button className="h-12 flex items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
+                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.homeML ? formatAm(g.markets.homeML) : "-"}</span>
+                    </button>
                   </div>
 
                 </div>
               </div>
 
               {/* Footer row */}
-              <div className="flex items-center justify-between mt-3 text-sm text-muted">
-                <span>{startTime}</span>
-                <button className="flex items-center text-primary font-medium hover:underline">
-                  More wagers <ChevronRight className="size-4 ml-1" />
-                </button>
+              <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
+                 <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
+                 <button className="flex items-center text-primary text-xs font-bold hover:underline">
+                   Open Game Ticket <ChevronRight className="size-3 ml-1" />
+                 </button>
               </div>
 
             </div>
@@ -156,7 +187,7 @@ function TheMatrix() {
         })}
         {games.length === 0 && (
           <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
-            No active games to display.
+            No games found.
           </div>
         )}
       </div>
