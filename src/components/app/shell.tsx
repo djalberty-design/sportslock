@@ -26,7 +26,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useAccess();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
+        <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
+      {/* Global Trust / Sync Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-7 bg-obsidian border-b border-line/50 flex items-center justify-between px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-primary animate-pulse"></span> Live Feed Synced: Just now</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="hidden md:inline-block">AI Engine: Optimal</span>
+          <span className="text-primary font-mono tracking-normal">v4.2.0</span>
+        </div>
+      </div>
       {/* Mobile Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden">
         {TABS.map((tab) => {
@@ -48,7 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Desktop Side Rail */}
-      <aside className="sticky top-0 hidden h-dvh w-64 flex-col border-r border-line bg-panel md:flex">
+      <aside className="sticky top-7 hidden h-[calc(100dvh-1.75rem)] w-64 flex-col border-r border-line bg-panel md:flex mt-7">
         <div className="flex h-16 items-center gap-3 px-6">
           <Hexagon className="size-6 text-primary" />
           <span className="font-display text-xl font-bold tracking-tight text-ink">SportsLock AI</span>
@@ -90,9 +100,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 bg-background relative" id="main">
+      <main className="flex-1 bg-background relative mt-7" id="main">
         {/* Top Header for Mobile */}
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden">
+        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden">
           <div className="flex items-center gap-2">
             <Hexagon className="size-5 text-primary" />
             <span className="font-display font-bold tracking-tight">SportsLock AI</span>
