@@ -52,7 +52,7 @@ function ParlayArchitect() {
     .filter((p) => {
       if (!p.start) return false;
       const startMs = new Date(p.start).getTime();
-      return startMs > now && p.calcEdge > 0.01;
+      return startMs > now && p.calcEdge > 0.01 && p.calcEdge <= 0.15;
     })
     .sort((a, b) => b.calcEdge - a.calcEdge);
 

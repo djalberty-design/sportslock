@@ -153,8 +153,8 @@ function tagFor(ev: number, hold: number, row: Omit<ScanRow, "tag" | "action" | 
   if (row.isProp && isCollegeSport(row.sport)) return "illegal_fl";
   if (row.isProp && !isKnownMarket(row.selection, row.marketType)) return "unknown_market";
   if (row.inPlay) return "in_play";
-  if (Number.isFinite(ev) && ev >= activeMinEdge && row.hardRockPrice != null) return "fair_or_better";
-  if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
+  if (Number.isFinite(ev) && ev >= activeMinEdge && ev <= 0.15 && row.hardRockPrice != null) return "fair_or_better";
+  if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev <= 0.15 && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
     return "close_enough";
   }
   if (Number.isFinite(ev) && ev < DEFAULTS.closeEnoughEv) return "juiced";
