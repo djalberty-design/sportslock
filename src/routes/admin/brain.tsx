@@ -84,7 +84,7 @@ function BrainTelemetry() {
           <button type="button" onClick={handleSync} disabled={isSyncing} className={`rounded-md px-4 py-2 text-sm font-bold transition-all cursor-pointer ${isSyncing ? 'bg-zinc-700 text-zinc-400' : 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'}`}>
             {isSyncing ? 'Syncing...' : 'Force Re-Sync'}
           </button>
-          <button type="button" onClick={downloadCSV} className="rounded-md bg-gold px-4 py-2 text-sm font-bold text-navy-deep hover:brightness-110 transition-all cursor-pointer">
+          <button type="button" onClick={downloadCSV} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-zinc-950 hover:brightness-110 transition-all cursor-pointer">
             Download Raw CSV
           </button>
         </div>

@@ -36,19 +36,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-paper text-ink">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-gold focus:px-3 focus:py-2 focus:text-navy-deep"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-emerald-500 focus:px-3 focus:py-2 focus:text-zinc-950"
       >
         Skip to main
       </a>
       <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/92 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Link to="/" className="flex min-h-11 items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-md bg-gold text-navy-deep shadow-[var(--shadow-stamp)]">
+            <span className="grid size-9 place-items-center rounded-md bg-emerald-500 text-zinc-950 shadow-[var(--shadow-stamp)]">
               <LockMark />
             </span>
             <span className="leading-tight">
               <span className="font-display block text-lg font-semibold tracking-wide text-ink">{BRAND.name}</span>
-             <span className="hidden text-xs uppercase tracking-[0.16em] text-gold sm:block">Intelligence. Edge. Confidence.</span>
+             <span className="hidden text-xs uppercase tracking-[0.16em] text-emerald-500 sm:block">Intelligence. Edge. Confidence.</span>
             </span>
           </Link>
           <div className="flex items-center gap-1">
@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 to="/admin"
                 className={cn(
                   "hidden min-h-11 items-center rounded-md px-3 text-sm font-medium sm:inline-flex",
-                  pathname === "/admin" ? "bg-gold text-navy-deep" : "text-muted hover:bg-wash hover:text-ink",
+                  pathname === "/admin" ? "bg-emerald-500 text-zinc-950" : "text-muted hover:bg-wash hover:text-ink",
                 )}
               >
                 Admin
@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="mx-auto hidden max-w-6xl px-4 pb-32 text-xs text-muted lg:block">
         <p>
           21+ for Hard Rock Bet. 18+ for classic daily fantasy / prediction markets. Call{" "}
-          <span className="font-mono text-gold">{BRAND.helpline}</span> if play is no longer fun. This site
+          <span className="font-mono text-emerald-500">{BRAND.helpline}</span> if play is no longer fun. This site
           never places a bet. Delayed public odds. Not a prediction. Florida.
         </p>
       </footer>
@@ -100,15 +100,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                   to={item.to}
                   className={cn(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium uppercase tracking-wide",
-                    active ? "text-gold" : "text-faint hover:text-ink",
+                    active ? "text-emerald-500" : "text-faint hover:text-ink",
                   )}
                 >
                   <span
                     className={cn(
                       "grid place-items-center rounded-md",
                       featured && "size-8",
-                      featured && active && "bg-gold text-navy-deep",
-                      featured && !active && "bg-wash text-gold",
+                      featured && active && "bg-emerald-500 text-zinc-950",
+                      featured && !active && "bg-wash text-emerald-500",
                     )}
                   >
                     <item.icon className="size-4" strokeWidth={active || featured ? 2 : 1.6} />

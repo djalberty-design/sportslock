@@ -49,7 +49,7 @@ export function StartPage() {
   return (
     <div className="space-y-8">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">{BRAND.kicker}</p>
+        <p className="text-sm text-emerald-500">{BRAND.kicker}</p>
         <h1 className="font-display mt-2 text-3xl text-ink md:text-5xl">Set the stake. Then take the ticket.</h1>
         <p className="mt-3 text-base text-ink/80">
           Type what you can spend. AI Picks names a ticket. You place it at Hard Rock Bet Florida if you want. This site never places a bet.
@@ -65,7 +65,7 @@ export function StartPage() {
       <Link
         to="/today"
         onClick={() => setOnboarded(true)}
-        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-gold px-5 text-base font-medium text-navy-deep sm:w-auto"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-500 px-5 text-base font-medium text-zinc-950 sm:w-auto"
       >
         Open AI Picks
       </Link>
@@ -80,9 +80,9 @@ export function StartPage() {
             {TABS.map((tab) => (
               <li key={tab.to}>
                 <Link to={tab.to} onClick={() => setOnboarded(true)} className="paper-card block p-5">
-                  <p className="stamp text-gold">{tab.stamp}</p>
+                  <p className="stamp text-emerald-500">{tab.stamp}</p>
                   <h3 className="font-display mt-2 flex items-center gap-2 text-xl text-ink">
-                    <tab.icon className="size-4 text-gold" strokeWidth={1.75} />
+                    <tab.icon className="size-4 text-emerald-500" strokeWidth={1.75} />
                     {tab.title}
                   </h3>
                   <p className="mt-2 text-sm text-muted">{tab.body}</p>

@@ -12,7 +12,7 @@ import { WagerMeter } from "./wager-meter";
 const USED_TONE: Record<CrossCheck["used"], string> = {
   blocks: "text-down",
   supports: "text-up",
-  noted: "text-gold",
+  noted: "text-emerald-500",
   discarded: "text-faint",
 };
 
@@ -29,13 +29,13 @@ export function OpinionCard({ board, compact = false }: { board: PlayBoard; comp
 
   return (
     <section className="paper-card relative overflow-hidden p-5 md:p-6">
-      <div className="absolute inset-y-0 left-0 w-1.5 bg-gold" aria-hidden="true" />
-      <p className="stamp text-gold">The call · {lane.kicker}</p>
+      <div className="absolute inset-y-0 left-0 w-1.5 bg-emerald-500" aria-hidden="true" />
+      <p className="stamp text-emerald-500">The call · {lane.kicker}</p>
       <h2 className="font-display mt-2 text-2xl text-ink md:text-[1.7rem]">{lane.name}</h2>
       <p className="mt-4 text-sm uppercase tracking-[0.14em] text-muted">Do this</p>
       <p className="mt-1 font-display text-xl text-ink">{verdict.doThis}</p>
       {compact && rec ? (
-        <p className="mt-3 text-sm text-gold">
+        <p className="mt-3 text-sm text-emerald-500">
           {rec.kickoffEnglish || "Time TBA"}
           {rec.away && rec.home ? ` · ${rec.away} (away) at ${rec.home} (home)` : ""}
         </p>
@@ -57,7 +57,7 @@ export function OpinionCard({ board, compact = false }: { board: PlayBoard; comp
           <Link
             to="/game/$eventId"
             params={{ eventId: rec.eventId }}
-            className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Bet this one game — photo required
           </Link>
@@ -92,7 +92,7 @@ export function OpinionCard({ board, compact = false }: { board: PlayBoard; comp
           <span>
             We ran 11 checks · {oks} OK · {stops} stop
           </span>
-          <span className="stamp text-gold">{showChecks ? "Hide" : "Show"}</span>
+          <span className="stamp text-emerald-500">{showChecks ? "Hide" : "Show"}</span>
         </button>
         {showChecks ? (
           <ol className="mt-3 grid gap-1.5">
@@ -112,7 +112,7 @@ export function OpinionCard({ board, compact = false }: { board: PlayBoard; comp
         <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
           {open ? "Hide the longer why" : "Longer why"}
         </Button>
-        <Link to="/learn" className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-gold underline-offset-4 hover:underline">
+        <Link to="/learn" className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
           Open Learn
         </Link>
         <Button variant="outline" size="sm" onClick={() => setIgnoreRibbon(!ignoreRibbon)}>

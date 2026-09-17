@@ -8,7 +8,7 @@ export function OptionsPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Eight types · one catalog</p>
+        <p className="text-sm text-emerald-500">Eight types · one catalog</p>
         <h1 className="font-display mt-2 text-3xl text-ink">What this app will even consider.</h1>
         <p className="mt-3 text-ink/80">
           Each type has a plain-English deep dive: how it works, when it works, when it fails, and what never to do. Status is scored from today's delayed odds — not a 0–100 game grade.
@@ -25,8 +25,8 @@ export function OptionsPage() {
                 className="paper-card block p-5 transition-shadow hover:shadow-[var(--shadow-paper-hover)]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="stamp text-gold">{opt.symbol}</span>
-                  <span className="text-xs uppercase tracking-wider text-gold">
+                  <span className="stamp text-emerald-500">{opt.symbol}</span>
+                  <span className="text-xs uppercase tracking-wider text-emerald-500">
                     {st ? STATUS_LABEL[st.status] : "—"}
                   </span>
                 </div>

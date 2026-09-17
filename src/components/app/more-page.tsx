@@ -39,7 +39,7 @@ export function MorePage() {
   return (
     <div className="space-y-8">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">How this site works</p>
+        <p className="text-sm text-emerald-500">How this site works</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">More</h1>
         <p className="mt-2 max-w-2xl text-sm text-ink/80">
           Set money. Pick a ticket. Photograph Hard Rock. Mark it on Log. This site never places a bet.
@@ -47,7 +47,7 @@ export function MorePage() {
       </header>
 
       <nav className="paper-card p-5">
-        <p className="stamp text-gold">On this page</p>
+        <p className="stamp text-emerald-500">On this page</p>
         <ul className="mt-3 space-y-1">
           {MORE_LINKS.filter((item) => item.to !== "/admin" || isAdmin).map((item) => (
             <li key={item.label}>
@@ -67,12 +67,12 @@ export function MorePage() {
       </nav>
 
       <section id="how" className="paper-card scroll-mt-24 p-5">
-        <p className="stamp text-gold">Four steps</p>
+        <p className="stamp text-emerald-500">Four steps</p>
         <h2 className="font-display mt-2 text-xl text-ink">How this site works</h2>
         <ol className="mt-4 grid gap-3 sm:grid-cols-2">
           {HOW_IT_WORKS.map((s) => (
             <li key={s.n} className="rounded-md bg-wash px-3 py-3">
-              <p className="stamp text-gold">{s.n}</p>
+              <p className="stamp text-emerald-500">{s.n}</p>
               <p className="mt-1 font-medium text-ink">{s.title}</p>
               <p className="mt-1 text-sm text-muted">{s.body}</p>
             </li>
@@ -81,7 +81,7 @@ export function MorePage() {
       </section>
 
       <section id="desks" className="paper-card scroll-mt-24 p-5">
-        <p className="stamp text-gold">Shipped map</p>
+        <p className="stamp text-emerald-500">Shipped map</p>
         <h2 className="font-display mt-2 text-xl text-ink">Desks</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {DESKS.map((d) => (
@@ -105,7 +105,7 @@ export function MorePage() {
       </section>
 
       <section id="never" className="paper-card scroll-mt-24 p-5">
-        <p className="stamp text-gold">Hard lines</p>
+        <p className="stamp text-emerald-500">Hard lines</p>
         <h2 className="font-display mt-2 text-xl text-ink">What this site will never do</h2>
         <p className="mt-2 text-sm text-ink/80">
           These are law. A later feature cannot cross them without a new desk pin and a new bible.
@@ -119,12 +119,12 @@ export function MorePage() {
       </section>
 
       <section id="words" className="paper-card scroll-mt-24 p-5">
-        <p className="stamp text-gold">One line each</p>
+        <p className="stamp text-emerald-500">One line each</p>
         <h2 className="font-display mt-2 text-xl text-ink">Words we use</h2>
         <dl className="mt-4 space-y-3">
           {WORDS_WE_USE.map((w) => (
             <div key={w.id}>
-              <dt className="text-sm font-medium text-gold">{w.word}</dt>
+              <dt className="text-sm font-medium text-emerald-500">{w.word}</dt>
               <dd className="text-sm text-ink/90">{w.line}</dd>
             </div>
           ))}
@@ -134,7 +134,7 @@ export function MorePage() {
       <section id="money" className="scroll-mt-24 space-y-4">
         <BankrollBar />
         <section className="paper-card p-5">
-          <p className="stamp text-gold">Settings</p>
+          <p className="stamp text-emerald-500">Settings</p>
           <h2 className="font-display mt-2 text-xl text-ink">What this device remembers</h2>
           <p className="mt-2 text-sm text-muted">Saved here. Same board still ranks the same.</p>
 
@@ -148,7 +148,7 @@ export function MorePage() {
                   onClick={() => setDeskMood(m.id)}
                   className={
                     deskMood === m.id
-                      ? "min-h-11 rounded-md bg-gold px-4 text-sm font-medium text-navy-deep"
+                      ? "min-h-11 rounded-md bg-emerald-500 px-4 text-sm font-medium text-zinc-950"
                       : "min-h-11 rounded-md bg-wash px-4 text-sm font-medium text-muted hover:text-ink"
                   }
                 >

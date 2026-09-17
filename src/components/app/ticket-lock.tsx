@@ -57,7 +57,7 @@ export function TicketReview({
   return (
     <div className="mt-5 space-y-4 rounded-md bg-wash p-4 ring-1 ring-gold/40">
       <div>
-        <p className="stamp text-gold">Not on Log yet · check the live number</p>
+        <p className="stamp text-emerald-500">Not on Log yet · check the live number</p>
         <h3 className="font-display mt-2 text-2xl text-ink">{title}</h3>
         <p className="mt-1 text-sm text-ink">
           {items.length === 1
@@ -87,7 +87,7 @@ export function TicketReview({
                 <p className="text-muted">
                   Board had <span className="font-mono text-ink">{formatAmerican(board)}</span>
                 </p>
-                <p className={shifted ? "text-gold" : "text-ink"}>
+                <p className={shifted ? "text-emerald-500" : "text-ink"}>
                   Screenshot now <span className="font-mono">{formatAmerican(live)}</span>
                 </p>
               </div>
@@ -105,13 +105,13 @@ export function TicketReview({
         <OddsBox label="Live number from screenshot" price={liveAmerican} chance={chance} live />
       )}
       {moved ? (
-        <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-gold">
+        <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-emerald-500">
           {lineShiftAlert(delayedAmerican, liveAmerican, chance ?? undefined)}
         </p>
       ) : null}
       {verdict ? (
         <p className="text-sm font-medium text-ink">
-          At this Hard Rock number: <span className="text-gold">{verdict}</span>
+          At this Hard Rock number: <span className="text-emerald-500">{verdict}</span>
         </p>
       ) : chance == null ? (
         <p className="text-sm text-muted">No desk line to compare yet. We can still lock the Hard Rock number from the photo.</p>
@@ -152,7 +152,7 @@ function OddsBox({
   return (
     <div className={cn("rounded-md px-3 py-3", live ? "bg-wash-gold" : "bg-card")}>
       <p className="stamp text-muted">{label}</p>
-      <p className={cn("font-display mt-1 text-2xl tabular-nums", live ? "text-gold" : "text-ink")}>
+      <p className={cn("font-display mt-1 text-2xl tabular-nums", live ? "text-emerald-500" : "text-ink")}>
         {math.pctLabel ?? formatAmerican(price)}
       </p>
       {math.hit != null ? (
@@ -170,7 +170,7 @@ export function LockedStamp({ ticket }: { ticket: PaperTicket }) {
   return (
     <section className="paper-card overflow-hidden p-5 text-center ring-2 ring-gold">
       <img src="/lock-stamp.jpg" alt="Locked in" className="lock-stamp mx-auto size-40 object-contain" />
-      <p className="stamp mt-2 text-gold">On Log · waiting</p>
+      <p className="stamp mt-2 text-emerald-500">On Log · waiting</p>
       <h2 className="font-display mt-2 text-2xl text-ink">{ticket.description}</h2>
       <p className="mt-2 text-sm text-ink">
         {formatBetUsd(ticket.stake)}
@@ -187,7 +187,7 @@ export function LockedStamp({ ticket }: { ticket: PaperTicket }) {
             : "live odds"}
       </p>
       {payout ? (
-        <p className="mt-1 text-sm text-gold">
+        <p className="mt-1 text-sm text-emerald-500">
           Hit {formatBetUsd(payout.total)} · miss −{formatBetUsd(ticket.stake)}
         </p>
       ) : null}
@@ -198,13 +198,13 @@ export function LockedStamp({ ticket }: { ticket: PaperTicket }) {
         price={ticket.livePrice ?? ticket.price}
         label="Chance it hits — locked number"
       />
-      <p className="mt-3 rounded-md bg-wash-gold px-3 py-2 text-sm text-gold">
+      <p className="mt-3 rounded-md bg-wash-gold px-3 py-2 text-sm text-emerald-500">
         This ticket is now one of {pulse.openCount} open {pulse.openCount === 1 ? "ticket" : "tickets"} on Log — top
         right of every page. When the game ends, tap Hit or Miss. Money on Start moves the same way the book would.
       </p>
       <Link
         to="/desk"
-        className="mt-4 inline-flex min-h-12 items-center justify-center rounded-md bg-gold px-5 text-base font-medium text-navy-deep"
+        className="mt-4 inline-flex min-h-12 items-center justify-center rounded-md bg-emerald-500 px-5 text-base font-medium text-zinc-950"
       >
         See it on Log
       </Link>
@@ -221,10 +221,10 @@ export function TicketChip() {
       to="/desk"
       className={cn(
         "inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium",
-        pathnameOpen ? "ticket-pulse bg-wash-gold text-gold" : "text-muted hover:bg-wash hover:text-ink",
+        pathnameOpen ? "ticket-pulse bg-wash-gold text-emerald-500" : "text-muted hover:bg-wash hover:text-ink",
       )}
     >
-      <span className="grid size-6 place-items-center rounded-sm bg-gold font-mono text-xs text-navy-deep">
+      <span className="grid size-6 place-items-center rounded-sm bg-emerald-500 font-mono text-xs text-zinc-950">
         {pulse.openCount}
       </span>
       <span className="hidden sm:inline">{pulse.openCount === 1 ? "open ticket" : "open tickets"}</span>

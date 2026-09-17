@@ -148,7 +148,7 @@ export function NowPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm text-gold">Named tickets. Fast Log to lock the live price.</p>
+        <p className="text-sm text-emerald-500">Named tickets. Fast Log to lock the live price.</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">AI Picks</h1>
         <p className="mt-2 max-w-2xl text-sm text-ink/80">
           Three columns. Not a guarantee. This site never places a bet.
@@ -175,7 +175,7 @@ export function NowPage() {
       ) : null}
 
       {query.isError ? (
-        <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
+        <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">
           Live board missing. Open Games after a refresh, or Fast Log.
         </p>
       ) : null}
@@ -244,7 +244,7 @@ export function NowPage() {
                   onClick={() => setLane(tab.id)}
                   className={cn(
                     "min-h-11 shrink-0 rounded-md px-4 text-sm font-medium",
-                    lane === tab.id ? "bg-gold text-navy-deep" : "bg-wash text-muted hover:text-ink",
+                    lane === tab.id ? "bg-emerald-500 text-zinc-950" : "bg-wash text-muted hover:text-ink",
                   )}
                 >
                   {tab.label}
@@ -263,7 +263,7 @@ export function NowPage() {
                     onClick={() => setParlayLane(tab.id)}
                     className={cn(
                       "min-h-11 shrink-0 rounded-md px-3 text-sm font-medium",
-                      parlayLane === tab.id ? "bg-wash-gold text-gold" : "bg-wash text-muted hover:text-ink",
+                      parlayLane === tab.id ? "bg-wash-gold text-emerald-500" : "bg-wash text-muted hover:text-ink",
                     )}
                   >
                     {tab.label}
@@ -286,12 +286,12 @@ export function NowPage() {
           </section>
 
           <PhotoWagerCta what="wager" />
-          <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
+          <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">
             Fast Log the ticket to confirm it on Log.
           </p>
           <p className="text-sm text-muted">
             Build your own mix on{" "}
-            <Link to="/parlay" className="font-medium text-gold underline-offset-4 hover:underline">
+            <Link to="/parlay" className="font-medium text-emerald-500 underline-offset-4 hover:underline">
               Combos
             </Link>
             . Open a game for the full Hard Rock sheet.
@@ -307,7 +307,7 @@ export function NowPage() {
 function OpinionSkeleton() {
   return (
     <section className="paper-card p-6">
-      <p className="stamp text-gold">The Call</p>
+      <p className="stamp text-emerald-500">The Call</p>
       <p className="mt-3 text-muted">Reading live odds and every market on the sheet…</p>
     </section>
   );
@@ -373,7 +373,7 @@ function TierColumn({
 }) {
   return (
     <section>
-      <p className="stamp text-gold">{stamp}</p>
+      <p className="stamp text-emerald-500">{stamp}</p>
       <h2 className="font-display mt-1 text-xl text-ink">{title}</h2>
       <p className="mt-1 mb-3 text-sm text-muted">{blurb}</p>
       {items.length ? (

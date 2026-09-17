@@ -6,7 +6,7 @@ export function SlatePage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">DraftKings Fantasy · not a Florida sportsbook fill</p>
+        <p className="text-sm text-emerald-500">DraftKings Fantasy · not a Florida sportsbook fill</p>
         <h1 className="font-display mt-2 text-3xl text-ink md:text-5xl">Fantasy</h1>
         <p className="mt-3 text-base text-ink/80">
           Salary-cap roster on DraftKings Fantasy. Photograph the player list and the contest lobby. We name a Safer cash
@@ -17,7 +17,7 @@ export function SlatePage() {
       <DfsDesk />
       <Link
         to="/today"
-        className="inline-flex min-h-12 items-center justify-center rounded-md bg-gold px-5 text-base font-medium text-navy-deep"
+        className="inline-flex min-h-12 items-center justify-center rounded-md bg-emerald-500 px-5 text-base font-medium text-zinc-950"
       >
         Open AI Picks
       </Link>

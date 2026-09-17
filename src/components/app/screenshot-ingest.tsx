@@ -235,7 +235,7 @@ export function ScreenshotIngest({
     <section id="lock-in" className={cn(embedded ? "mt-5 space-y-4" : "paper-card p-5 md:p-6")}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="stamp text-gold">Photo</p>
+          <p className="stamp text-emerald-500">Photo</p>
           <h2 className="font-display mt-1 text-xl text-ink">{title}</h2>
           <p className="mt-1 text-sm text-muted">{note}</p>
         </div>
@@ -244,15 +244,15 @@ export function ScreenshotIngest({
       {!preview && !locked && mode === "ticket" && !dkFlow ? (
         <ol className="mt-4 grid gap-2 text-sm text-ink sm:grid-cols-3">
           <li>
-            <p className="stamp text-gold">01</p>
+            <p className="stamp text-emerald-500">01</p>
             <p className="mt-1">Take a photo or pick from your library. Confirm the line before Log.</p>
           </li>
           <li>
-            <p className="stamp text-gold">02</p>
+            <p className="stamp text-emerald-500">02</p>
             <p className="mt-1">We show the live price and Hit / Miss dollars. Not on Log yet.</p>
           </li>
           <li>
-            <p className="stamp text-gold">03</p>
+            <p className="stamp text-emerald-500">03</p>
             <p className="mt-1">Save it. It waits on Log.</p>
           </li>
         </ol>
@@ -261,7 +261,7 @@ export function ScreenshotIngest({
       {!locked ? (
         <>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gold px-4 text-navy-deep">
+            <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 text-zinc-950">
               <Camera className="size-5" strokeWidth={1.75} />
               <span className="text-base font-medium">
                 {busy ? "Reading…" : dkFlow ? "Confirm with DraftKings Photo" : "Take photo"}
@@ -278,7 +278,7 @@ export function ScreenshotIngest({
                 }}
               />
             </label>
-            <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-lg bg-wash px-4 text-gold">
+            <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-lg bg-wash px-4 text-emerald-500">
               <ImageUp className="size-5" strokeWidth={1.75} />
               <span className="text-base font-medium">{preview ? "Different photo" : "Photo library"}</span>
               <input
@@ -494,7 +494,7 @@ export function ScreenshotIngest({
               error={lockError}
             />
           ) : preview && !draft.selection && !busy ? (
-            <p className="mt-4 text-sm text-gold">We could not read a pick. Tap Fix a field and type it, then lock.</p>
+            <p className="mt-4 text-sm text-emerald-500">We could not read a pick. Tap Fix a field and type it, then lock.</p>
           ) : null}
         </>
       ) : null}
@@ -523,7 +523,7 @@ export function PhotoFirstNote({ venue }: { venue?: string }) {
   const target = venue ?? "Hard Rock Bet Florida";
   const fantasy = /draftkings|fantasy/i.test(target);
   return (
-    <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
+    <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">
       {fantasy
         ? `Confirm with a DraftKings Fantasy photo. We read live salaries and flag $200+ shifts. 18+ Florida DFS — not a Hard Rock Bet Florida ticket.`
         : `Photograph the Hard Rock Bet Florida screen. We read the live price. Then you confirm it on Log.`}

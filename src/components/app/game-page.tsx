@@ -94,7 +94,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   if (!first && !q.isLoading) {
     return (
       <div className="space-y-4">
-        <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-gold">
+        <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-emerald-500">
           <ChevronLeft className="size-4" strokeWidth={1.75} />
           Games
         </Link>
@@ -106,7 +106,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   const researchPanel: ReactNode = (
     <div className="space-y-4">
       <section className="paper-card p-5">
-        <p className="stamp text-gold">Who is more likely to win?</p>
+        <p className="stamp text-emerald-500">Who is more likely to win?</p>
         <h2 className="font-display mt-2 text-2xl text-ink">{lean.title}</h2>
         <p className="mt-2 text-sm text-ink/90">{lean.because}</p>
         {fav ? (
@@ -146,7 +146,7 @@ export function GamePage({ eventId }: { eventId: string }) {
           {report?.because ??
             "Looks are pooled in log-odds. Ticket count vs handle is a layer â€” we never copy 80% of bets. Kalshi and Polymarket are research, not a Hard Rock ticket. This is not a lock."}
         </p>
-        <p className="mt-1 text-xs text-gold">
+        <p className="mt-1 text-xs text-emerald-500">
           Confidence {report?.confidence ?? "low"}
           {report ? ` Â· ${report.layers.length} looks Â· agreement ${Math.round(report.agreement * 100)} in 100` : ""}
         </p>
@@ -182,7 +182,7 @@ export function GamePage({ eventId }: { eventId: string }) {
             {research.lastFive.map((b) => (
               <li key={b.team}>
                 <p className="font-medium">{b.team}</p>
-                <p className="font-mono text-gold">{b.results.join(" ")}</p>
+                <p className="font-mono text-emerald-500">{b.results.join(" ")}</p>
                 <p className="text-muted">{b.line}</p>
               </li>
             ))}
@@ -196,7 +196,7 @@ export function GamePage({ eventId }: { eventId: string }) {
           <ul className="mt-3 space-y-2 text-sm">
             {research.injuries.map((inj, i) => (
               <li key={`${inj.player}-${i}`}>
-                <span className="text-gold">{inj.status}</span>
+                <span className="text-emerald-500">{inj.status}</span>
                 {" Â· "}
                 <span className="font-medium">{inj.player}</span>
                 <span className="text-muted"> ({inj.team})</span>
@@ -230,7 +230,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   return (
     <div className={showSlip ? "space-y-4 pb-40" : "space-y-4"}>
-      <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-gold">
+      <Link to="/board" className="inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-emerald-500">
         <ChevronLeft className="size-4" strokeWidth={1.75} />
         Games
       </Link>
@@ -261,7 +261,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       />
 
       {first && "scheduleOnly" in first && first.scheduleOnly ? (
-        <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-gold">
+        <p className="rounded-md bg-wash-gold px-3 py-2 text-sm text-emerald-500">
           ESPN listed this matchup but has not posted a two-way price. Fast Log when the number
           drops.
         </p>
@@ -493,7 +493,7 @@ function ChanceBar({
       </p>
       <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-navy-deep">
         <span className="bg-ink/40" style={{ width: `${a}%` }} />
-        <span className="bg-gold" style={{ width: `${h}%` }} />
+        <span className="bg-emerald-500" style={{ width: `${h}%` }} />
       </div>
     </div>
   );

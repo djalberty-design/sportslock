@@ -147,10 +147,10 @@ function ParlayArchitect() {
             <button
               onClick={handleLock}
               disabled={isLocking || isLocked}
-              className={`w-full mt-6 py-4 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-lg shadow-gold/20 flex justify-center items-center gap-2 ${
+              className={`w-full mt-6 py-4 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-lg shadow-emerald-500/20 flex justify-center items-center gap-2 ${
                 isLocked 
                   ? "bg-emerald-600 text-white" 
-                  : "bg-gold text-navy-deep hover:bg-[#e6a627]"
+                  : "bg-emerald-500 text-zinc-950 hover:bg-[#e6a627]"
               }`}
             >
               {isLocked ? "✔ Locked in Ledger" : isLocking ? "Locking..." : "Lock It In"}

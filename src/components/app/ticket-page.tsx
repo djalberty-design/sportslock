@@ -157,12 +157,12 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
     <div className="space-y-6">
       <BackLink />
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">
+        <p className="text-sm text-emerald-500">
           {bucketLabel(pick)} · {sportLabel(pick.sport)}
           {pick.row?.inPlay ? " · Live" : ""}
         </p>
         <h1 className="font-display mt-2 text-3xl text-ink md:text-4xl">{pick.selection}</h1>
-        <p className="mt-2 text-sm text-gold">
+        <p className="mt-2 text-sm text-emerald-500">
           {pick.start ? formatKickoff(pick.start) : ""}
           {pick.away && pick.home ? ` · ${pickMatchup(pick)}` : ""}
         </p>
@@ -172,7 +172,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
       </header>
 
       <section className="paper-card p-5 md:p-6">
-        <p className="stamp text-gold">The ticket</p>
+        <p className="stamp text-emerald-500">The ticket</p>
         <WagerMeter
           className="mt-4"
           size="lg"
@@ -213,7 +213,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
             game ensemble, then apply the period shrink or the player model.
           </p>
         )}
-        <p className="mt-4 text-xs text-gold">
+        <p className="mt-4 text-xs text-emerald-500">
           {LOOK_LABEL[qualityBand(pick.infoQuality)]}
           {report ? ` · ${report.layers.length} looks · agreement ${Math.round(report.agreement * 100)} in 100` : ""}
           {pick.chance ? ` · ticket ${formatChancePct(pick.chance)}` : ""}
@@ -234,7 +234,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
         {pick.row ? (
           <button
             type="button"
-            className="inline-flex min-h-11 items-center rounded-md bg-gold px-4 text-sm font-medium text-navy-deep"
+            className="inline-flex min-h-11 items-center rounded-md bg-emerald-500 px-4 text-sm font-medium text-zinc-950"
             onClick={() => add(rowToPick(pick.row!))}
           >
             Add to parlay
@@ -244,12 +244,12 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
           <Link
             to="/game/$eventId"
             params={{ eventId: pick.eventId }}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Hard Rock sheet
           </Link>
         ) : (
-          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
             Open Parlay
           </Link>
         )}
@@ -338,7 +338,7 @@ function ParlayTicketView({
     <div className="space-y-6">
       <BackLink parlay />
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">
+        <p className="text-sm text-emerald-500">
           {bucketLabel(pick)} · {parlay.legs.length}-leg
           {parlay.sports?.length ? ` · ${parlay.sports.map(sportLabel).join(" / ")}` : ""}
         </p>
@@ -346,7 +346,7 @@ function ParlayTicketView({
         <ol className="mt-3 space-y-1 text-sm text-ink/90">
           {parlay.legs.map((leg, i) => (
             <li key={`${leg.eventId}-${leg.selection}-${i}`}>
-              <span className="stamp text-gold">Leg {i + 1}</span>{" "}
+              <span className="stamp text-emerald-500">Leg {i + 1}</span>{" "}
               {shortPick(leg.selection, leg.marketType)} · {sportLabel(leg.sport)} · {formatKickoff(leg.start)}
               <span className="text-muted">
                 {" "}
@@ -361,7 +361,7 @@ function ParlayTicketView({
       </header>
 
       <section className="paper-card p-5 md:p-6">
-        <p className="stamp text-gold">The slip</p>
+        <p className="stamp text-emerald-500">The slip</p>
         <WagerMeter
           className="mt-4"
           size="lg"
@@ -371,7 +371,7 @@ function ParlayTicketView({
         />
         {pick.implied != null ? <EdgeRow pick={pick} className="mt-4" /> : null}
         <ConfidenceChips pick={pick} className="mt-3" />
-        <p className="mt-3 text-xs uppercase tracking-wide text-gold">
+        <p className="mt-3 text-xs uppercase tracking-wide text-emerald-500">
           {correlationFlag(parlay.correlation, parlay.sameGame)}
         </p>
         {usedSim ? (
@@ -490,7 +490,7 @@ function ParlayTicketView({
         </button>
       </div>
 
-      {lockError ? <p className="mt-4 text-sm text-gold text-center">{lockError}</p> : null}
+      {lockError ? <p className="mt-4 text-sm text-emerald-500 text-center">{lockError}</p> : null}
 
       <div className="mt-6 flex flex-wrap gap-3 justify-center">
         <Link
@@ -499,7 +499,7 @@ function ParlayTicketView({
         >
           Add a leg
         </Link>
-        <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+        <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
           Back to Parlay
         </Link>
       </div>
@@ -592,12 +592,12 @@ function LegBlock({
   return (
     <article className="paper-card space-y-4 p-5">
       <header>
-        <p className="stamp text-gold">
+        <p className="stamp text-emerald-500">
           Leg {index + 1} · {sportLabel(row?.sport ?? fallback.sport)}
           {standDown ? " · stood down" : ""}
         </p>
         <h3 className="font-display mt-2 text-xl text-ink">{shortPick(row?.selection ?? fallback.selection, row?.marketType ?? fallback.marketType)}</h3>
-        <p className="mt-1 text-sm text-gold">
+        <p className="mt-1 text-sm text-emerald-500">
           {formatKickoff(row?.start ?? fallback.start)} · {row?.away ?? fallback.away} at {row?.home ?? fallback.home}
         </p>
         <p className="mt-1 font-mono text-xs text-muted">
@@ -605,7 +605,7 @@ function LegBlock({
         </p>
       </header>
       {standDown ? (
-        <p className="text-sm text-gold">
+        <p className="text-sm text-emerald-500">
           {row?.tag === "illegal_fl"
             ? "This leg is not a legal Florida ticket (college player). Stood down. Combined still opened."
             : "This leg could not be priced on the delayed board (unknown market or missing row). Stood down. Combined still opened."}
@@ -641,7 +641,7 @@ function LegBlock({
           <Link
             to="/ticket"
             search={{ id: pick.id }}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Open this leg
           </Link>
@@ -650,7 +650,7 @@ function LegBlock({
           <Link
             to="/game/$eventId"
             params={{ eventId }}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Hard Rock sheet
           </Link>
@@ -724,7 +724,7 @@ function LayerList({ layers }: { layers: Layer[] }) {
         <li key={l.id} className="rounded-md bg-wash px-3 py-2">
           <p className="flex justify-between gap-3 text-sm">
             <span className="font-medium text-ink">{l.label}</span>
-            <span className="tabular-nums text-gold">{l.value}</span>
+            <span className="tabular-nums text-emerald-500">{l.value}</span>
           </p>
           <p className="mt-1 text-xs text-muted">{l.note}</p>
         </li>
@@ -832,7 +832,7 @@ function ContextPanel({
       </p>
       {form?.length ? (
         <div className="mt-4 space-y-3">
-          <p className="stamp text-gold">Last 10 scores — analysis</p>
+          <p className="stamp text-emerald-500">Last 10 scores — analysis</p>
           {form.map((block) => {
             const read = analyzeScores(block.games ?? [], 10);
             return (
@@ -860,7 +860,7 @@ function ContextPanel({
       </ul>
       {player ? (
         <div className="mt-4 rounded-md bg-wash px-3 py-2">
-          <p className="stamp text-gold">Player</p>
+          <p className="stamp text-emerald-500">Player</p>
           <p className="mt-1 font-medium text-ink">
             {player.name}
             {player.position ? ` · ${player.position}` : ""}
@@ -873,7 +873,7 @@ function ContextPanel({
             </p>
           ) : null}
           {recent.length ? (
-            <p className="mt-1 text-xs text-gold">
+            <p className="mt-1 text-xs text-emerald-500">
               Last {player.recentN ?? 10} · {recent.map(([k, v]) => `${k} ${typeof v === "number" ? v.toFixed(2).replace(/0+$/, "").replace(/\.$/, "") : v}`).join(" · ")}
             </p>
           ) : null}
@@ -883,7 +883,7 @@ function ContextPanel({
         <ul className="mt-3 space-y-1 text-sm">
           {injuries.slice(0, 8).map((i) => (
             <li key={`${i.team}-${i.player}`} className="text-ink/90">
-              <span className="text-gold">{i.status}</span> · {i.player}
+              <span className="text-emerald-500">{i.status}</span> · {i.player}
               {i.team ? ` (${i.team})` : ""}
               {i.detail ? ` — ${i.detail}` : ""}
             </li>
@@ -892,7 +892,7 @@ function ContextPanel({
       ) : null}
       {usage ? (
         <div className="mt-4 rounded-md bg-wash px-3 py-2">
-          <p className="stamp text-gold">
+          <p className="stamp text-emerald-500">
             Usage {usage.empty || !(brief?.players && brief.players.length) ? "Looked" : usage.thin ? "Thin" : "Ran"}
             {usage.empty || !(brief?.players && brief.players.length)
               ? " · leftover opportunity Looked"
@@ -944,7 +944,7 @@ function BackLink({ parlay = false }: { parlay?: boolean }) {
   return (
     <Link
       to={parlay ? "/parlay" : "/today"}
-      className="inline-flex min-h-11 items-center gap-1 text-sm text-gold"
+      className="inline-flex min-h-11 items-center gap-1 text-sm text-emerald-500"
     >
       <ChevronLeft className="size-4" strokeWidth={1.75} />
       {parlay ? "Parlay" : "AI Picks"}
@@ -993,7 +993,7 @@ function RulesRan({
                   {r.title}
                   {source ? ` · ${source}` : ""}
                 </span>
-                <span className="stamp text-gold">{stamp}</span>
+                <span className="stamp text-emerald-500">{stamp}</span>
               </p>
               <p className="mt-1 text-xs text-muted">{r.text}</p>
             </li>

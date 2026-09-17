@@ -7,8 +7,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-gold text-navy-deep hover:opacity-90",
-        gold: "bg-gold text-navy-deep hover:opacity-90",
+        primary: "bg-emerald-500 text-zinc-950 hover:opacity-90",
+        gold: "bg-emerald-500 text-zinc-950 hover:opacity-90",
         ghost: "bg-transparent text-ink hover:bg-wash",
         outline: "bg-card text-ink shadow-[var(--shadow-paper)] hover:shadow-[var(--shadow-paper-hover)]",
         danger: "bg-down text-ink hover:opacity-90",

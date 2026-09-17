@@ -138,8 +138,8 @@ export function TuningPanel() {
             disabled={isSaving}
             className={`w-full py-3 rounded-md font-bold text-sm transition-all cursor-pointer ${
               isSaved 
-                ? 'bg-emerald-500 text-navy-deep' 
-                : 'bg-gold hover:brightness-110 text-navy-deep'
+                ? 'bg-emerald-500 text-zinc-950' 
+                : 'bg-emerald-500 hover:brightness-110 text-zinc-950'
             }`}
           >
             {isSaved ? 'Saved!' : isSaving ? 'Saving...' : 'Save Engine Configuration'}

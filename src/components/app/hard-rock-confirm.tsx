@@ -83,7 +83,7 @@ export function HardRockConfirm({
 
   return (
     <section id="lock-in" className={cn(embedded ? "mt-5 space-y-4" : "paper-card p-5 md:p-6")}>
-      <p className="stamp text-gold">Hard Rock confirm</p>
+      <p className="stamp text-emerald-500">Hard Rock confirm</p>
       <h2 className="font-display mt-1 text-xl text-ink">
         {heading ?? (multi ? "Confirm this parlay at Hard Rock" : "Confirm this ticket at Hard Rock")}
       </h2>
@@ -95,7 +95,7 @@ export function HardRockConfirm({
       <div className="mt-4 space-y-3">
         {legs.map((leg, i) => (
           <div key={i} className="grid grid-cols-2 gap-2 rounded-md bg-wash p-3 md:grid-cols-3">
-            <p className="col-span-2 stamp text-gold md:col-span-3">{multi || legs.length > 1 ? `Leg ${i + 1}` : "Single"}</p>
+            <p className="col-span-2 stamp text-emerald-500 md:col-span-3">{multi || legs.length > 1 ? `Leg ${i + 1}` : "Single"}</p>
             <Field label="Sport">
               <Input value={leg.sport} onChange={(e) => setLeg(i, { sport: e.target.value })} />
             </Field>
@@ -161,7 +161,7 @@ export function HardRockConfirm({
           error={error}
         />
       ) : (
-        <p className="text-sm text-gold">Type the pick and the live odds to save this to Log.</p>
+        <p className="text-sm text-emerald-500">Type the pick and the live odds to save this to Log.</p>
       )}
     </section>
   );

@@ -30,7 +30,7 @@ export function DeskPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Fast Logged tickets wait here</p>
+        <p className="text-sm text-emerald-500">Fast Logged tickets wait here</p>
         <h1 className="font-display mt-2 text-3xl text-ink">Log</h1>
         <p className="mt-3 text-ink/80">
           Fast Log a ticket. Confirm the line. After the game, tap Hit or Miss. This site never places the bet.
@@ -67,7 +67,7 @@ export function DeskPage() {
               const pay = t.price != null ? profitOnStake(t.stake, t.price) : null;
               return (
                 <li key={t.id} className="paper-card p-5">
-                  <p className="stamp text-gold">Waiting</p>
+                  <p className="stamp text-emerald-500">Waiting</p>
                   <h3 className="font-display mt-2 text-xl text-ink">{t.description}</h3>
                   {t.home && t.away ? (
                     <p className="mt-1 text-sm text-muted">
@@ -116,7 +116,7 @@ export function DeskPage() {
 
       {open.length ? (
         <details className="paper-card p-5">
-          <summary className="cursor-pointer text-sm font-medium text-gold">Upload a Custom Parlay</summary>
+          <summary className="cursor-pointer text-sm font-medium text-emerald-500">Upload a Custom Parlay</summary>
           <div className="mt-3 rounded-lg border border-panel-border bg-obsidian p-4">
             <ScreenshotIngest kind="ticket" heading="Upload a Custom Parlay" embedded />
             <p className="mt-2 text-xs text-muted">Only use this to upload a screenshot of a custom parlay that cannot be built on SportsLock.</p>
@@ -134,7 +134,7 @@ export function DeskPage() {
               <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-ink">{t.description}</p>
-                  <p className="text-xs uppercase tracking-[0.12em] text-gold">
+                  <p className="text-xs uppercase tracking-[0.12em] text-emerald-500">
                     {t.status === "win" ? "Hit" : t.status === "loss" ? "Miss" : "Push"}
                   </p>
                   <p className="mt-1 text-xs text-muted">
@@ -155,7 +155,7 @@ export function DeskPage() {
       </section>
 
       <p className="text-sm">
-        <Link to="/more" hash="words" className="font-medium text-gold underline-offset-4 hover:underline">
+        <Link to="/more" hash="words" className="font-medium text-emerald-500 underline-offset-4 hover:underline">
           Words we use
         </Link>
       </p>
@@ -169,7 +169,7 @@ export function DeskPage() {
         <p className="text-sm text-muted">Brier score shows after eight settled Hit/Miss tickets with a real desk chance. Missing chance stays empty.</p>
       )}
       {haircuts.length ? (
-        <p className="text-sm text-gold">
+        <p className="text-sm text-emerald-500">
           Pending haircut (not live tonight): {haircuts.map((h) => `${h.layerId} ×${h.haircut}`).join(" · ")}.
         </p>
       ) : null}
@@ -218,7 +218,7 @@ function Stat({
       <p
         className={cn(
           "font-display mt-2 text-2xl tabular-nums",
-          gold && "text-gold",
+          gold && "text-emerald-500",
           up && "text-up",
           down && "text-down",
           !gold && !up && !down && "text-ink",

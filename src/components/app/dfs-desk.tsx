@@ -41,7 +41,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
   return (
     <section className="space-y-4">
       <header className="max-w-3xl">
-        <p className="stamp text-gold">Daily fantasy — NFL, NBA, MLB, NHL</p>
+        <p className="stamp text-emerald-500">Daily fantasy — NFL, NBA, MLB, NHL</p>
         <h2 className="font-display mt-2 text-2xl text-ink md:text-3xl">
           Photograph the contest. We name a roster and a buy-in.
         </h2>
@@ -59,7 +59,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
 
       <a
         href="#lock-in"
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-gold px-4 text-base font-medium text-navy-deep transition-transform duration-150 ease-out active:scale-[0.96] sm:w-auto"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 text-base font-medium text-zinc-950 transition-transform duration-150 ease-out active:scale-[0.96] sm:w-auto"
       >
         <Camera className="size-4" strokeWidth={1.75} />
         Confirm with DraftKings Photo
@@ -71,7 +71,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <article className="paper-card p-5">
-          <p className="stamp text-gold">Buy-in</p>
+          <p className="stamp text-emerald-500">Buy-in</p>
           <h3 className="font-display mt-2 text-xl text-ink">What to enter</h3>
           <p className="mt-2 text-sm text-ink/80">{rec.note}</p>
           {rec.cash ? (
@@ -91,11 +91,11 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
               Photograph today's lobby to replace typical rungs with what's actually up. We will not lock a buy-in without that photo.
             </p>
           ) : (
-            <p className="mt-3 text-xs text-gold">Using the contest list you confirmed.</p>
+            <p className="mt-3 text-xs text-emerald-500">Using the contest list you confirmed.</p>
           )}
         </article>
         <article className="paper-card p-5">
-          <p className="stamp text-gold">How to shoot it</p>
+          <p className="stamp text-emerald-500">How to shoot it</p>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-ink/90">
             <li>Open DraftKings Fantasy (not Sportsbook — Sportsbook is not legal in Florida).</li>
             <li>Screenshot the contest lobby so we can read the buy-ins.</li>
@@ -106,7 +106,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
             <div className="mt-4">
               <Link
                 to="/slate"
-                className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-gold underline-offset-4 hover:underline"
+                className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
               >
                 Open the full roster builder
               </Link>
@@ -115,7 +115,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
             <button
               type="button"
               onClick={() => loadSampleSlate()}
-              className="mt-4 inline-flex min-h-11 items-center rounded-md bg-wash px-3 text-sm font-medium text-gold hover:text-ink"
+              className="mt-4 inline-flex min-h-11 items-center rounded-md bg-wash px-3 text-sm font-medium text-emerald-500 hover:text-ink"
             >
               Load practice NFL slate
             </button>
@@ -148,7 +148,7 @@ export function DfsDesk({ variant = "full" }: { variant?: "full" | "today" }) {
 function SalaryShiftBanner({ shifts }: { shifts?: SalaryShift[] }) {
   if (!shifts?.length) return null;
   return (
-    <div className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold" role="status">
+    <div className="rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500" role="status">
       <p className="font-medium">Salary shift on DraftKings</p>
       <ul className="mt-1 space-y-1">
         {shifts.map((s) => (
@@ -165,7 +165,7 @@ function InactiveBanner({ alerts }: { alerts?: InactiveAlert[] }) {
   if (!alerts?.length) return null;
   return (
     <div className="rounded-md bg-wash px-4 py-3 text-sm text-ink" role="status">
-      <p className="flex items-center gap-2 font-medium text-gold">
+      <p className="flex items-center gap-2 font-medium text-emerald-500">
         <ShieldAlert className="size-4" strokeWidth={1.75} />
         Injury ripple & 90-minute inactive radar
       </p>
@@ -197,7 +197,7 @@ function LineupCard({ title, kicker, lineup }: { title: string; kicker: string; 
   }
   return (
     <article className="paper-card flex flex-col p-5">
-      <p className="stamp text-gold">{kicker}</p>
+      <p className="stamp text-emerald-500">{kicker}</p>
       <h3 className="font-display mt-2 text-xl text-ink">{title}</h3>
       <p className="mt-1 font-mono text-xs text-muted">
         Cap {formatUsd(lineup.capUsed, 0)} / {formatUsd(lineup.cap, 0)} · floor {floor.toFixed(1)} · median {lineup.projP50.toFixed(1)} ·
@@ -213,7 +213,7 @@ function LineupCard({ title, kicker, lineup }: { title: string; kicker: string; 
               <span>
                 <span className="stamp mr-2 text-muted">{captain ? "CPT" : p.pos}</span>
                 {p.name}
-                {isChalk(p.ownershipEst) ? <span className="ml-2 text-xs text-gold">chalk</span> : null}
+                {isChalk(p.ownershipEst) ? <span className="ml-2 text-xs text-emerald-500">chalk</span> : null}
                 {p.researchNote ? <span className="mt-0.5 block text-xs text-muted">{p.researchNote}</span> : null}
               </span>
               <span className="font-mono tabular-nums">${salary.toLocaleString()}</span>
@@ -234,14 +234,14 @@ function LineupCard({ title, kicker, lineup }: { title: string; kicker: string; 
         <button
           type="button"
           onClick={copy}
-          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-wash px-3 text-sm font-medium text-ink hover:text-gold"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-wash px-3 text-sm font-medium text-ink hover:text-emerald-500"
         >
           <Copy className="size-4" strokeWidth={1.75} />
           {copied ? "Copied" : "Copy roster"}
         </button>
         <a
           href="#lock-in"
-          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-gold px-3 text-sm font-medium text-navy-deep"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-500 px-3 text-sm font-medium text-zinc-950"
         >
           <Camera className="size-4" strokeWidth={1.75} />
           Confirm with DraftKings Photo
@@ -257,7 +257,7 @@ function ValueBridge({ players }: { players?: import("@/lib/market/types").Slate
   if (!notes.length) return null;
   return (
     <div className="rounded-md bg-wash px-4 py-3 text-sm text-ink/80">
-      <p className="stamp text-gold">Value bridge · Fantasy only</p>
+      <p className="stamp text-emerald-500">Value bridge · Fantasy only</p>
       <ul className="mt-2 space-y-1">
         {notes.map((n) => (
           <li key={n}>{n}</li>

@@ -39,7 +39,7 @@ export function MasterFilter({
             onClick={() => onBetType(b.id)}
             className={cn(
               "min-h-11 rounded-md px-4 text-sm font-medium",
-              betType === b.id ? "bg-gold text-navy-deep" : "bg-wash text-muted hover:text-ink",
+              betType === b.id ? "bg-emerald-500 text-zinc-950" : "bg-wash text-muted hover:text-ink",
             )}
           >
             {b.label}
@@ -52,7 +52,7 @@ export function MasterFilter({
           onClick={() => onSameGameOnly(!sameGameOnly)}
           className={cn(
             "min-h-11 rounded-md px-4 text-sm font-medium",
-            sameGameOnly ? "bg-wash-gold text-gold" : "bg-wash text-muted hover:text-ink",
+            sameGameOnly ? "bg-wash-gold text-emerald-500" : "bg-wash text-muted hover:text-ink",
           )}
         >
           Same-Game Only
@@ -62,7 +62,7 @@ export function MasterFilter({
           onClick={() => onPropsIncluded(!propsIncluded)}
           className={cn(
             "min-h-11 rounded-md px-4 text-sm font-medium",
-            propsIncluded ? "bg-wash-gold text-gold" : "bg-wash text-muted hover:text-ink",
+            propsIncluded ? "bg-wash-gold text-emerald-500" : "bg-wash text-muted hover:text-ink",
           )}
         >
           Player Props Included

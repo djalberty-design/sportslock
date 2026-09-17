@@ -72,7 +72,7 @@ export function CollapsibleParlayPill() {
         hash={onTicket ? "lock-in" : undefined}
         tabIndex={hidden ? -1 : 0}
         className={cn(
-          "pointer-events-auto mx-auto flex max-w-xl items-center justify-between gap-3 rounded-lg bg-gold px-4 py-2.5 text-navy-deep shadow-[var(--shadow-stamp)]",
+          "pointer-events-auto mx-auto flex max-w-xl items-center justify-between gap-3 rounded-lg bg-emerald-500 px-4 py-2.5 text-zinc-950 shadow-[var(--shadow-stamp)]",
           hidden && "pointer-events-none",
         )}
       >

@@ -100,7 +100,7 @@ export function ParlayPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Two or more picks. They all have to hit.</p>
+        <p className="text-sm text-emerald-500">Two or more picks. They all have to hit.</p>
         <h1 className="font-display mt-2 text-3xl text-ink md:text-5xl">Parlay</h1>
         <p className="mt-3 text-base text-ink/80">
           We list 2- and 3-leg tickets with the best chance they all hit. You can also build your own. Fast Log the slip.
@@ -173,13 +173,13 @@ export function ParlayPage() {
             return (
               <li key={g.eventId + g.side} className="paper-card flex items-start justify-between gap-3 p-4">
                 <div>
-                  <p className="stamp text-gold">{sportLabel(g.sport)}</p>
+                  <p className="stamp text-emerald-500">{sportLabel(g.sport)}</p>
                   <LiveStamp row={g} className="mt-1 block" />
                   <p className="mt-1 font-medium text-ink">{shortPick(g.selection, g.marketType)}</p>
                   <p className="text-xs text-ink">
                     Away: {g.away} · Home: {g.home}
                   </p>
-                  <p className="text-xs text-gold">{formatKickoff(g.start, true)}</p>
+                  <p className="text-xs text-emerald-500">{formatKickoff(g.start, true)}</p>
                   <WagerMeter
                     className="mt-2"
                     size="sm"
@@ -204,7 +204,7 @@ export function ParlayPage() {
                   <Link
                     to="/game/$eventId"
                     params={{ eventId: g.eventId }}
-                    className="text-center text-xs text-gold underline-offset-4 hover:underline"
+                    className="text-center text-xs text-emerald-500 underline-offset-4 hover:underline"
                   >
                     Research
                   </Link>
@@ -327,13 +327,13 @@ function ParlayCatalog({
             const on = Boolean(loadedStamp) && stamp === loadedStamp;
             return (
               <li key={`${p.title}-${names}-${i}`} className="paper-card flex flex-col p-4">
-                <p className="stamp text-gold">
+                <p className="stamp text-emerald-500">
                   {p.legs.length}-leg · {p.mix === "same-game" ? "same game" : p.mix === "cross-sport" ? "cross sport" : "same sport"}
                   {p.sports?.length ? ` · ${p.sports.map(sportLabel).join(" / ")}` : ""}
                 </p>
                 <p className="mt-2 font-medium text-ink">{names}</p>
                 {p.sameGame ? (
-                  <p className="mt-1 text-xs uppercase tracking-wide text-gold">
+                  <p className="mt-1 text-xs uppercase tracking-wide text-emerald-500">
                     {p.correlation === "shared-latent"
                       ? "Same-game joint-path"
                       : p.correlation === "fallback-haircut"
@@ -362,15 +362,15 @@ function ParlayCatalog({
                     } as DeskPick
                   }
                 />
-                {p.sameGame ? <p className="mt-2 text-xs text-gold">Same-game. They move together.</p> : null}
+                {p.sameGame ? <p className="mt-2 text-xs text-emerald-500">Same-game. They move together.</p> : null}
                 <p className="mt-2 text-xs text-muted">{p.reason}</p>
-                {p.pricedAsEntertainment ? <p className="mt-1 text-xs text-gold">Fun money — not a plan.</p> : null}
+                {p.pricedAsEntertainment ? <p className="mt-1 text-xs text-emerald-500">Fun money — not a plan.</p> : null}
                 {on ? <p className="mt-1 text-xs text-muted">In your builder</p> : null}
                 <Link
                   to="/ticket"
                   search={{ id: parlayTicketId(p) }}
                   onClick={() => onLoad(p)}
-                  className="mt-3 inline-flex min-h-11 items-center justify-center rounded-md bg-gold px-3 text-sm font-medium text-navy-deep"
+                  className="mt-3 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-500 px-3 text-sm font-medium text-zinc-950"
                 >
                   {on ? "Loaded" : "Load this ticket"}
                 </Link>
@@ -440,7 +440,7 @@ function LegResearchCard({ leg, index, onRemove }: { leg: ParlayPick; index: num
 
   return (
     <li className="paper-card p-4">
-      <p className="stamp text-gold">
+      <p className="stamp text-emerald-500">
         {sportLabel(leg.sport)} · Leg {index + 1}
         {leg.marketType === "prop" ? " · Player bet" : ""}
       </p>
@@ -448,10 +448,10 @@ function LegResearchCard({ leg, index, onRemove }: { leg: ParlayPick; index: num
       <p className="text-sm text-ink">
         Away: {leg.away || "—"} · Home: {leg.home || "—"}
       </p>
-      <p className="text-sm text-gold">{leg.start ? formatKickoff(leg.start) : "Time TBA"}</p>
+      <p className="text-sm text-emerald-500">{leg.start ? formatKickoff(leg.start) : "Time TBA"}</p>
       <WagerMeter className="mt-3" size="sm" chance={leg.fairProb} price={leg.price} label="This leg" />
       <p className="mt-2 text-sm text-ink/90">{why}</p>
-      {prop?.customize ? <p className="mt-2 text-sm text-gold">{prop.customize}</p> : null}
+      {prop?.customize ? <p className="mt-2 text-sm text-emerald-500">{prop.customize}</p> : null}
       {injuries.length ? (
         <ul className="mt-2 space-y-1 text-xs text-muted">
           {injuries.map((inj, i) => (
@@ -466,7 +466,7 @@ function LegResearchCard({ leg, index, onRemove }: { leg: ParlayPick; index: num
           <Link
             to="/game/$eventId"
             params={{ eventId: leg.eventId }}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Full game research
           </Link>
@@ -641,7 +641,7 @@ function BuiltTicket({
   if (!legs.length) {
     return (
       <section id="your-ticket" ref={refEl as never} className="paper-card p-5">
-        <p className="stamp text-gold">Builder</p>
+        <p className="stamp text-emerald-500">Builder</p>
         <h2 className="font-display mt-2 text-xl text-ink">Your ticket</h2>
         <p className="mt-2 text-sm text-muted">
           Load a ranked slip or add games below. Ribbon is 2- or 3-leg. 4-leg is Catalog / fun money.
@@ -659,7 +659,7 @@ function BuiltTicket({
   return (
     <section id="your-ticket" ref={refEl as never} className="space-y-3">
       <div className="paper-card p-5">
-        <p className="stamp text-gold">Builder</p>
+        <p className="stamp text-emerald-500">Builder</p>
         <h2 className="font-display mt-2 text-xl text-ink">{opened?.selection ?? grade?.headline ?? `${legs.length}-leg ticket`}</h2>
         {combined != null ? (
           <WagerMeter
@@ -671,7 +671,7 @@ function BuiltTicket({
           />
         ) : null}
         {opened?.parlay?.correlation || grade?.correlation ? (
-          <p className="mt-2 text-xs uppercase tracking-wide text-gold">
+          <p className="mt-2 text-xs uppercase tracking-wide text-emerald-500">
             {(opened?.parlay?.correlation ?? grade?.correlation) === "shared-latent"
               ? "Same-game joint-path"
               : (opened?.parlay?.correlation ?? grade?.correlation) === "fallback-haircut"
@@ -685,7 +685,7 @@ function BuiltTicket({
             <Link
               to="/ticket"
               search={{ id: ticketId }}
-              className="inline-flex min-h-11 items-center justify-center rounded-md bg-gold px-4 text-sm font-medium text-navy-deep"
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-500 px-4 text-sm font-medium text-zinc-950"
             >
               Open ticket
             </Link>

@@ -42,9 +42,9 @@ export function PathPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Long-term math · not a forecast</p>
+        <p className="text-sm text-emerald-500">Long-term math · not a forecast</p>
         <h1 className="font-display mt-2 text-3xl text-ink">A betting bankroll is not an index fund.</h1>
-        <p className="mt-3 rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">{PATH_HONESTY}</p>
+        <p className="mt-3 rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">{PATH_HONESTY}</p>
       </header>
 
       <BankrollBar />

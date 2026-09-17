@@ -34,7 +34,7 @@ export function LivePage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm text-gold">Sweat Station</p>
+        <p className="text-sm text-emerald-500">Sweat Station</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Live</h1>
         <p className="mt-2 max-w-2xl text-sm text-ink/80">
           Focus mode. Only live games tied to your active, logged tickets are shown here.
@@ -42,7 +42,7 @@ export function LivePage() {
       </header>
 
       {query.isError ? (
-        <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
+        <p className="rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">
           Live board missing. Wait for the feed to restore.
         </p>
       ) : null}
@@ -51,7 +51,7 @@ export function LivePage() {
 
       {picks && !live.length ? (
         <section className="paper-card p-5">
-          <p className="stamp text-gold">Relax</p>
+          <p className="stamp text-emerald-500">Relax</p>
           <h2 className="font-display mt-2 text-xl text-ink">No active tickets are live right now. Relax.</h2>
           <p className="mt-2 text-sm text-muted">
             {activeCount === 0 

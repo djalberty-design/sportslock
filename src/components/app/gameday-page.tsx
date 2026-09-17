@@ -31,7 +31,7 @@ export function GamedayPage() {
   return (
     <div className="space-y-4">
       <header>
-        <p className="text-sm text-gold">One screen. Kickoff, the pick, the dollars.</p>
+        <p className="text-sm text-emerald-500">One screen. Kickoff, the pick, the dollars.</p>
         <h1 className="font-display mt-1 text-3xl text-ink">Game day</h1>
         <p className="mt-2 text-sm text-ink/80">
           Photograph Hard Rock to confirm the live number. This site never places a bet.
@@ -56,16 +56,16 @@ export function GamedayPage() {
             });
             return (
               <li key={p.id} className="paper-card p-5">
-                <p className="stamp text-gold">
+                <p className="stamp text-emerald-500">
                   {hero && p.id === hero.id ? "The Call" : sportLabel(p.sport)}
                   {p.start ? ` · ${formatKickoff(p.start, true)}` : ""}
                 </p>
                 <h2 className="font-display mt-2 text-2xl text-ink">{p.selection}</h2>
-                <p className="mt-1 text-sm text-gold">
+                <p className="mt-1 text-sm text-emerald-500">
                   Find it on Hard Rock Bet Florida
                   {p.price != null ? ` at ${formatAmerican(p.price)}` : ""}.
                 </p>
-                <p className="mt-3 font-display text-3xl tabular-nums text-gold">
+                <p className="mt-3 font-display text-3xl tabular-nums text-emerald-500">
                   {formatChancePct(p.chance) ?? "—"}
                 </p>
                 <p className="text-sm text-ink">Chance it hits. Not a guarantee.</p>
@@ -80,10 +80,10 @@ export function GamedayPage() {
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {fee ? <span className="rounded-sm bg-wash px-2 py-1 text-xs text-muted">{fee.text}</span> : null}
                   {timing ? (
-                    <span className="rounded-sm bg-wash-gold px-2 py-1 text-xs text-gold">{TIMING_COPY[timing].title}</span>
+                    <span className="rounded-sm bg-wash-gold px-2 py-1 text-xs text-emerald-500">{TIMING_COPY[timing].title}</span>
                   ) : null}
                   {p.earlyMover ? (
-                    <span className="rounded-sm bg-wash-gold px-2 py-1 text-xs text-gold">Early Mover Advantage</span>
+                    <span className="rounded-sm bg-wash-gold px-2 py-1 text-xs text-emerald-500">Early Mover Advantage</span>
                   ) : null}
                 </div>
                 {timing ? <p className="mt-2 text-xs text-muted">{TIMING_COPY[timing].line}</p> : null}
@@ -91,7 +91,7 @@ export function GamedayPage() {
                   to="/ticket"
                   search={{ id: p.id }}
                   hash="lock-in"
-                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-gold px-4 text-sm font-medium text-navy-deep"
+                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 text-sm font-medium text-zinc-950"
                 >
                   <Camera className="size-4" strokeWidth={1.75} />
                   Confirm with Hard Rock Photo

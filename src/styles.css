@@ -5,8 +5,6 @@
   --color-panel: #171717;
   --color-panel-border: #262626;
   --color-neon: #39FF14;
-  --color-gold: #FFB81C;
-  --color-navy-deep: #051C2C;
   --color-crimson: #FF3131;
   --color-muted: #A3A3A3;
   --color-ink: #FAFAFA;
@@ -107,14 +105,14 @@
 }
 
 .ticket-ribbon {
-  background: var(--color-gold);
-  color: var(--color-navy-deep);
+  background: var(--color-emerald-500);
+  color: var(--color-zinc-950);
   box-shadow: var(--shadow-stamp);
 }
 
 .rink-rule {
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  background: linear-gradient(90deg, transparent, var(--color-emerald-500), transparent);
 }
 
 .lock-stamp {
@@ -141,8 +139,8 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
-  background: var(--color-gold);
-  color: var(--color-navy-deep);
+  background: var(--color-emerald-500);
+  color: var(--color-zinc-950);
   padding: 0.28rem 0.4rem;
   border-radius: 4px;
 }

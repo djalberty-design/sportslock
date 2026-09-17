@@ -52,7 +52,7 @@ function Login() {
   return (
     <main className="grid min-h-dvh place-items-center bg-paper px-4 py-10">
       <div className="w-full max-w-md">
-        <p className="text-sm text-gold">{BRAND.kicker}</p>
+        <p className="text-sm text-emerald-500">{BRAND.kicker}</p>
         <h1 className="font-display mt-2 text-4xl text-ink">Owner sign in</h1>
         <p className="mt-3 text-sm text-ink/80">
           The desk is open to everyone. Sign in only if you need Admin access via Google or Email. This site never places a bet.
@@ -91,7 +91,7 @@ function Login() {
           </section>
 
         <section className="paper-card mt-4 p-5">
-          <p className="stamp text-gold">{mode === "in" ? "Email & password" : "New account"}</p>
+          <p className="stamp text-emerald-500">{mode === "in" ? "Email & password" : "New account"}</p>
           <form className="mt-4 space-y-3" onSubmit={onEmail}>
             <label className="block text-xs uppercase tracking-[0.14em] text-muted">
               Your email
@@ -123,7 +123,7 @@ function Login() {
           </form>
           <button
             type="button"
-            className="mt-3 text-sm text-gold underline-offset-4 hover:underline"
+            className="mt-3 text-sm text-emerald-500 underline-offset-4 hover:underline"
             onClick={() => setMode(mode === "in" ? "up" : "in")}
           >
             {mode === "in" ? "Need an account? Create one" : "Already have an account? Sign in"}
@@ -132,7 +132,7 @@ function Login() {
 
         <Link
           to="/"
-          className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+          className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
         >
           Use the desk without signing in
         </Link>

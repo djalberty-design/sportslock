@@ -17,7 +17,7 @@ export function GlossaryPanel({
       <div className="flex flex-wrap gap-2">
         {terms.map((t) => (
           <details key={t.id} className="paper-card px-3 py-2 text-sm">
-            <summary className="cursor-pointer font-medium text-gold">
+            <summary className="cursor-pointer font-medium text-emerald-500">
               {t.word}
               {t.also ? <span className="ml-1 text-xs text-muted">({t.also})</span> : null}
             </summary>

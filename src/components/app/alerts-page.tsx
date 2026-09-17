@@ -16,7 +16,7 @@ export function AlertsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
-        <p className="text-sm text-gold">Plan notes · not a live odds ping</p>
+        <p className="text-sm text-emerald-500">Plan notes · not a live odds ping</p>
         <h1 className="font-display mt-2 text-3xl text-ink">Three weekday windows. No texts.</h1>
         <p className="mt-3 text-ink/80">
           Optional reminders at noon, 4:10 p.m., and 6:30 p.m. Eastern. Browser notes only fire while this tab is open. The site cannot see Hard Rock Bet.
@@ -26,7 +26,7 @@ export function AlertsPage() {
       <ul className="space-y-3">
         {ALERTS_ET.map((a) => (
           <li key={a.id} className="paper-card p-5">
-            <p className="stamp text-gold">{a.id}</p>
+            <p className="stamp text-emerald-500">{a.id}</p>
             <h2 className="font-display mt-2 text-xl text-ink">{a.when}</h2>
             <p className="mt-2 text-sm text-ink/90">{a.job}</p>
           </li>

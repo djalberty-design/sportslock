@@ -182,7 +182,7 @@ export function HardRockSheet({
           </div>
         ) : null}
         {phase === "preseason" || scheduleOnly ? (
-          <p className="mt-1 text-center text-xs text-gold">
+          <p className="mt-1 text-center text-xs text-emerald-500">
             {phase === "preseason" ? "Preseason" : ""}
             {phase === "preseason" && scheduleOnly ? " · " : ""}
             {scheduleOnly ? "Odds not posted yet" : ""}
@@ -204,7 +204,7 @@ export function HardRockSheet({
           onClick={() => setSgp((v) => !v)}
           className={cn(
             "grid size-6 shrink-0 place-items-center rounded-sm border-2 transition-colors",
-            sgp ? "border-gold bg-gold text-navy-deep" : "border-muted bg-transparent text-transparent",
+            sgp ? "border-emerald-500 bg-emerald-500 text-zinc-950" : "border-muted bg-transparent text-transparent",
           )}
         >
           <Check className="size-3.5" strokeWidth={3} aria-hidden />
@@ -229,7 +229,7 @@ export function HardRockSheet({
             }}
             className={cn(
               "min-h-11 shrink-0 px-3 text-sm font-medium",
-              tab === t.id ? "border-b-2 border-gold text-ink" : "text-muted",
+              tab === t.id ? "border-b-2 border-emerald-500 text-ink" : "text-muted",
             )}
           >
             {t.label}
@@ -281,7 +281,7 @@ export function HardRockSheet({
       {tab !== "popular" && tab !== "research" ? (
         <div className="pt-2">
           {college && tab === "props" ? (
-            <p className="mt-3 rounded-md bg-wash-gold px-4 py-3 text-sm text-gold">
+            <p className="mt-3 rounded-md bg-wash-gold px-4 py-3 text-sm text-emerald-500">
               College player bets are not allowed on Hard Rock Bet in Florida. Use who wins, the spread, or the total.
             </p>
           ) : (
@@ -428,7 +428,7 @@ function OddsCell({
       />
       {pct != null ? (
         <span className="absolute inset-x-0 bottom-0 h-0.5 bg-line" aria-hidden>
-          <span className="block h-full bg-gold" style={{ width: `${pct}%` }} />
+          <span className="block h-full bg-emerald-500" style={{ width: `${pct}%` }} />
         </span>
       ) : null}
     </button>
@@ -799,7 +799,7 @@ function PlayerName({
         {src && !broken ? (
           <img src={src} alt="" className="size-10 rounded-full object-cover" onError={() => setBroken(true)} />
         ) : (
-          <span className="grid size-10 place-items-center rounded-full bg-wash text-sm font-medium text-gold">
+          <span className="grid size-10 place-items-center rounded-full bg-wash text-sm font-medium text-emerald-500">
             {letter}
           </span>
         )}
@@ -835,7 +835,7 @@ function TeamMark({
       {src && !broken ? (
         <img src={src} alt="" className="size-24 object-contain" onError={() => setBroken(true)} />
       ) : (
-        <span className="grid size-24 place-items-center rounded-full bg-wash font-display text-2xl text-gold">
+        <span className="grid size-24 place-items-center rounded-full bg-wash font-display text-2xl text-emerald-500">
           {letter}
         </span>
       )}

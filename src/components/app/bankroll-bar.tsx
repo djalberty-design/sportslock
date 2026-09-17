@@ -33,14 +33,14 @@ export function BankrollBar() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-md bg-wash-gold/70 px-4 py-3">
-          <p className="stamp text-gold">Core · 85%</p>
+          <p className="stamp text-emerald-500">Core · 85%</p>
           <p className="font-display mt-1 text-2xl tabular-nums text-ink">{formatBetUsd(split.core)}</p>
           <p className="mt-1 text-xs text-muted">
             1% of core is {formatBetUsd(split.coreTicket)} on a single or 2-pick combo. Steady bankroll building.
           </p>
         </div>
         <div className="rounded-md bg-wash px-4 py-3">
-          <p className="stamp text-gold">Fun / lotto · 15%</p>
+          <p className="stamp text-emerald-500">Fun / lotto · 15%</p>
           <p className="font-display mt-1 text-2xl tabular-nums text-ink">{formatBetUsd(split.fun)}</p>
           <p className="mt-1 text-xs text-muted">
             {formatBetUsd(split.funTicket)} flyers on 3-pick and 4-pick combos. Recreational dollars stay in this bucket.
@@ -77,7 +77,7 @@ export function BankrollBar() {
 
       {payout && rec?.price != null ? (
         <div className="mt-4 rounded-md bg-wash-gold/70 px-4 py-3">
-          <p className="stamp text-gold">If this ticket hits</p>
+          <p className="stamp text-emerald-500">If this ticket hits</p>
           <p className="mt-2 text-sm text-ink">
             If this ticket is {formatBetUsd(bet)} at {formatAmerican(rec.price)} and it hits, you get about{" "}
             {formatBetUsd(payout.total)} back ({formatBetUsd(payout.profit)} profit). If it misses, you are out{" "}
@@ -123,7 +123,7 @@ function DollarField({
     <label className="block">
       <span className="text-sm font-medium text-ink">{label}</span>
       <span className="mt-1.5 flex items-center gap-1">
-        <span className="text-gold">$</span>
+        <span className="text-emerald-500">$</span>
         <Input
           inputMode="decimal"
           className="font-mono"
@@ -151,7 +151,7 @@ function formatInput(n: number): string {
 export function ConnectAppsNote() {
   return (
     <section className="paper-card p-5">
-      <p className="stamp text-gold">Hard Rock Bet Florida</p>
+      <p className="stamp text-emerald-500">Hard Rock Bet Florida</p>
       <h2 className="font-display mt-2 text-xl text-ink">Can we plug into the book?</h2>
       <p className="mt-2 text-sm text-ink/90">
         No. Hard Rock Bet does not let another site log into your account or read your bets live. There is no official

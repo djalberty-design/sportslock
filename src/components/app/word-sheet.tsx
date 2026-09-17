@@ -33,7 +33,7 @@ export function WordSheet({
           to="/more"
           hash="words"
           onClick={onClose}
-          className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
         >
           More words
         </Link>

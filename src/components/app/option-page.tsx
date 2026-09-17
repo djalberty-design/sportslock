@@ -12,7 +12,7 @@ export function OptionPage({ kind }: { kind: string }) {
     return (
       <div className="paper-card p-6">
         <p className="text-ink">Unknown bet type.</p>
-        <Link to="/options" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-gold underline">
+        <Link to="/options" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline">
           Back to bet types
         </Link>
       </div>
@@ -21,10 +21,10 @@ export function OptionPage({ kind }: { kind: string }) {
 
   return (
     <article className="mx-auto max-w-2xl space-y-5">
-      <p className="stamp text-gold">{meta.symbol}</p>
+      <p className="stamp text-emerald-500">{meta.symbol}</p>
       <h1 className="font-display text-3xl text-ink">{meta.title}</h1>
       <p className="rounded-md bg-wash px-4 py-3 text-sm text-ink">
-        Live status: <span className="font-medium uppercase text-gold">{st ? STATUS_LABEL[st.status] : "—"}</span>
+        Live status: <span className="font-medium uppercase text-emerald-500">{st ? STATUS_LABEL[st.status] : "—"}</span>
         {st?.note ? ` · ${st.note}` : ""}
       </p>
       <p className="text-lg text-ink/90">{meta.promise}</p>
@@ -54,7 +54,7 @@ export function OptionPage({ kind }: { kind: string }) {
           ))}
         </ul>
       </section>
-      <Link to="/options" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+      <Link to="/options" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
         All bet types
       </Link>
     </article>

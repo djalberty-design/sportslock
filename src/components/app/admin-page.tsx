@@ -44,7 +44,7 @@ export function AdminPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Owner desk A {OWNER_ADMIN_EMAIL}</p>
+        <p className="text-sm text-emerald-500">Owner desk A {OWNER_ADMIN_EMAIL}</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
         <p className="mt-2 text-sm text-ink/80">
           Allowlist, algorithm knobs, master ledger, and feed health. Regular users cannot see this. This site never
@@ -131,7 +131,7 @@ function AllowlistPanel() {
   return (
     <div className="space-y-5">
       <section className="paper-card p-5">
-        <p className="stamp text-gold">Approved emails</p>
+        <p className="stamp text-emerald-500">Approved emails</p>
         <h2 className="font-display mt-2 text-xl text-ink">Allowlist</h2>
         <form
           className="mt-4 flex flex-col gap-2 sm:flex-row"
@@ -155,7 +155,7 @@ function AllowlistPanel() {
             <li key={row.email} className="flex min-h-11 items-center justify-between gap-3 py-2">
               <span>
                 <span className="block text-sm text-ink">{row.email}</span>
-                <span className="text-xs uppercase tracking-[0.14em] text-gold">{row.role}</span>
+                <span className="text-xs uppercase tracking-[0.14em] text-emerald-500">{row.role}</span>
               </span>
               {row.email === OWNER_ADMIN_EMAIL ? (
                 <span className="text-xs text-muted">Super admin</span>
@@ -179,7 +179,7 @@ function AllowlistPanel() {
       </section>
 
       <section className="paper-card p-5">
-        <p className="stamp text-gold">Queue</p>
+        <p className="stamp text-emerald-500">Queue</p>
         <h2 className="font-display mt-2 text-xl text-ink">Access requests</h2>
         {(reqs.data ?? []).length ? (
           <ul className="mt-3 space-y-3">
@@ -235,7 +235,7 @@ function StatusPanel() {
   const h = q.data;
   return (
     <section className="paper-card p-5">
-      <p className="stamp text-gold">Feeds</p>
+      <p className="stamp text-emerald-500">Feeds</p>
       <h2 className="font-display mt-2 text-xl text-ink">System status</h2>
       <p className="mt-2 text-sm text-muted">ESPN, Kalshi, and Polymarket. Delayed public numbers. Not a fill.</p>
       {h ? (

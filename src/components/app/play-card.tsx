@@ -27,7 +27,7 @@ export function TapeStrip({
         : "Tickets and dollars agree";
   return (
     <div className="mt-3 rounded-md bg-wash px-3 py-2">
-      <p className="stamp text-gold">Bets vs money</p>
+      <p className="stamp text-emerald-500">Bets vs money</p>
       <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
         <div>
           <p className="text-muted">Wagers (ticket count)</p>
@@ -38,9 +38,9 @@ export function TapeStrip({
         </div>
         <div>
           <p className="text-muted">Dollars (handle)</p>
-          <p className="font-display text-lg tabular-nums text-gold">{h}%</p>
+          <p className="font-display text-lg tabular-nums text-emerald-500">{h}%</p>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-navy-deep">
-            <span className="block h-full bg-gold" style={{ width: `${h}%` }} />
+            <span className="block h-full bg-emerald-500" style={{ width: `${h}%` }} />
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@ export function PlayCard({
       {ribbon ? (
         <span className="ticket-ribbon absolute -top-2 right-4 rounded-sm px-2 py-1 stamp">The call</span>
       ) : null}
-      <p className="stamp text-gold">{section ? `${section}${rank ? ` · ${rank}` : ""}` : meta.kicker}</p>
+      <p className="stamp text-emerald-500">{section ? `${section}${rank ? ` · ${rank}` : ""}` : meta.kicker}</p>
       <h3 className="font-display mt-2 text-xl text-ink">{meta.name}</h3>
       <p className="mt-1 text-base font-medium text-ink/90">{play.title}</p>
       <EventWhen play={play} />
@@ -93,9 +93,9 @@ export function PlayCard({
       <p className="mt-3 flex-1 text-sm text-muted">{play.because}</p>
       {play.marketExplain ? <p className="mt-2 text-xs text-ink/70">{play.marketExplain}</p> : null}
       {play.details && !play.home && !play.legs?.length ? (
-        <p className="mt-2 font-mono text-xs text-gold">{play.details}</p>
+        <p className="mt-2 font-mono text-xs text-emerald-500">{play.details}</p>
       ) : null}
-      {play.pricedAsEntertainment ? <p className="mt-2 text-sm text-gold">Fun money — not a plan.</p> : null}
+      {play.pricedAsEntertainment ? <p className="mt-2 text-sm text-emerald-500">Fun money — not a plan.</p> : null}
       <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
         <div>
           <dt className="text-faint">Where to place it</dt>
@@ -120,23 +120,23 @@ export function PlayCard({
           <Link
             to="/game/$eventId"
             params={{ eventId: play.eventId }}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
           >
             Bet this one game
           </Link>
         ) : play.optionKind === "parlay" ? (
-          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
             Open parlay — photo required
           </Link>
         ) : (
-          <Link to="/desk" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+          <Link to="/desk" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
             Photograph then log
           </Link>
         )}
         <Link
           to="/option/$kind"
           params={{ kind: play.optionKind }}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline"
         >
           What this means
         </Link>

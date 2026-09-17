@@ -77,7 +77,7 @@ export function MobileMoreDrawer() {
               <ol className="mt-4 grid gap-2">
                 {HOW_IT_WORKS.map((s) => (
                   <li key={s.n} className="rounded-md bg-wash px-3 py-3">
-                    <p className="stamp text-gold">{s.n}</p>
+                    <p className="stamp text-emerald-500">{s.n}</p>
                     <p className="mt-1 text-sm font-medium text-ink">{s.title}</p>
                     <p className="text-xs text-muted">{s.body}</p>
                   </li>
@@ -114,7 +114,7 @@ export function MobileMoreDrawer() {
         onClick={() => setOpen(true)}
         className={cn(
           "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-transform duration-150 ease-out active:scale-[0.96]",
-          open || pathname === "/more" ? "bg-gold text-navy-deep" : "text-muted hover:bg-wash hover:text-ink",
+          open || pathname === "/more" ? "bg-emerald-500 text-zinc-950" : "text-muted hover:bg-wash hover:text-ink",
         )}
         aria-haspopup="dialog"
         aria-expanded={open}

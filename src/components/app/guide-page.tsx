@@ -6,7 +6,7 @@ export function GuidePage() {
     <article className="mx-auto max-w-2xl space-y-5">
       <p className="rounded-md bg-wash px-4 py-3 text-sm text-ink">
         Longer FAQ. Start with{" "}
-        <Link to="/learn" className="font-medium text-gold underline-offset-4 hover:underline">
+        <Link to="/learn" className="font-medium text-emerald-500 underline-offset-4 hover:underline">
           Learn
         </Link>{" "}
         if the words are new.
