@@ -32,7 +32,7 @@ import { getTuning } from "../tuning-api.ts";
 export const COMBO_SEED_CAP = DEFAULT_COMBO_LEG_CAP;
 
 let activeKelly = 1;
-let activeMinEdge = 0.025;
+let dynamicFloor = 0.025;
 let activeComboCap = COMBO_SEED_CAP;
 
 export function americanToImplied(odds: number): number {
@@ -153,7 +153,7 @@ function tagFor(ev: number, hold: number, row: Omit<ScanRow, "tag" | "action" | 
   if (row.isProp && isCollegeSport(row.sport)) return "illegal_fl";
   if (row.isProp && !isKnownMarket(row.selection, row.marketType)) return "unknown_market";
   if (row.inPlay) return "in_play";
-  if (Number.isFinite(ev) && ev >= activeMinEdge && ev <= 0.15 && row.hardRockPrice != null) return "fair_or_better";
+  if (Number.isFinite(ev) && ev >= dynamicFloor && ev <= 0.15 && row.hardRockPrice != null) return "fair_or_better";
   if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev <= 0.15 && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
     return "close_enough";
   }
@@ -1010,7 +1010,7 @@ export async function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings
   const tuning = await getTuning();
   activeKelly = tuning.kellyMultiplier;
   activeComboCap = tuning.maxLegs;
-  activeMinEdge = tuning.minEdge / 100;
+  dynamicFloor = tuning.minEdge / 100;
   const scored = scoreQuotes(snapshot);
   const stamped = stampRows(scored, snapshot.publicSplits ?? []);
   let rows = applyEnsemble(stamped, snapshot);
