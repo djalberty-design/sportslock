@@ -9,7 +9,7 @@ function TheMatrix() {
   const { snapshot } = useDeskDecision();
   
   // Group by game using the underlying snapshot briefs/quotes
-  const gamesMap = new Map();
+  const gamesMap = new Map<string, any>();
   snapshot?.briefs?.forEach((b: any) => {
     gamesMap.set(b.eventId, { 
       sport: b.sport || "GAME", 
@@ -20,7 +20,7 @@ function TheMatrix() {
       weather: b.weather,
       eventId: b.eventId,
       start: b.start,
-      markets: { awayML: null, homeML: null, awaySpread: null, homeSpread: null, over: null, under: null }
+      markets: {}
     });
   });
 
@@ -31,7 +31,7 @@ function TheMatrix() {
       g = {
         eventId: q.eventId, sport: q.sport || "GAME", home: q.home || "Home", away: q.away || "Away",
         homeAbbr: q.homeAbbr, awayAbbr: q.awayAbbr, start: q.start,
-        markets: { awayML: null, homeML: null, awaySpread: null, homeSpread: null, over: null, under: null }
+        markets: {}
       };
     }
     
@@ -109,34 +109,34 @@ function TheMatrix() {
                   {/* SPREAD Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
+                      <span className="text-sm font-bold text-ink">{g.markets?.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
                     </div>
                     <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
+                      <span className="text-sm font-bold text-ink">{g.markets?.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
                     </div>
                   </div>
 
                   {/* TOTAL Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets.over?.price ? formatAm(g.markets.over.price) : ""}</span>
+                      <span className="text-sm font-bold text-ink">{g.markets?.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets?.over?.price ? formatAm(g.markets.over.price) : ""}</span>
                     </div>
                     <div className="h-12 flex flex-col items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-ink">{g.markets.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-primary">{g.markets.under?.price ? formatAm(g.markets.under.price) : ""}</span>
+                      <span className="text-sm font-bold text-ink">{g.markets?.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
+                      <span className="text-xs font-bold text-primary">{g.markets?.under?.price ? formatAm(g.markets.under.price) : ""}</span>
                     </div>
                   </div>
 
                   {/* WINNER Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-primary">{g.markets.awayML ? formatAm(g.markets.awayML) : "-"}</span>
+                      <span className="text-sm font-bold text-primary">{g.markets?.awayML ? formatAm(g.markets.awayML) : "-"}</span>
                     </div>
                     <div className="h-12 flex items-center justify-center bg-panel rounded border border-line">
-                      <span className="text-sm font-bold text-primary">{g.markets.homeML ? formatAm(g.markets.homeML) : "-"}</span>
+                      <span className="text-sm font-bold text-primary">{g.markets?.homeML ? formatAm(g.markets.homeML) : "-"}</span>
                     </div>
                   </div>
 
