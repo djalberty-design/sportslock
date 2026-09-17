@@ -815,8 +815,40 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     predictByEvent.set(q.eventId, row);
     predict.push(row);
   }
-  const briefs = quotes.length ? await fetchBriefs(quotes, predictByEvent, rawTape) : [];
-  const publicSplits = splitsFromTape(quotes, rawTape);
+  // Build briefs: for ESPN quotes use the full ESPN research pipeline,
+  // for Odds API quotes create lightweight briefs from the quote data itself.
+  const espnQuotes = uniqueQuotes.filter(q => q.espnId && ESPN_PATH[q.sport]);
+  const espnBriefs = espnQuotes.length ? await fetchBriefs(espnQuotes, predictByEvent, rawTape) : [];
+
+  // Create lightweight briefs for Odds API games that ESPN didn't cover
+  const briefEventIds = new Set(espnBriefs.map(b => b.eventId));
+  const oddsApiBriefs: EventBrief[] = [];
+  const seenOddsEvents = new Set<string>();
+  for (const q of uniqueQuotes) {
+    if (briefEventIds.has(q.eventId) || seenOddsEvents.has(q.eventId)) continue;
+    seenOddsEvents.add(q.eventId);
+    const pred = predictByEvent.get(q.eventId);
+    oddsApiBriefs.push({
+      eventId: q.eventId,
+      sport: q.sport,
+      home: q.home,
+      away: q.away,
+      homeAbbr: q.homeAbbr,
+      awayAbbr: q.awayAbbr,
+      start: q.start,
+      homeRecord: q.homeRecord,
+      awayRecord: q.awayRecord,
+      kalshiHomeWin: pred?.kalshiHome,
+      polyHomeWin: pred?.polyHome,
+      kalshiVolume: pred?.kalshiVolume,
+      polyVolume: pred?.polyVolume,
+      players: [],
+      injuries: [],
+    } as any);
+  }
+  const briefs = [...espnBriefs, ...oddsApiBriefs];
+
+  const publicSplits = splitsFromTape(uniqueQuotes, rawTape);
   const tapeNote = publicSplits.length
     ? ` Ticket vs handle tape on ${publicSplits.length} game${publicSplits.length === 1 ? "" : "s"} (Action Network + line-move inference - not Hard Rock's own book).`
     : " No public ticket/handle tape on this pull.";
@@ -834,16 +866,20 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     return `${sport}`;
   });
 
-  let finalQuotes = overlayOddsApiMains(quotes, oddsApiMains);
+  // Use ALL quotes from valid events (the `seen` set has all eventIds that passed the time filter).
+  // uniqueQuotes has one representative per event (for Kalshi/Poly matching);
+  // the frontend needs every market line (ML home, ML away, spread, total, etc).
+  const validEventIds = new Set(uniqueQuotes.map(q => q.eventId));
+  let finalQuotes = quotes.filter(q => validEventIds.has(q.eventId));
   if (finalQuotes.length === 0) {
     finalQuotes.push({
       eventId: "diagnostic-empty",
       sport: "SYS",
       start: new Date().toISOString(),
       home: "Odds API",
-      away: "Quota Empty",
+      away: "No Games",
       homeAbbr: "API",
-      awayAbbr: "QTA",
+      awayAbbr: "---",
       marketType: "ml",
       side: "home",
       selection: "Odds API",
@@ -852,13 +888,13 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
       delayed: true,
       inPlay: false,
     });
-    notes.push(`Diagnostic: The API returned 0 games. Quota used up or fetch failed.`);
+    notes.push(`No games returned. Either quota is exhausted or no games are scheduled right now.`);
   }
   const live = finalQuotes.length > 0;
 
   return {
     asOf,
-    delayed: true,
+    delayed: !oddsApiMains?.length,
     sample: false,
     hours: {
       preGameOpen: true,
@@ -871,7 +907,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
           ? "No upcoming kickoff on the live board"
           : "Live schedule unavailable",
       note: live
-        ? `Live schedule for every league we cover: ${labels.join(", ")}. Odds, Kalshi + Polymarket, records, rest, ticket count vs handle. NBA, NHL, and college basketball stay on the board even before books post a number — photograph Hard Rock Bet Florida when they do. Confirm at ${BRAND.venueLive}.`
+        ? `Board powered by The Odds API. ${listed.join(", ")}. Odds from Hard Rock / DraftKings / FanDuel.`
         : "Could not load the live schedule. Photograph a Hard Rock screen so we still have real games.",
     },
     quotes: finalQuotes,
@@ -880,10 +916,11 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     briefs,
     predict,
     sourceNote: live
-      ? `Live ESPN games (${listed.join(", ")}) as of ${asOf}.${notes.length ? ` ${notes.join("; ")}.` : ""}${tapeNote} Prediction markets are research, not a Hard Rock fill. Not a lock.`
-      : "Live ESPN schedule failed to load. No invented games.",
+      ? `Odds API board (${listed.join(", ")}) as of ${asOf}.${notes.length ? ` ${notes.join("; ")}.` : ""}${tapeNote} Prediction markets are research, not a Hard Rock fill. Not a lock.`
+      : "Odds API returned no games. Quota may be exhausted.",
   };
 }
+
 
 
 
@@ -938,7 +975,9 @@ function overlayOddsApiMains(quotes: QuoteLine[], oddsApiData: any[]): QuoteLine
     }
   }
   return quotes;
-}function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
+}
+
+function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
   const sportMap: Record<string, string> = {
     "americanfootball_nfl": "NFL",
     "americanfootball_ncaaf": "NCAAF",
@@ -949,28 +988,87 @@ function overlayOddsApiMains(quotes: QuoteLine[], oddsApiData: any[]): QuoteLine
   };
   const out: QuoteLine[] = [];
   if (!oddsApiData || !oddsApiData.length) return out;
+
   for (const group of oddsApiData) {
     if (!group || !group.data) continue;
     const sport = sportMap[group.sport] || group.sport;
+
     for (const g of group.data) {
       if (!g.home_team || !g.away_team) continue;
       const start = g.commence_time || new Date().toISOString();
       const eventId = `oddsapi-${sport}-${g.id}`;
-      const homeAbbr = g.home_team.substring(0, 3).toUpperCase();
-      const awayAbbr = g.away_team.substring(0, 3).toUpperCase();
-      const base = {
+      const homeAbbr = g.home_team.split(" ").pop()?.substring(0, 3).toUpperCase() || g.home_team.substring(0, 3).toUpperCase();
+      const awayAbbr = g.away_team.split(" ").pop()?.substring(0, 3).toUpperCase() || g.away_team.substring(0, 3).toUpperCase();
+
+      // Pick best available bookmaker: Hard Rock > DraftKings > FanDuel
+      const bookmaker =
+        g.bookmakers?.find((b: any) => b.key === "hardrock") ||
+        g.bookmakers?.find((b: any) => b.key === "draftkings") ||
+        g.bookmakers?.find((b: any) => b.key === "fanduel");
+
+      const base: Omit<QuoteLine, "marketType" | "side" | "selection" | "price"> = {
         eventId, sport, start,
         home: g.home_team, away: g.away_team,
         homeAbbr, awayAbbr,
-        delayed: true, inPlay: false, source: "odds-api",
+        delayed: false, inPlay: false, source: bookmaker?.title || "odds-api",
       };
-      out.push({ ...base, marketType: "ml", side: "away", selection: g.away_team, price: 0 });
-      out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: 0 });
-      out.push({ ...base, marketType: "spread", side: "away", selection: g.away_team, price: 0 });
-      out.push({ ...base, marketType: "spread", side: "home", selection: g.home_team, price: 0 });
-      out.push({ ...base, marketType: "total", side: "over", selection: "Over", price: 0 });
-      out.push({ ...base, marketType: "total", side: "under", selection: "Under", price: 0 });
+
+      if (!bookmaker || !bookmaker.markets) {
+        // No bookmaker data — still emit schedule-only quotes so the game card appears
+        out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: 0, delayed: true } as QuoteLine);
+        out.push({ ...base, marketType: "ml", side: "away", selection: g.away_team, price: 0, delayed: true } as QuoteLine);
+        continue;
+      }
+
+      const ml = bookmaker.markets.find((m: any) => m.key === "h2h");
+      const sp = bookmaker.markets.find((m: any) => m.key === "spreads");
+      const tot = bookmaker.markets.find((m: any) => m.key === "totals");
+
+      // Moneyline
+      if (ml?.outcomes) {
+        for (const o of ml.outcomes) {
+          const isHome = o.name === g.home_team;
+          out.push({
+            ...base,
+            marketType: "ml",
+            side: isHome ? "home" : "away",
+            selection: o.name,
+            price: o.price ?? 0,
+          } as QuoteLine);
+        }
+      }
+
+      // Spread
+      if (sp?.outcomes) {
+        for (const o of sp.outcomes) {
+          const isHome = o.name === g.home_team;
+          out.push({
+            ...base,
+            marketType: "spread",
+            side: isHome ? "home" : "away",
+            selection: o.name,
+            price: o.price ?? 0,
+            point: o.point,
+          } as QuoteLine);
+        }
+      }
+
+      // Totals
+      if (tot?.outcomes) {
+        for (const o of tot.outcomes) {
+          const isOver = o.name === "Over";
+          out.push({
+            ...base,
+            marketType: "total",
+            side: isOver ? "over" : "under",
+            selection: o.name,
+            price: o.price ?? 0,
+            point: o.point,
+          } as QuoteLine);
+        }
+      }
     }
   }
   return out;
 }
+

@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { LayoutGrid, ChevronRight, BarChart2, CloudSun } from "lucide-react";
+import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
-  const { snapshot } = useDeskDecision();
+  const { snapshot, query } = useDeskDecision();
   
   // Group by game using the underlying snapshot briefs/quotes
   const gamesMap = new Map<string, any>();
@@ -44,28 +44,30 @@ function TheMatrix() {
     g.homeScore = q.homeScore ?? g.homeScore ?? 0;
     g.awayScore = q.awayScore ?? g.awayScore ?? 0;
     
-                // Assign markets based on QuoteLine data
-      const isHome = q.selection === q.home || q.selection === q.homeAbbr || (g.home && q.selection.includes(g.home)) || (g.homeAbbr && q.selection.includes(g.homeAbbr));
-      
-      if (q.marketType === 'ml') {
-        if (isHome) g.markets.homeML = q.price;
-        else g.markets.awayML = q.price;
-      } else if (q.marketType === 'spread') {
-        if (isHome) g.markets.homeSpread = { point: q.point, price: q.price };
-        else g.markets.awaySpread = { point: q.point, price: q.price };
-      } else if (q.marketType === 'total') {
-        if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
-        else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
-      }
-      
-      gamesMap.set(q.eventId, g);
+    // Assign markets based on QuoteLine data
+    const isHome = q.selection === q.home || q.selection === q.homeAbbr || (g.home && q.selection?.includes(g.home)) || (g.homeAbbr && q.selection?.includes(g.homeAbbr));
+    
+    if (q.marketType === 'ml') {
+      if (isHome) g.markets.homeML = q.price;
+      else g.markets.awayML = q.price;
+    } else if (q.marketType === 'spread') {
+      if (isHome) g.markets.homeSpread = { point: q.point, price: q.price };
+      else g.markets.awaySpread = { point: q.point, price: q.price };
+    } else if (q.marketType === 'total') {
+      if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
+      else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
+    }
+    
+    gamesMap.set(q.eventId, g);
   });
 
-  const games = Array.from(gamesMap.values());
+  // Filter out the diagnostic "SYS" sport placeholder
+  const games = Array.from(gamesMap.values()).filter(g => g.sport !== "SYS");
 
-    const formatAm = (val: any) => {
-    if (val == null) return "-";
+  const formatAm = (val: any) => {
+    if (val == null || val === 0) return "-";
     const num = Number(val);
+    if (!Number.isFinite(num)) return "-";
     if (num <= -100 || num >= 100) return num > 0 ? `+${num}` : `${num}`;
     return num >= 2.0 ? `+${Math.round((num - 1) * 100)}` : `-${Math.round(100 / (num - 1))}`;
   };
@@ -76,7 +78,33 @@ function TheMatrix() {
         <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
           <LayoutGrid className="size-6 text-primary" /> Matchups
         </h1>
+        {snapshot?.sourceNote && (
+          <p className="text-xs text-muted">{snapshot.sourceNote}</p>
+        )}
       </div>
+
+      {/* Error / crash banner */}
+      {snapshot?.hours?.note && snapshot.hours.note.includes("CRASH") && (
+        <div className="bg-red-500/20 text-red-400 p-4 rounded-md mb-6 whitespace-pre-wrap font-mono text-xs">
+          <AlertTriangle className="size-4 inline mr-2" />
+          {snapshot.hours.note}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {query.isPending && !snapshot && (
+        <div className="text-center p-12 text-muted">
+          Loading board...
+        </div>
+      )}
+
+      {/* Query error state */}
+      {query.isError && (
+        <div className="bg-red-500/10 text-red-400 p-6 rounded-xl mb-6 border border-red-500/20">
+          <AlertTriangle className="size-5 inline mr-2" />
+          Failed to load board data. {query.error?.message}
+        </div>
+      )}
 
       <div className="flex flex-col gap-6">
         {games.map(g => {
@@ -101,6 +129,7 @@ function TheMatrix() {
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{g.sport}</span>
                   {g.weather && <span className="text-xs text-muted flex items-center gap-1"><CloudSun className="size-3" /> {g.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
                 </div>
                 
@@ -190,9 +219,17 @@ function TheMatrix() {
             </div>
           );
         })}
-        {games.length === 0 && (
+
+        {/* Empty state */}
+        {!query.isPending && games.length === 0 && (
           <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
-            No games found.
+            <p className="text-lg font-semibold mb-2">No games on the board right now</p>
+            <p className="text-sm">
+              {snapshot?.sourceNote || "Check back when games are scheduled."}
+            </p>
+            {snapshot?.hours?.note && (
+              <p className="text-xs mt-3 text-muted/70">{snapshot.hours.note}</p>
+            )}
           </div>
         )}
       </div>

@@ -84,11 +84,11 @@ export function BoardPage() {
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-neon">Live ESPN schedule · tap a game to bet that one ticket</p>
+        <p className="text-sm text-neon">Odds-API powered board · tap a game to bet that one ticket</p>
         <h1 className="font-display mt-2 text-3xl text-ink">Every game. Who's more likely, and what it pays.</h1>
         <p className="mt-3 text-sm text-ink/80">{snapshot?.hours.note ?? snapshot?.sourceNote}</p>
         <p className="mt-1 font-mono text-xs text-muted">
-          as of {snapshot ? new Date(snapshot.asOf).toLocaleString() : "—"} · {snapshot?.hours.label}
+          as of {snapshot ? new Date(snapshot.asOf).toLocaleString() : "\u2014"} {"\u00b7"} {snapshot?.hours.label}
         </p>
       </header>
 
@@ -99,10 +99,6 @@ export function BoardPage() {
       ) : null}
 
       <SportFilter sports={sports} />
-<p className="text-sm text-muted">
-        Ranked by researched chance and payout together. A huge favorite that pays almost nothing sits lower. Today first.
-        {allGames.length ? ` ${allGames.length} games on All.` : ""}
-      </p>
 
       {query.isLoading || !snapshot ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
