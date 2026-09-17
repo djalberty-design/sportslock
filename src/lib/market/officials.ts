@@ -237,7 +237,7 @@ export function applyRefereeGrudgeToProps(
           p: 0.35, // Skews heavily towards UNDER (Foul trouble risk)
           precision: 4.5,
           family: "alpha",
-          note: [ALPHA] Foul trouble risk: Officiated by  (Antagonistic History).,
+          note: `[ALPHA] Foul trouble risk: Officiated by ${o.name} (Antagonistic History).`,
         };
       }
     }
