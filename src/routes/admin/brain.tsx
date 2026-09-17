@@ -65,7 +65,7 @@ function BrainTelemetry() {
       <div className="rounded-md bg-zinc-900 border border-zinc-800 p-4 font-mono text-sm">
         <h3 className="mb-4 font-display text-lg text-white">Live System Diagnostics</h3>
         <ul className="space-y-3">
-          {['ESPN Market Data', 'Kalshi Prediction Feed', 'Polymarket Feed', 'Quantitative Edge Calculator', 'Master Ledger Connection'].map((node, i) => (
+          {['Initialize Global Market Snapshot', 'Ingest ESPN Public Odds Pipeline', 'Ingest Kalshi Prediction Feed', 'Ingest Polymarket Prediction Feed', 'Parse OCR Hard Rock Bet Slips', 'Normalize Cross-Platform Team Nomenclature', 'Filter Expired & Active Live Events', 'Convert American Odds to Decimal Payouts', 'Calculate True Probability via Market Shares', 'Execute Quantitative Edge Formula', 'Filter Strictly Positive EV Propositions', 'Sort Global Board by Maximum Mathematical Edge', 'De-duplicate Same-Game Parlay Constraints', 'Compound Top-3 Leg Probabilities', 'Calculate Final Accumulator Edge', 'Validate Admin Allowlist Authorization', 'Ping Master Postgres Ledger', 'Generate Optimal Hard Rock Slip'].map((node, i) => (
             <li key={i} className="flex items-center justify-between border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
               <span className="text-zinc-300">{node}</span>
               <div className="flex items-center gap-2">
