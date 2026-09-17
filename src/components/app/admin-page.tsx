@@ -45,13 +45,19 @@ export function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <header className="max-w-2xl">
-        <p className="text-sm text-emerald-500">Owner desk A {OWNER_ADMIN_EMAIL}</p>
-        <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
-        <p className="mt-2 text-sm text-ink/80">
-          Allowlist, algorithm knobs, master ledger, and feed health. Regular users cannot see this. This site never
-          places a bet.
-        </p>
+      <header className="max-w-2xl flex justify-between items-start">
+        <div>
+          <p className="text-sm text-emerald-500">Owner desk • {OWNER_ADMIN_EMAIL}</p>
+          <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
+          <p className="mt-2 text-sm text-ink/80">
+            Allowlist, algorithm knobs, master ledger, and feed health.
+          </p>
+        </div>
+        <div className="bg-paper border border-line p-3 rounded-xl flex flex-col items-center">
+          <span className="text-xs font-bold uppercase tracking-widest text-muted">Odds API Quota</span>
+          <span className="text-2xl font-display text-emerald-500">{quotaQuery.data !== null && quotaQuery.data !== undefined ? quotaQuery.data : "---"}</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted mt-1">/ 500 Remaining</span>
+        </div>
       </header>
 
       <ul className="grid gap-2 sm:grid-cols-2">
@@ -189,7 +195,7 @@ function AllowlistPanel() {
               <li key={r.id} className="rounded-md bg-wash px-3 py-3">
                 <p className="text-sm font-medium text-ink">{r.email}</p>
                 <p className="text-xs text-muted">
-                  {r.name || "No name"} Ã‚Â· {r.status}
+                  {r.name || "No name"} Ãƒâ€šÃ‚Â· {r.status}
                 </p>
                 {r.status === "pending" ? (
                   <div className="mt-2 flex gap-2">
@@ -247,7 +253,7 @@ function StatusPanel() {
           <HealthRow name="Polymarket" ping={h.polymarket} />
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feedsÃ¢â‚¬Â¦" : "Could not load health."}</p>
+        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feedsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Could not load health."}</p>
       )}
       <Button type="button" variant="outline" className="mt-4" onClick={() => void q.refetch()}>
         Ping again
@@ -261,7 +267,7 @@ function HealthRow({ name, ping }: { name: string; ping: { ok: boolean; ms: numb
     <li className="flex items-center justify-between rounded-md bg-wash px-3 py-3">
       <span className="text-sm font-medium text-ink">{name}</span>
       <span className={ping.ok ? "text-sm text-up" : "text-sm text-down"}>
-        {ping.ok ? "Up" : "Down"} Ã‚Â· {ping.ms} ms{ping.status ? ` Ã‚Â· ${ping.status}` : ""}
+        {ping.ok ? "Up" : "Down"} Ãƒâ€šÃ‚Â· {ping.ms} ms{ping.status ? ` Ãƒâ€šÃ‚Â· ${ping.status}` : ""}
       </span>
     </li>
   );
