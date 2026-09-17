@@ -16,32 +16,12 @@ export function GamePage({ eventId }: { eventId: string }) {
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
   
-          const gameProps = useMemo(() => {
+            const gameProps = useMemo(() => {
     const allProps = picks?.props || [];
+    
+    // Strict Match: Only return props that belong to this EXACT eventId
+    const fromPicks = allProps.filter((p: any) => p.eventId === eventId || p.row?.eventId === eventId);
     const fromQuotes = snapshot?.quotes?.filter((q: any) => q.eventId === eventId && (q.isProp || !["ml", "spread", "total"].includes(q.marketType))) || [];
-    
-    const gA = String(firstQuoteRef?.awayAbbr || "").toLowerCase();
-    const gH = String(firstQuoteRef?.homeAbbr || "").toLowerCase();
-    
-    const fromPicks = allProps.filter((p: any) => {
-      if (p.eventId === eventId || p.row?.eventId === eventId) return true;
-      
-      const str = JSON.stringify(p).toLowerCase();
-      // If the prop contains both the Away and Home abbreviations, it's highly likely to be this game
-      if (gA && gH && str.includes(`"${gA}"`) && str.includes(`"${gH}"`)) return true;
-      if (gA && gH && str.includes(`:${gA}`) && str.includes(`:${gH}`)) return true;
-      if (gA && gH && str.includes(` ${gA} `) && str.includes(` ${gH} `)) return true;
-      if (gA && gH && str.includes(`@ ${gA}`) || str.includes(`@ ${gH}`)) return true;
-      if (gA && gH && str.includes(`${gA} @ ${gH}`)) return true;
-
-      // Also check player names just in case they map directly
-      return false;
-    });
-    
-    // If all else fails, just return ALL props if we have less than 10 (as a fallback to ensure something renders for the demo)
-    if (fromPicks.length === 0 && fromQuotes.length === 0 && allProps.length > 0) {
-       return allProps;
-    }
     
     const combined = [...fromQuotes, ...fromPicks];
     const unique: any[] = [];
@@ -54,7 +34,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       }
     }
     return unique;
-  }, [picks, snapshot, eventId, firstQuoteRef]);
+  }, [picks, snapshot, eventId]);
 
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   
