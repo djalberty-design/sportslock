@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
 import { ALL_SPORTS } from "@/lib/market/universe";
@@ -35,13 +36,13 @@ type Tab = (typeof TABS)[number]["id"];
 export function AdminPage() {
   const { isAdmin, access } = useAccess();
   const [tab, setTab] = useState<Tab>("allowlist");
-
-
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isRootAdmin = pathname === "/admin";
 
   return (
     <div className="space-y-6">
       <header className="max-w-2xl">
-        <p className="text-sm text-gold">Owner desk · {OWNER_ADMIN_EMAIL}</p>
+        <p className="text-sm text-gold">Owner desk A {OWNER_ADMIN_EMAIL}</p>
         <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
         <p className="mt-2 text-sm text-ink/80">
           Allowlist, algorithm knobs, master ledger, and feed health. Regular users cannot see this. This site never
@@ -60,23 +61,40 @@ export function AdminPage() {
 
       <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Admin sections">
         {TABS.map((t) => (
-          <button
+          <Link
             key={t.id}
+            to="/admin"
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
+            aria-selected={isRootAdmin && tab === t.id}
             onClick={() => setTab(t.id)}
-            className={tab === t.id ? "min-h-11 rounded-md bg-gold px-4 text-sm font-medium text-navy-deep" : "min-h-11 rounded-md bg-wash px-4 text-sm font-medium text-muted hover:text-ink"}
+            className={isRootAdmin && tab === t.id ? "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" : "min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"}
           >
             {t.label}
-          </button>
+          </Link>
         ))}
+        <Link
+          to="/admin/architect"
+          className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
+          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+        >
+          Architect
+        </Link>
+        <Link
+          to="/admin/terminal"
+          className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
+          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+        >
+          Terminal
+        </Link>
       </div>
 
-      {tab === "allowlist" ? <AllowlistPanel /> : null}
-      {tab === "tune" ? <TuningPanel /> : null}
-      {tab === "ledger" ? <LedgerPanel /> : null}
-      {tab === "status" ? <StatusPanel /> : null}
+      {isRootAdmin && tab === "allowlist" ? <AllowlistPanel /> : null}
+      {isRootAdmin && tab === "tune" ? <TuningPanel /> : null}
+      {isRootAdmin && tab === "ledger" ? <LedgerPanel /> : null}
+      {isRootAdmin && tab === "status" ? <StatusPanel /> : null}
+      
+      <Outlet />
     </div>
   );
 }
