@@ -10,7 +10,7 @@ import { TicketChip } from "./ticket-lock";
 import { MobileMoreDrawer } from "./mobile-more-drawer";
 
 const TABS = [
-  { to: "/", label: "Apex", icon: Hexagon },
+  { to: "/", label: "SportsLock", icon: Hexagon },
   { to: "/picks", label: "The Lab", icon: Beaker },
   { to: "/games", label: "Matchups", icon: Activity },
   { to: "/ticket", label: "My Action", icon: Ticket },
@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 hidden h-dvh w-64 flex-col border-r border-line bg-panel md:flex">
         <div className="flex h-16 items-center gap-3 px-6">
           <Hexagon className="size-6 text-primary" />
-          <span className="font-display text-xl font-bold tracking-tight text-ink">Apex AI</span>
+          <span className="font-display text-xl font-bold tracking-tight text-ink">SportsLock AI</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {TABS.map((tab) => {
@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden">
           <div className="flex items-center gap-2">
             <Hexagon className="size-5 text-primary" />
-            <span className="font-display font-bold tracking-tight">Apex AI</span>
+            <span className="font-display font-bold tracking-tight">SportsLock AI</span>
           </div>
           <div className="flex items-center gap-3">
              <TicketChip />

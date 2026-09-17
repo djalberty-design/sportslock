@@ -17,7 +17,7 @@ function TheLab() {
           The Lab
         </h1>
         <p className="text-muted text-sm">
-          Raw player props scanned and evaluated by Apex. Look for Syndicate Badges.
+          Raw player props scanned and evaluated by SportsLock AI. Look for Syndicate Badges.
         </p>
       </div>
 
@@ -26,7 +26,7 @@ function TheLab() {
           <div key={i} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border border-line bg-panel hover:border-primary/50 transition-colors shadow-sm">
             <div className="flex flex-col mb-3 md:mb-0">
               <span className="font-bold text-lg text-ink">{p.row?.selection || "Prop"}</span>
-              <span className="text-xs text-muted uppercase tracking-wider">{p.row?.marketType} • {p.row?.sport}</span>
+              <span className="text-xs text-muted uppercase tracking-wider">{p.row?.marketType} â€¢ {p.row?.sport}</span>
               
               {/* Alpha Badges Mockup based on the Phase 8/9 Engine */}
               {p.scoreNote && p.scoreNote.includes("[ALPHA]") && (
