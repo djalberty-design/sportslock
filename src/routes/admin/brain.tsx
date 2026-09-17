@@ -5,7 +5,7 @@ import { buildScan } from '@/lib/market/engine';
 import { buildDeskPicks } from '@/lib/market/picks';
 import { useState } from 'react';
 
-const getBrainData = createServerFn({ method: 'GET' }).handler(async () => {
+const getBrainData = createServerFn({ method: 'POST' }).handler(async () => {
   const snapshot = await buildLiveSnapshot();
   const scan = await buildScan(snapshot, false);
   const bag = buildDeskPicks(scan, snapshot);
@@ -13,7 +13,7 @@ const getBrainData = createServerFn({ method: 'GET' }).handler(async () => {
 });
 
 export const Route = createFileRoute('/admin/brain')({
-  loader: async () => getBrainData(),
+  loader: async () => getBrainData({ data: undefined }),
   component: BrainTelemetry,
 });
 

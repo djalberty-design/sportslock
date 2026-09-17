@@ -5,12 +5,14 @@ import { buildLiveSnapshot } from "@/lib/market/live-board";
 import { buildScan } from "@/lib/market/engine";
 import { buildDeskPicks } from "@/lib/market/picks";
 import { insertLedgerTicket } from "@/lib/ledger-api";
+import { getTuning } from "@/lib/tuning-api";
 
-const getOptimalPicks = createServerFn({ method: "GET" }).handler(async () => {
+const getOptimalPicks = createServerFn({ method: "POST" }).handler(async () => {
   const snapshot = await buildLiveSnapshot();
   const scan = await buildScan(snapshot, false);
   const bag = buildDeskPicks(scan, snapshot);
-  return bag.all;
+  const tuning = await getTuning();
+  return { picks: bag.all, tuning };
 });
 
 const lockTicket = createServerFn({ method: "POST" })
@@ -22,7 +24,7 @@ const lockTicket = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/admin/architect")({
   loader: async () => {
-    return getOptimalPicks();
+    return getOptimalPicks({ data: undefined });
   },
   component: ParlayArchitect,
 });
@@ -34,13 +36,16 @@ function decimalToAmerican(dec: number): number {
 }
 
 function ParlayArchitect() {
-  const picks = Route.useLoaderData() as any[];
+  const { picks, tuning } = Route.useLoaderData() as any;
   const [isLocking, setIsLocking] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
+  const dynamicFloor = tuning?.minEdge ? tuning.minEdge / 100 : 0.025;
+  const maxLegs = tuning?.maxLegs || 3;
+
   const now = Date.now();
   const withEdge = picks
-    .map((p) => {
+    .map((p: any) => {
       const payout = p.decimalPayout || (p.price < 0 ? 100 / Math.abs(p.price) + 1 : p.price / 100 + 1);
       const chance = p.chance || 0;
       return {
@@ -49,12 +54,12 @@ function ParlayArchitect() {
         calcEdge: chance * payout - 1,
       };
     })
-    .filter((p) => {
+    .filter((p: any) => {
       if (!p.start) return false;
       const startMs = new Date(p.start).getTime();
-      return startMs > now && p.calcEdge > 0.01 && p.calcEdge <= 0.15;
+      return startMs > now && p.calcEdge >= dynamicFloor && p.calcEdge <= 0.15;
     })
-    .sort((a, b) => b.calcEdge - a.calcEdge);
+    .sort((a: any, b: any) => b.calcEdge - a.calcEdge);
 
   const uniqueEvents = new Set<string>();
   const top3 = [];
@@ -62,7 +67,7 @@ function ParlayArchitect() {
     if (p.eventId && !uniqueEvents.has(p.eventId)) {
       uniqueEvents.add(p.eventId);
       top3.push(p);
-      if (top3.length === 3) break;
+      if (top3.length === maxLegs) break;
     }
   }
 
