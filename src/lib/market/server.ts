@@ -243,3 +243,36 @@ export const lockPredictionFn = createServerFn({ method: "POST" })
       return { ok: false, count: 0 };
     }
   });
+
+export const getTuningFn = createServerFn({ method: "GET" })
+  .handler(async (): Promise<{ kelly: number; maxLegs: number; minEdge: number }> => {
+    try {
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      const rows = await sql`SELECT kelly, max_legs, min_edge FROM desk_tuning_raw WHERE id = 1`;
+      if (rows.length > 0) {
+        return { kelly: rows[0].kelly ?? 0.25, maxLegs: rows[0].max_legs ?? 3, minEdge: rows[0].min_edge ?? 2.5 };
+      }
+      return { kelly: 0.25, maxLegs: 3, minEdge: 2.5 };
+    } catch {
+      return { kelly: 0.25, maxLegs: 3, minEdge: 2.5 };
+    }
+  });
+
+export const saveTuningFn = createServerFn({ method: "POST" })
+  .validator((d: { kelly: number; maxLegs: number; minEdge: number }) => d)
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    try {
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      await sql`
+        UPDATE desk_tuning_raw
+        SET kelly = ${data.kelly}, max_legs = ${data.maxLegs}, min_edge = ${data.minEdge}
+        WHERE id = 1
+      `;
+      return { ok: true };
+    } catch (e: any) {
+      console.error("saveTuningFn error:", e);
+      return { ok: false };
+    }
+  });

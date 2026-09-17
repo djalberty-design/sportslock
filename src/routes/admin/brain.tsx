@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Sliders, Cpu, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sliders, Cpu, Save, Check, Loader2 } from "lucide-react";
+import { getTuningFn, saveTuningFn } from "@/lib/market/server";
 
 export const Route = createFileRoute("/admin/brain")({ component: EngineBay });
 
@@ -8,6 +9,35 @@ function EngineBay() {
   const [kelly, setKelly] = useState(0.25);
   const [maxLegs, setMaxLegs] = useState(4);
   const [minEdge, setMinEdge] = useState(3.5);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load saved tuning from DB on mount
+  useEffect(() => {
+    getTuningFn().then((t) => {
+      setKelly(t.kelly);
+      setMaxLegs(t.maxLegs);
+      setMinEdge(t.minEdge);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await saveTuningFn({ data: { kelly, maxLegs, minEdge } });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (e) {
+      console.error("Failed to save tuning:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -16,9 +46,19 @@ function EngineBay() {
           <Cpu className="size-5 text-primary" />
           Engine Tuning
         </h2>
-        <button className="flex items-center gap-2 bg-primary text-primary-foreground font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all active:scale-95 shadow-apex-glow">
-          <Save className="size-4" />
-          Lock in Settings
+        <button
+          onClick={handleSave}
+          disabled={saving || !loaded}
+          className="flex items-center gap-2 bg-primary text-primary-foreground font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all active:scale-95 shadow-apex-glow disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : saved ? (
+            <Check className="size-4" />
+          ) : (
+            <Save className="size-4" />
+          )}
+          {saving ? "Saving..." : saved ? "Locked In!" : "Lock in Settings"}
         </button>
       </div>
 
@@ -65,6 +105,12 @@ function EngineBay() {
           <p className="text-xs text-muted">The AI will discard any bets or combinations with an expected value below this threshold.</p>
         </div>
       </div>
+
+      {!loaded && (
+        <p className="text-xs text-muted flex items-center gap-2">
+          <Loader2 className="size-3 animate-spin" /> Loading saved settings...
+        </p>
+      )}
     </div>
   );
 }
