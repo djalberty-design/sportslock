@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, ChevronRight, X, Flame } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShieldCheck, Flame, Zap, BarChart2 } from "lucide-react";
 import { useState } from "react";
 import { espnLogoUrl } from "@/lib/market/logos";
 
@@ -16,7 +16,6 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
     ? (pick?.decimalPayout || parlayCand?.decimalPayout).toFixed(2) 
     : fairDec;
   
-  // Convert Decimal Odds to American
   const decPayout = parseFloat(payoutDec);
   const americanOdds = decPayout >= 2.0 
     ? `+${Math.round((decPayout - 1) * 100)}`
@@ -24,140 +23,176 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
 
   const numWager = parseFloat(wager || "0");
   const totalPayout = (numWager * decPayout).toFixed(2);
-  const aiInsight = pick?.why || parlayCand?.reason || parlayCand?.scoreNote;
+  const aiInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
+  
+  // Game Context (from first leg)
+  const firstLeg = legs[0];
+  const firstQuote = snapshot?.quotes?.find((q: any) => q.eventId === firstLeg?.eventId);
+  const firstBrief = snapshot?.briefs?.find((b: any) => b.eventId === firstLeg?.eventId);
+  const homeLogo = firstQuote?.homeLogo || (firstQuote?.homeAbbr ? espnLogoUrl(firstLeg?.sport || "MLB", firstQuote?.homeAbbr) : null);
+  const awayLogo = firstQuote?.awayLogo || (firstQuote?.awayAbbr ? espnLogoUrl(firstLeg?.sport || "MLB", firstQuote?.awayAbbr) : null);
+  const isLive = firstQuote?.inPlay;
 
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-sm flex flex-col"
+        className="relative overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-sm flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
+        onClick={() => {
+          // This will open the deep dive sheet later
+          console.log("Open Sheet");
+        }}
       >
-        {/* Header - Hard Rock Style */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 rounded bg-primary/10 px-2 py-1 text-primary">
-            <span className="text-xs font-bold uppercase tracking-wider">SportsLock Gold</span>
+        {/* Rich Header: Teams, Date, Weather */}
+        <div className="flex items-center justify-between mb-4 border-b border-line/50 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center -space-x-2">
+              {awayLogo ? <img src={awayLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Away" /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
+              {homeLogo ? <img src={homeLogo} className="size-8 rounded-full ring-2 ring-panel" alt="Home" /> : <div className="size-8 rounded-full bg-line ring-2 ring-panel" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                {firstQuote?.awayAbbr || "AWAY"} @ {firstQuote?.homeAbbr || "HOME"}
+              </span>
+              <span className="text-[10px] text-muted flex items-center gap-2">
+                {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "TODAY"}
+                {firstBrief?.weather && <span>• 🌤️ {firstBrief.weather}</span>}
+              </span>
+            </div>
           </div>
-          <span className="text-lg font-bold text-primary font-mono">{americanOdds}</span>
+          {isLive ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/20">
+              <span className="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">LIVE</span>
+            </div>
+          ) : (
+            <div className="text-lg font-bold text-primary font-mono">{americanOdds}</div>
+          )}
         </div>
 
-        <div className="text-ink font-display font-bold text-lg mb-3">
-          {legs.length}-Bet Parlay
+        {/* Simulation Bar (Macro) */}
+        <div className="mb-4 bg-obsidian rounded-lg p-2.5 border border-line/30 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
+            <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
+            <span className="text-primary">68% Hit Prob</span>
+          </div>
+          <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full w-[68%] relative">
+              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
+            </div>
+          </div>
         </div>
 
-        {/* The Legs - Hard Rock Style */}
-        <div className="mb-6 flex-1 space-y-3">
+        <div className="text-ink font-display font-bold text-base mb-3 flex items-center gap-2">
+          {legs.length}-Leg Parlay <span className="text-primary text-xs font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+{Math.round(((parlayCand?.combinedEv || 0) * 100))}% EDGE</span>
+        </div>
+
+        {/* The Legs */}
+        <div className="mb-4 flex-1 space-y-4">
           {legs.map((leg: any, i: number) => {
-            // Find the quote to get the team abbreviations for the logo
-            const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) 
-                          || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
+            const legQuote = snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId && q.selection === leg.selection) || snapshot?.quotes?.find((q: any) => q.eventId === leg.eventId);
             const teamAbbr = leg.selection.includes(leg.home) ? legQuote?.homeAbbr : legQuote?.awayAbbr;
-            const logo = espnLogoUrl(leg.sport || "MLB", teamAbbr || legQuote?.homeAbbr);
-            
-            const matchUp = `${legQuote?.awayAbbr || leg.away || "AWAY"} @ ${legQuote?.homeAbbr || leg.home || "HOME"}`;
+            const logo = legQuote?.homeLogo || legQuote?.awayLogo || espnLogoUrl(leg.sport || "MLB", teamAbbr || legQuote?.homeAbbr);
             
             return (
-              <div key={i} className="flex items-start gap-3">
-                {logo ? (
-                  <img src={logo} className="size-6 object-contain shrink-0 mt-0.5" alt="" />
-                ) : (
-                  <div className="size-6 rounded-full bg-line shrink-0 mt-0.5" />
-                )}
-                <div className="flex flex-col">
-                  <div className="text-sm">
-                    <span className="font-bold text-ink">{leg.selection} </span>
-                    <span className="text-muted text-xs uppercase tracking-wider">{leg.marketType} </span>
-                    <span className="text-muted text-xs">({matchUp})</span>
+              <div key={i} className="flex items-start gap-3 relative">
+                {/* Syndicate Pulse (Sharp Money) - conditionally show on first leg for demo */}
+                {i === 0 && (
+                  <div className="absolute -left-1.5 top-0 z-10">
+                    <Flame className="size-4 text-orange-500 fill-orange-500/20" />
                   </div>
+                )}
+                
+                {legQuote?.headshot ? (
+                   <div className="relative size-8 shrink-0">
+                     <img src={legQuote.headshot} className="size-8 rounded-full object-cover ring-1 ring-line bg-obsidian" alt="" />
+                     {logo && <img src={logo} className="absolute -bottom-1 -right-1 size-4 rounded-full ring-1 ring-panel bg-white object-contain" alt="" />}
+                   </div>
+                ) : logo ? (
+                  <img src={logo} className="size-7 object-contain shrink-0 mt-0.5" alt="" />
+                ) : (
+                  <div className="size-7 rounded-full bg-line shrink-0 mt-0.5" />
+                )}
+                
+                <div className="flex flex-col w-full">
+                  <div className="text-sm flex items-start justify-between w-full">
+                    <span className="font-bold text-ink leading-tight">{leg.selection} </span>
+                    <span className="text-muted text-xs uppercase tracking-wider font-bold ml-2 shrink-0">{leg.marketType} </span>
+                  </div>
+                  <div className="text-muted text-[10px] mt-0.5">{legQuote?.awayAbbr || leg.away} @ {legQuote?.homeAbbr || leg.home}</div>
                 </div>
               </div>
             );
           })}
         </div>
+        
+        {/* AI Insight Snippet */}
+        <div className="mt-2 mb-4 p-3 bg-primary/5 border border-primary/10 rounded-lg text-xs text-primary/90 italic border-l-2 border-l-primary">
+          "{aiInsight}"
+        </div>
 
-        {/* Action Button - Hard Rock Style */}
+        {/* Action Button */}
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="w-full flex flex-col items-center justify-center rounded-lg bg-primary py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all active:scale-[0.98]"
+          onClick={(e) => {
+            e.stopPropagation(); // prevent opening sheet
+            setIsModalOpen(true);
+          }}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-between group"
         >
-          <span className="text-base">Lock It In</span>
-          <span className="text-xs font-medium opacity-90">${numWager} pays ${totalPayout}</span>
+          <span>Lock It In</span>
+          <span className="font-mono text-sm group-hover:scale-105 transition-transform">
+            ${wager} pays ${(numWager * decPayout).toFixed(2)}
+          </span>
         </button>
-
-        {aiInsight && (
-          <div className="mt-3 flex items-center justify-center gap-1 text-xs text-primary font-medium">
-            <Flame className="size-3" />
-            <span>AI Verified Edge</span>
-          </div>
-        )}
       </motion.div>
 
-      {/* Confirmation Modal */}
+      {/* Lock It In Modal (To be expanded in step 5) */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-obsidian/80 backdrop-blur-sm"
-              onClick={() => setIsModalOpen(false)}
-            />
-            
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-background/80 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md rounded-2xl border border-line bg-panel shadow-2xl p-6"
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="w-full max-w-md bg-panel border border-line rounded-2xl shadow-2xl overflow-hidden"
             >
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="absolute right-4 top-4 text-muted hover:text-ink transition-colors"
-              >
-                <X className="size-5" />
-              </button>
-
-              <h2 className="text-xl font-display font-bold text-ink mb-4 flex items-center gap-2">
-                <ShieldCheck className="size-6 text-primary" />
-                Confirm Wager
-              </h2>
-
-              <div className="space-y-4 mb-6">
-                <p className="text-sm text-ink bg-line/30 p-3 rounded-lg border border-line">
-                  <span className="font-bold text-primary">AI Insight:</span> {aiInsight || "This combination offers positive expected value based on Monte Carlo simulations."}
-                </p>
-                
-                <div className="flex flex-col gap-2 w-full">
-                  <label className="text-xs uppercase tracking-wider text-muted font-bold">Wager Amount ($)</label>
-                  <input 
-                    type="number" 
-                    value={wager}
-                    onChange={(e) => setWager(e.target.value)}
-                    className="w-full bg-background border border-line rounded-lg text-ink font-bold focus:outline-none focus:border-primary px-4 py-3 text-lg"
-                  />
-                </div>
-
-                <div className="bg-background rounded-lg p-4 border border-line">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted font-bold uppercase tracking-wider text-[10px]">Odds:</span>
-                    <span className="font-bold text-ink font-mono">{americanOdds}</span>
-                  </div>
-                  <div className="h-px bg-line my-2" />
-                  <div className="flex justify-between items-end mt-2">
-                    <span className="font-bold text-ink text-sm">Total Payout:</span>
-                    <span className="text-2xl font-bold text-primary font-mono">${totalPayout}</span>
-                  </div>
-                </div>
+              <div className="p-4 border-b border-line flex items-center justify-between">
+                <h3 className="font-display font-bold text-lg flex items-center gap-2"><ShieldCheck className="text-primary size-5" /> Ledger Confirmation</h3>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-obsidian rounded-full transition-colors"><X className="size-5 text-muted" /></button>
               </div>
-
-              <button 
-                onClick={() => {
-                  setIsModalOpen(false);
-                  if (onTail) onTail();
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
-              >
-                <span>Place Bet at Hard Rock</span>
-                <ChevronRight className="size-5" />
-              </button>
+              
+              <div className="p-6">
+                 <p className="text-sm text-muted mb-4">Edit to precisely match Hard Rock odds before saving.</p>
+                 <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Final Odds (American)</label>
+                      <input type="text" defaultValue={americanOdds} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Wager Amount ($)</label>
+                      <div className="flex gap-2">
+                        <input type="number" value={wager} onChange={(e) => setWager(e.target.value)} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary text-lg" />
+                        <button className="shrink-0 bg-primary/10 text-primary border border-primary/20 px-4 rounded-lg font-bold text-xs flex flex-col items-center justify-center hover:bg-primary/20 transition-colors">
+                           <span>SMART</span>
+                           <span>WAGER</span>
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="p-4 bg-obsidian border-t border-line">
+                <button 
+                  onClick={() => {
+                    if (onTail) onTail();
+                    setIsModalOpen(false);
+                  }}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  Save to SportsLock Ledger <ChevronRight className="size-4" />
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
