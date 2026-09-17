@@ -223,3 +223,23 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       return { ok: false, error: String(e) };
     }
   });
+
+export const lockPredictionFn = createServerFn({ method: "POST" })
+  .validator((d: { legs: Array<{ eventId: string; selection: string; marketType: string; point?: number; price: number; fairProb: number }> }) => d)
+  .handler(async ({ data }): Promise<{ ok: boolean; count: number }> => {
+    try {
+      const { logPrediction } = await import("@/lib/market/ledger");
+      let count = 0;
+      for (const leg of data.legs) {
+        await logPrediction(
+          { eventId: leg.eventId, selection: leg.selection, marketType: leg.marketType, point: leg.point, price: leg.price, fairProb: leg.fairProb } as any,
+          { source: "manual-lock-in", ts: new Date().toISOString() }
+        );
+        count++;
+      }
+      return { ok: true, count };
+    } catch (e: any) {
+      console.error("lockPredictionFn error:", e);
+      return { ok: false, count: 0 };
+    }
+  });
