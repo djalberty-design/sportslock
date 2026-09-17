@@ -42,7 +42,7 @@ export type OfficialMeans = {
 
 
 function displayName(o: OfficialPosting): string {
-  return [o.name, o.role].filter(Boolean).join(" Â· ");
+  return [o.name, o.role].filter(Boolean).join(" · ");
 }
 
 export function parseEspnOfficials(raw: unknown): OfficialPosting[] {
@@ -172,10 +172,10 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
           // The HOME pitcher's K-rate suppresses the AWAY team's expected runs!
           nextA *= 1 - (effectiveZone * (1 + homeKEdge));
         } else if (effectiveZone < 0) {
-          // Tight zone (hitter-friendly): 
-          // Tight zone heavily hurts K-pitchers (more walks, deep counts)
-          nextH *= 1 - (effectiveZone * (1 + awayKEdge)); 
-          nextA *= 1 - (effectiveZone * (1 + homeKEdge));
+          // Tight zone (hitter-friendly): boost runs
+          const absZone = Math.abs(effectiveZone);
+          nextH *= 1 + (absZone * (1 + awayKEdge));
+          nextA *= 1 + (absZone * (1 + homeKEdge));
         }
       }
       chaosAdd += Math.abs(effectiveZone);
