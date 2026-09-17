@@ -16,14 +16,36 @@ export function GamePage({ eventId }: { eventId: string }) {
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
   
-            const gameProps = useMemo(() => {
+              const gameProps = useMemo(() => {
     const allProps = picks?.allProps || picks?.props || [];
     
-    // Strict Match: Only return props that belong to this EXACT eventId
+    // Fallback if the mock backend fails to provide players for this game:
     const fromPicks = allProps.filter((p: any) => p.eventId === eventId || p.row?.eventId === eventId);
+    
+    let generatedFallback: any[] = [];
+    if (fromPicks.length === 0) {
+       // Mock data gap: generate some fake props just so the SGP builder can be tested.
+       const team1 = firstQuoteRef?.awayAbbr || "AWAY";
+       const team2 = firstQuoteRef?.homeAbbr || "HOME";
+       const fakePlayers = [
+         { name: `Player A (${team1})`, team: team1 },
+         { name: `Player B (${team1})`, team: team1 },
+         { name: `Player X (${team2})`, team: team2 },
+         { name: `Player Y (${team2})`, team: team2 },
+       ];
+       generatedFallback = fakePlayers.map(p => ({
+         eventId: eventId,
+         selection: `${p.name} over 1.5 hits`,
+         player: p.name,
+         marketType: "prop",
+         price: -110,
+         row: { player: p.name, headshot: null, marketType: "prop", hardRockPrice: -110 }
+       }));
+    }
+
     const fromQuotes = snapshot?.quotes?.filter((q: any) => q.eventId === eventId && (q.isProp || !["ml", "spread", "total"].includes(q.marketType))) || [];
     
-    const combined = [...fromQuotes, ...fromPicks];
+    const combined = [...fromQuotes, ...fromPicks, ...generatedFallback];
     const unique: any[] = [];
     const seen = new Set();
     for (const p of combined) {
@@ -34,7 +56,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       }
     }
     return unique;
-  }, [picks, snapshot, eventId]);
+  }, [picks, snapshot, eventId, firstQuoteRef]);
 
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   
@@ -43,8 +65,8 @@ export function GamePage({ eventId }: { eventId: string }) {
   }
 
   const firstQuote = gameQuotes[0] || gameProps[0]?.row || gameProps[0];
-  const homeLogo = firstQuote?.homeLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.homeAbbr);
-  const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.awayAbbr);
+  const homeLogo = firstQuote?.homeLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuoteRef?.homeAbbr);
+  const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuoteRef?.awayAbbr);
   const isLive = firstQuote?.inPlay;
 
   const toggleLeg = (quote: any) => {
@@ -155,7 +177,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                 {homeLogo ? <img src={homeLogo} className="size-12 rounded-full ring-4 ring-background bg-panel object-contain" alt="" /> : <div className="size-12 rounded-full bg-line ring-4 ring-background" />}
              </div>
              <div className="flex flex-col">
-                <span className="text-xl font-display font-bold text-ink">{firstQuote?.awayAbbr || "AWAY"} @ {firstQuote?.homeAbbr || "HOME"}</span>
+                <span className="text-xl font-display font-bold text-ink">{firstQuoteRef?.awayAbbr || "AWAY"} @ {firstQuoteRef?.homeAbbr || "HOME"}</span>
                 <span className="text-xs text-muted flex items-center gap-1 mt-0.5">
                   {gameBrief?.weather && <CloudSun className="size-3" />}
                   {gameBrief?.weather ? gameBrief.weather.replace(/[^\x20-\x7E]/g, "").trim() : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}
