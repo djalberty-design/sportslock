@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { buildLiveSnapshot } from "@/lib/market/live-board";
 import { buildScan } from "@/lib/market/engine";
 import { buildDeskPicks } from "@/lib/market/picks";
+import { insertLedgerTicket } from "@/lib/ledger-api";
 
 const getOptimalPicks = createServerFn({ method: "GET" }).handler(async () => {
   const snapshot = await buildLiveSnapshot();
@@ -10,6 +12,13 @@ const getOptimalPicks = createServerFn({ method: "GET" }).handler(async () => {
   const bag = buildDeskPicks(scan, snapshot);
   return bag.all;
 });
+
+const lockTicket = createServerFn({ method: "POST" })
+  .validator((data: { legs: any; combinedOdds: number; trueProb: number; stake: number }) => data)
+  .handler(async ({ data }) => {
+    await insertLedgerTicket(data);
+    return { success: true };
+  });
 
 export const Route = createFileRoute("/admin/architect")({
   loader: async () => {
@@ -26,6 +35,8 @@ function decimalToAmerican(dec: number): number {
 
 function ParlayArchitect() {
   const picks = Route.useLoaderData() as any[];
+  const [isLocking, setIsLocking] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   const now = Date.now();
   const withEdge = picks
@@ -60,12 +71,27 @@ function ParlayArchitect() {
   const parlayEdge = combinedProb * combinedPayout - 1;
   const combinedAmerican = decimalToAmerican(combinedPayout);
 
+  const handleLock = async () => {
+    setIsLocking(true);
+    await lockTicket({
+      data: {
+        legs: top3,
+        combinedOdds: combinedAmerican,
+        trueProb: combinedProb,
+        stake: 25 // Default stake
+      }
+    });
+    setIsLocking(false);
+    setIsLocked(true);
+    setTimeout(() => setIsLocked(false), 2000);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 md:p-12 font-mono flex justify-center items-center">
       <div className="max-w-2xl w-full space-y-8">
         <header className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <span className="text-emerald-500">✦</span> Parlay Architect
+            <span className="text-emerald-500">⚡</span> Parlay Architect
           </h1>
           <p className="text-zinc-400">
             Autonomous +EV accumulator construction. Exploiting algorithmic edges sequentially.
@@ -120,8 +146,16 @@ function ParlayArchitect() {
               </div>
             </div>
             
-            <button className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-lg shadow-emerald-900/50">
-              Execute on Hard Rock
+            <button
+              onClick={handleLock}
+              disabled={isLocking || isLocked}
+              className={`w-full mt-6 py-4 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-lg shadow-gold/20 flex justify-center items-center gap-2 ${
+                isLocked 
+                  ? "bg-emerald-600 text-white" 
+                  : "bg-gold text-navy-deep hover:bg-[#e6a627]"
+              }`}
+            >
+              {isLocked ? "✔ Locked in Ledger" : isLocking ? "Locking..." : "Lock It In"}
             </button>
           </div>
         ) : (
