@@ -14,14 +14,39 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [wager, setWager] = useState("50");
 
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
-  const gameProps = useMemo(() => picks?.props?.filter((p: any) => p.row?.eventId === eventId || p.eventId === eventId) || [], [picks, eventId]);
+  const firstQuoteRef = gameQuotes[0];
+  
+  const gameProps = useMemo(() => {
+    const fromPicks = picks?.props?.filter((p: any) => {
+      const pE = p.row?.eventId || p.eventId;
+      if (pE === eventId) return true;
+      if (pE && eventId && (eventId.includes(pE) || pE.includes(eventId))) return true;
+      if (firstQuoteRef && p.row?.homeAbbr === firstQuoteRef.homeAbbr && p.row?.awayAbbr === firstQuoteRef.awayAbbr) return true;
+      return false;
+    }) || [];
+    
+    const fromQuotes = snapshot?.quotes?.filter((q: any) => q.eventId === eventId && (q.isProp || !["ml", "spread", "total"].includes(q.marketType))) || [];
+    
+    const combined = [...fromPicks, ...fromQuotes];
+    const unique: any[] = [];
+    const seen = new Set();
+    for (const p of combined) {
+      const key = p.selection + (p.marketType || "");
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(p);
+      }
+    }
+    return unique;
+  }, [picks, snapshot, eventId, firstQuoteRef]);
+
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   
   if (gameQuotes.length === 0 && gameProps.length === 0) {
     return <div className="p-8 text-center text-muted">Game not found or loading...</div>;
   }
 
-  const firstQuote = gameQuotes[0] || gameProps[0]?.row;
+  const firstQuote = gameQuotes[0] || gameProps[0]?.row || gameProps[0];
   const homeLogo = firstQuote?.homeLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.homeAbbr);
   const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "MLB", firstQuote?.awayAbbr);
   const isLive = firstQuote?.inPlay;
@@ -40,7 +65,6 @@ export function GamePage({ eventId }: { eventId: string }) {
   const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || leg.chance || 0.5), 1) : 0;
   const hitProbPct = Math.round(combinedProb * 100);
 
-  // Fake Vegas multiplier for demo
   const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
       let p = leg.hardRockPrice || leg.consensusPrice || leg.price || leg.row?.hardRockPrice || -110;
       let prob = p < 0 ? (-p / (-p + 100)) : (100 / (p + 100));
@@ -49,7 +73,6 @@ export function GamePage({ eventId }: { eventId: string }) {
   const vegasPct = Math.round(vegasImplied * 100);
   const edgeVal = (hitProbPct - vegasPct).toFixed(1);
   
-  // Decimal to American
   let decPayout = 1 / (vegasImplied || 0.5);
   let americanOdds = decPayout >= 2.0 
     ? `+${Math.round((decPayout - 1) * 100)}`
