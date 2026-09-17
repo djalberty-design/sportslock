@@ -66,7 +66,7 @@ export function UserButton() {
   );
   if (!user) {
     return (
-      <Link to="/login" className="min-h-11 px-3 text-sm font-medium text-muted hover:text-ink">
+      <Link to="/admin/terminal" className="min-h-11 px-3 text-sm font-medium text-muted hover:text-ink">
         Owner
       </Link>
     );
