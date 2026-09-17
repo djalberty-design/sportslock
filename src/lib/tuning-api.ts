@@ -17,20 +17,8 @@ export const DEFAULT_TUNING: TuningConfig = {
 export async function getTuning(): Promise<TuningConfig> {
   const sql = await getSql();
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS desk_tuning_raw (
-        id INTEGER PRIMARY KEY,
-        min_edge FLOAT,
-        kelly FLOAT,
-        max_legs INTEGER,
-        feeds TEXT
-      )
-    `;
-    
-    // Injecting Date.now() directly into the SQL string physically destroys any query caching
     const ts = Date.now();
-    const res = await sql`SELECT * FROM desk_tuning_raw WHERE id = 1 AND ${ts} = ${ts}`;
-    const rows = res.rows || res;
+    const rows = await sql`SELECT * FROM desk_tuning_raw WHERE id = 1 AND ${ts} = ${ts}`;
     
     if (!rows || rows.length === 0) return DEFAULT_TUNING;
     
@@ -50,16 +38,6 @@ export async function getTuning(): Promise<TuningConfig> {
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
   const sql = await getSql();
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS desk_tuning_raw (
-        id INTEGER PRIMARY KEY,
-        min_edge FLOAT,
-        kelly FLOAT,
-        max_legs INTEGER,
-        feeds TEXT
-      )
-    `;
-    
     await sql`
       INSERT INTO desk_tuning_raw (id, min_edge, kelly, max_legs, feeds)
       VALUES (
