@@ -18,6 +18,55 @@ export type GameLatent = {
   note: string;
 };
 
+export type GameSimResult = {
+  homeScore: number;
+  awayScore: number;
+  margin: number;
+  total: number;
+  script: "blowout" | "shootout" | "grind" | "normal";
+};
+
+// Box-Muller transform for normal distribution
+export function randomNormal(mu: number, sigma: number): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return z * sigma + mu;
+}
+
+/**
+ * Step 5.1: Game Script Simulation (Monte Carlo Sandbox)
+ * Simulates 10,000 outcomes of a game to generate a matrix of game scripts.
+ */
+export function runMonteCarlo(g: GameLatent, n = 10000): GameSimResult[] {
+  const results: GameSimResult[] = [];
+  const expectedTotal = g.muH + g.muA;
+  
+  for (let i = 0; i < n; i++) {
+    // Generate margin and total independently via Bivariate Normal
+    const margin = randomNormal(g.muH - g.muA, g.sigM);
+    const total = Math.max(0, randomNormal(expectedTotal, g.sigT));
+    
+    const homeScore = Math.max(0, (total + margin) / 2);
+    const awayScore = Math.max(0, (total - margin) / 2);
+    
+    let script: GameSimResult["script"] = "normal";
+    
+    // Classify the game script
+    if (Math.abs(margin) >= 14) {
+      script = "blowout";
+    } else if (total > expectedTotal * 1.25) {
+      script = "shootout";
+    } else if (total < expectedTotal * 0.75) {
+      script = "grind";
+    }
+    
+    results.push({ homeScore, awayScore, margin, total, script });
+  }
+  return results;
+}
+
 export type SimPrice = { p: number; n: number; se: number; ran: boolean };
 
 // Abramowitz and Stegun 7.1.26 rational approximation for Normal CDF
