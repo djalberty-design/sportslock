@@ -1118,7 +1118,8 @@ export function buildDeskPicks(scan: ScanBundle, snapshot: DeskSnapshot): DeskPi
   const periodRows = merged.filter((r) => isPeriodSel(r.selection, r.marketType) && r.marketType !== "prop" && !r.isProp);
 
   const popular = rankRows(popularRows, "popular", popularWhy, 24);
-  const props = rankRows(propRows, "prop", propWhy, 8);
+  const PROPS_ENABLED = false; // flip to true to re-enable props in AI picks
+  const props = PROPS_ENABLED ? rankRows(propRows, "prop", propWhy, 8) : [];
   const periods = rankRows(periodRows, "period", periodWhy, 6);
 
   const sgpGame = (scan.topSgp ?? []).slice(0, 4).map((p) => fromParlay(p, "sgp"));
