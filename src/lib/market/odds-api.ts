@@ -63,8 +63,10 @@ export async function fetchOddsApiMains(force = false) {
     }
   }
 
-  globalCache.mains = results;
-  globalCache.mainsLastFetch = Date.now();
+  if (results.length > 0) {
+    globalCache.mains = results;
+    globalCache.mainsLastFetch = Date.now();
+  }
   return results;
 }
 
