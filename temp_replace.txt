@@ -1,0 +1,68 @@
+﻿      {locked ? <LockedStamp ticket={locked} /> : null}
+
+      <div className="mt-6 rounded-xl bg-panel p-4 shadow-2xl border border-panel-border text-ink ring-1 ring-neon/20">
+        <div className="flex justify-between items-end border-b border-panel-border pb-2 mb-4">
+          <div>
+            <p className="text-xs text-muted font-bold uppercase">Combo • {parlay.legs.length} Legs</p>
+            <p className="text-lg font-bold">Combined Odds</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-mono-numbers text-neon">{price > 0 ? ++price : price}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1">
+            <label className="text-xs text-muted font-bold uppercase">Wager</label>
+            <div className="relative mt-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+              <input 
+                type="number" 
+                value={stake} 
+                onChange={(e) => setStake(Number(e.target.value))}
+                className="w-full rounded-md bg-obsidian border border-panel-border py-2 pl-7 pr-3 font-mono-numbers text-ink focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon"
+              />
+            </div>
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-muted font-bold uppercase">Odds</label>
+            <div className="relative mt-1">
+              <input 
+                type="number" 
+                value={price} 
+                onChange={(e) => setPrice(Number(e.target.value))}
+                className="w-full rounded-md bg-obsidian border border-panel-border py-2 px-3 font-mono-numbers text-neon focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-right"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="pt-2 border-t border-panel-border flex justify-between items-center mb-4">
+          <p className="text-sm text-muted font-bold uppercase">To Win</p>
+          <p className="text-xl font-mono-numbers text-ink">
+            ${((stake * ((Number(price) > 0 ? (Number(price) / 100) + 1 : (100 / Math.abs(Number(price))) + 1) - 1)).toFixed(2))}
+          </p>
+        </div>
+
+        <button 
+          onClick={lockToLog}
+          className="w-full flex min-h-12 items-center justify-center rounded-lg bg-neon text-obsidian font-bold text-lg hover:bg-neon/90 transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)]"
+        >
+          ⚡ Lock It
+        </button>
+      </div>
+
+      {lockError ? <p className="mt-4 text-sm text-gold text-center">{lockError}</p> : null}
+
+      <div className="mt-6 flex flex-wrap gap-3 justify-center">
+        <Link
+          to="/parlay"
+          className="inline-flex min-h-11 items-center rounded-md bg-wash px-4 text-sm font-medium text-ink"
+        >
+          Add a leg
+        </Link>
+        <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-gold underline-offset-4 hover:underline">
+          Back to Parlay
+        </Link>
+      </div>
+    </div>

@@ -1,11 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  ClipboardList,
-  Combine,
-  Newspaper,
-  Radio,
-  Sparkles,
-} from "lucide-react";
+import { Activity, Beaker, Hexagon, Ticket, Settings } from "lucide-react";
 import { type ReactNode } from "react";
 import { BRAND } from "@/lib/brand";
 import { UserButton } from "@/lib/auth/gates";
@@ -15,12 +9,11 @@ import { CollapsibleParlayPill } from "./collapsible-parlay-pill";
 import { TicketChip } from "./ticket-lock";
 import { MobileMoreDrawer } from "./mobile-more-drawer";
 
-const PRIMARY = [
-  { to: "/today", label: "AI Picks", icon: Sparkles, featured: true },
-  { to: "/board", label: "Games", icon: Newspaper },
-  { to: "/parlay", label: "Combos", icon: Combine },
-  { to: "/live", label: "Live", icon: Radio },
-  { to: "/desk", label: "Log", icon: ClipboardList },
+const TABS = [
+  { to: "/", label: "Apex", icon: Hexagon },
+  { to: "/picks", label: "The Lab", icon: Beaker },
+  { to: "/games", label: "Matchups", icon: Activity },
+  { to: "/ticket", label: "My Action", icon: Ticket },
 ] as const;
 
 function isActive(pathname: string, to: string) {
@@ -33,103 +26,90 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useAccess();
 
   return (
-    <div className="min-h-dvh bg-paper text-ink">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-emerald-500 focus:px-3 focus:py-2 focus:text-zinc-950"
-      >
-        Skip to main
-      </a>
-      <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/92 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <Link to="/" className="flex min-h-11 items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-md bg-emerald-500 text-zinc-950 shadow-[var(--shadow-stamp)]">
-              <LockMark />
-            </span>
-            <span className="leading-tight">
-              <span className="font-display block text-lg font-semibold tracking-wide text-ink">{BRAND.name}</span>
-             <span className="hidden text-xs uppercase tracking-[0.16em] text-emerald-500 sm:block">Intelligence. Edge. Confidence.</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-1">
-            {isAdmin ? (
+    <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
+      {/* Mobile Bottom App Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden">
+        {TABS.map((tab) => {
+          const active = isActive(pathname, tab.to);
+          return (
+            <Link
+              key={tab.to}
+              to={tab.to}
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-colors",
+                active ? "text-primary" : "text-muted hover:text-ink",
+              )}
+            >
+              <tab.icon className="size-5" />
+              <span className="text-[10px] font-medium tracking-wide">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Desktop Side Rail */}
+      <aside className="sticky top-0 hidden h-dvh w-64 flex-col border-r border-line bg-panel md:flex">
+        <div className="flex h-16 items-center gap-3 px-6">
+          <Hexagon className="size-6 text-primary" />
+          <span className="font-display text-xl font-bold tracking-tight text-ink">Apex AI</span>
+        </div>
+        <nav className="flex-1 space-y-1 px-3 py-4">
+          {TABS.map((tab) => {
+            const active = isActive(pathname, tab.to);
+            return (
               <Link
-                to="/admin"
+                key={tab.to}
+                to={tab.to}
                 className={cn(
-                  "hidden min-h-11 items-center rounded-md px-3 text-sm font-medium sm:inline-flex",
-                  pathname === "/admin" ? "bg-emerald-500 text-zinc-950" : "text-muted hover:bg-wash hover:text-ink",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+                  active ? "bg-primary/10 text-primary" : "text-muted hover:bg-line/50 hover:text-ink",
                 )}
               >
-                Admin
+                <tab.icon className="size-5" />
+                <span className="font-medium">{tab.label}</span>
               </Link>
-            ) : null}
-            <TicketChip />
-            <div className="hidden sm:block">
-              <UserButton />
-            </div>
-            <MobileMoreDrawer />
-          </div>
-        </div>
-        <div className="rink-rule" aria-hidden="true" />
-      </header>
-
-      <main id="main" className="mx-auto max-w-6xl px-4 pb-32 pt-6">
-        {children}
-      </main>
-      <CollapsibleParlayPill />
-
-      <footer className="mx-auto hidden max-w-6xl px-4 pb-32 text-xs text-muted lg:block">
-        <p>
-          21+ for Hard Rock Bet. 18+ for classic daily fantasy / prediction markets. Call{" "}
-          <span className="font-mono text-emerald-500">{BRAND.helpline}</span> if play is no longer fun. This site
-          never places a bet. Delayed public odds. Not a prediction. Florida.
-        </p>
-      </footer>
-
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
-        aria-label="Main"
-      >
-        <ul className="mx-auto grid max-w-6xl grid-cols-5">
-          {PRIMARY.map((item) => {
-            const active = isActive(pathname, item.to);
-            const featured = "featured" in item && item.featured;
-            return (
-              <li key={item.to}>
-                <Link
-                  to={item.to}
-                  className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium uppercase tracking-wide",
-                    active ? "text-emerald-500" : "text-faint hover:text-ink",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid place-items-center rounded-md",
-                      featured && "size-8",
-                      featured && active && "bg-emerald-500 text-zinc-950",
-                      featured && !active && "bg-wash text-emerald-500",
-                    )}
-                  >
-                    <item.icon className="size-4" strokeWidth={active || featured ? 2 : 1.6} />
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
             );
           })}
-        </ul>
-      </nav>
-    </div>
-  );
-}
+        </nav>
+        
+        {isAdmin && (
+          <div className="p-3 border-t border-line/50">
+            <Link
+              to="/admin"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+                isActive(pathname, "/admin") ? "bg-primary/10 text-primary" : "text-muted hover:bg-line/50 hover:text-ink"
+              )}
+            >
+              <Settings className="size-5" />
+              <span className="font-medium">The Overseer</span>
+            </Link>
+          </div>
+        )}
+      </aside>
 
-function LockMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-      <rect x="5" y="11" width="14" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="12" cy="16" r="1.25" fill="currentColor" />
-    </svg>
+      {/* Main Content Area */}
+      <main className="flex-1 bg-background relative" id="main">
+        {/* Top Header for Mobile */}
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden">
+          <div className="flex items-center gap-2">
+            <Hexagon className="size-5 text-primary" />
+            <span className="font-display font-bold tracking-tight">Apex AI</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <TicketChip />
+             {isAdmin && (
+               <Link to="/admin" className="text-muted hover:text-primary">
+                 <Settings className="size-5" />
+               </Link>
+             )}
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
