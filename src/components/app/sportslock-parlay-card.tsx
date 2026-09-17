@@ -234,7 +234,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
                            </div>
                            <div className="flex flex-col items-center justify-center bg-primary/10 border border-primary/30 rounded-lg py-2">
                              <span className="text-[9px] uppercase tracking-wider text-primary font-bold">Edge</span>
-                             <span className="font-mono text-primary text-sm">+{legEdge}%</span>
+                             <span className="font-mono text-primary text-sm">{parseFloat(legEdge) > 0 ? `+${legEdge}` : legEdge}%</span>
                            </div>
                          </div>
 
