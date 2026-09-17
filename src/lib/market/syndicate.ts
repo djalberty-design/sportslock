@@ -88,3 +88,88 @@ export function applyDefensiveSchemeSplit(stat: string, playerStyle?: string, de
   }
   return null;
 }
+/**
+ * Phase 9: The Final Asymmetries
+ * Thermodynamics, College Psychology, Red Zone Math, and Pace.
+ */
+
+// 1. Air Density & Thermodynamics
+export function applyAirDensityMultiplier(sport: string, temp?: number, humidity?: number, altitudeFeet?: number): number {
+  if (temp == null) return 1.0;
+  if (sport !== "MLB" && sport !== "NFL") return 1.0;
+
+  // Baseline: 70F, 50% humidity, Sea Level
+  let multiplier = 1.0;
+  
+  // Temperature factor (Hotter = less dense = ball flies further)
+  if (temp > 85) multiplier += 0.03;
+  if (temp < 40) multiplier -= 0.04;
+  
+  // Humidity factor (Humid air is lighter than dry air, surprisingly)
+  if (humidity != null) {
+    if (humidity > 75 && temp > 75) multiplier += 0.02;
+  }
+  
+  // Altitude factor (e.g. Coors Field, Mile High)
+  if (altitudeFeet != null && altitudeFeet > 4000) {
+    multiplier += 0.05;
+  }
+  
+  return multiplier;
+}
+
+// 2. The "Bend But Don't Break" Kicker Prop
+export function applyKickerRedZoneStall(stat: string, isKicker?: boolean, redZoneDefRank?: number, yardsAllowedRank?: number): PropLayer | null {
+  if (!isKicker || redZoneDefRank == null || yardsAllowedRank == null) return null;
+  
+  // If the defense allows a lot of yards (Rank > 20) but locks down the red zone (Rank < 10)
+  if (yardsAllowedRank >= 20 && redZoneDefRank <= 10) {
+    if (stat === "points" || stat === "field_goals") {
+      return {
+        id: "red_zone_stall",
+        label: "Red Zone Stall (Kicker Boost)",
+        p: 0.65,
+        precision: 4.5,
+        family: "alpha",
+        note: `[ALPHA] Defense gives up yards (Rank ${yardsAllowedRank}) but stops TDs (Rank ${redZoneDefRank}). Expect high FG attempts.`,
+      };
+    }
+  }
+  return null;
+}
+
+// 3. The "Hostile Environment" Penalty (NCAAF / NCAAB)
+export function applyHostileFreshmanPenalty(stat: string, sport: string, isFreshman?: boolean, isAway?: boolean, venueHostilityRank?: number): PropLayer | null {
+  if (!isFreshman || !isAway || venueHostilityRank == null) return null;
+  if (sport !== "NCAAF" && sport !== "NCAAB") return null;
+  
+  // If playing in a top 15 most hostile venue as a true freshman
+  if (venueHostilityRank <= 15) {
+    if (stat === "points" || stat === "pra" || stat === "pass_yds") {
+      return {
+        id: "hostile_freshman",
+        label: "Hostile Environment Penalty",
+        p: 0.38,
+        precision: 4.0,
+        family: "alpha",
+        note: `[ALPHA] True Freshman playing in hostile away environment (Venue Rank: ${venueHostilityRank}). Extreme volatility expected.`,
+      };
+    }
+  }
+  return null;
+}
+
+// 4. Referee Pace & Whistle Rate
+export function applyRefereePaceMultiplier(sport: string, refereeWhistleRate?: number): number {
+  if (refereeWhistleRate == null) return 1.0;
+  if (sport !== "NBA" && sport !== "NCAAB") return 1.0;
+  
+  // refereeWhistleRate is fouls called per 48 mins (average is around ~38 in NBA)
+  if (refereeWhistleRate > 44) {
+    return 1.04; // High whistle rate = clock stops, more free throws = OVER
+  } else if (refereeWhistleRate < 34) {
+    return 0.96; // Swallows whistle = clock runs, fewer free throws = UNDER
+  }
+  
+  return 1.0;
+}
