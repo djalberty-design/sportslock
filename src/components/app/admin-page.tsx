@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TuningPanel } from "./tuning-panel";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
@@ -226,77 +227,6 @@ function AllowlistPanel() {
   );
 }
 
-function TuningPanel() {
-  const { settings, rankMs, ranking, scan, picks } = useDeskDecision();
-  const qc = useQueryClient();
-  const [floor, setFloor] = useState(String(Math.round(settings.safestFloor * 100)));
-  const [kelly, setKelly] = useState(String(settings.kellyMultiplier));
-  const [cap, setCap] = useState(String(settings.comboLegCap));
-  const [feeds, setFeeds] = useState<SportFeeds>(settings.sportFeeds);
-  const [note, setNote] = useState("");
-  const games = new Set((scan?.rows ?? []).map((r) => r.eventId)).size;
-
-  async function save() {
-    setNote("");
-    try {
-      const next: Partial<DeskSettings> = {
-        safestFloor: Number(floor) / 100,
-        kellyMultiplier: Number(kelly),
-        comboLegCap: Number(cap),
-        sportFeeds: feeds,
-      };
-      const saved = await saveDeskSettings({ data: next });
-      qc.setQueryData(["desk-settings"], saved);
-      setNote("Saved. Ranking will refresh on the next odds snapshot.");
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : "Could not save.");
-    }
-  }
-
-  return (
-    <section className="paper-card space-y-4 p-5">
-      <p className="stamp text-gold">Model knobs</p>
-      <h2 className="font-display text-xl text-ink">Algorithm & thresholds</h2>
-      <p className="text-sm text-muted">
-        {ranking ? "Ranking in the background." : rankMs != null ? `Last pass ${rankMs} ms.` : "Waiting on the delayed board."}{" "}
-        {games ? `${games} games.` : ""} {picks?.all.length ?? 0} named tickets.
-      </p>
-      <label className="block text-xs uppercase tracking-[0.14em] text-muted">
-        Safest floor % (preferred 65)
-        <Input value={floor} onChange={(e) => setFloor(e.target.value)} className="mt-1 max-w-xs" />
-      </label>
-      <label className="block text-xs uppercase tracking-[0.14em] text-muted">
-        Kelly multiplier (1 = full)
-        <Input value={kelly} onChange={(e) => setKelly(e.target.value)} className="mt-1 max-w-xs" />
-      </label>
-      <label className="block text-xs uppercase tracking-[0.14em] text-muted">
-        Combo leg cap (8–20)
-        <Input value={cap} onChange={(e) => setCap(e.target.value)} className="mt-1 max-w-xs" />
-      </label>
-      <div>
-        <p className="text-xs uppercase tracking-[0.14em] text-muted">Sport feeds</p>
-        <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {ALL_SPORTS.map((sport) => (
-            <li key={sport}>
-              <label className="flex min-h-11 items-center gap-2 rounded-md bg-wash px-3 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={feeds[sport]}
-                  onChange={(e) => setFeeds({ ...feeds, [sport]: e.target.checked })}
-                />
-                {sportLabel(sport)}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <Button type="button" onClick={() => void save()}>
-        Save tuning
-      </Button>
-      {note ? <p className="text-sm text-muted">{note}</p> : null}
-    </section>
-  );
-}
 
 function LedgerPanel() {
   const qc = useQueryClient();
