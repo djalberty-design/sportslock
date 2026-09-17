@@ -1,3 +1,4 @@
+"use client";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { authClient, authEnabled, signIn } from "@/lib/auth/client";
