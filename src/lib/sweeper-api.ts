@@ -1,6 +1,10 @@
 import { getSql } from "@/lib/db";
+import { getLedgerTickets } from "@/lib/ledger-api";
 
 export async function runSweeper() {
+  // Run the getLedgerTickets function first simply to trigger its internal ensureLedgerTable check
+  await getLedgerTickets();
+
   const sql = await getSql();
   const result = await sql`SELECT * FROM desk_ledger WHERE status = 'pending'`;
   const pending = result.rows || result;
