@@ -1,4 +1,4 @@
-import { getSql } from "@/lib/db";
+import { db } from "@vercel/postgres";
 
 export type TuningConfig = {
   minEdge: number;
@@ -14,46 +14,72 @@ export const DEFAULT_TUNING: TuningConfig = {
   activeFeeds: ["espn", "kalshi", "polymarket"]
 };
 
-async function ensureTuningTable(sql: any) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS desk_tuning_v3 (
-      id INTEGER PRIMARY KEY,
-      payload TEXT
-    )
-  `;
-}
-
 export async function getTuning(): Promise<TuningConfig> {
-  const sql = await getSql();
-  await ensureTuningTable(sql);
-
-  // The timestamp forces Vercel's cache to miss, guaranteeing a live DB read
-  const ts = Date.now();
-  const result = await sql`SELECT payload FROM desk_tuning_v3 WHERE id = 1 AND ${ts} = ${ts}`;
-  const rows = result.rows || result;
-  
-  if (!rows || rows.length === 0) {
-    return DEFAULT_TUNING;
-  }
-  
+  const client = await db.connect();
   try {
-    return JSON.parse(rows[0].payload) as TuningConfig;
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS desk_tuning_raw (
+        id INTEGER PRIMARY KEY,
+        min_edge FLOAT,
+        kelly FLOAT,
+        max_legs INTEGER,
+        feeds TEXT
+      )
+    `);
+    
+    // Injecting Date.now() directly into the SQL string physically destroys any query caching
+    const res = await client.query(`SELECT * FROM desk_tuning_raw WHERE id = 1 /* ${Date.now()} */`);
+    
+    if (res.rows.length === 0) return DEFAULT_TUNING;
+    
+    const row = res.rows[0];
+    return {
+      minEdge: row.min_edge,
+      kellyMultiplier: row.kelly,
+      maxLegs: row.max_legs,
+      activeFeeds: row.feeds ? JSON.parse(row.feeds) : ["espn", "kalshi", "polymarket"]
+    };
   } catch (e) {
+    console.error("DB READ ERROR:", e);
     return DEFAULT_TUNING;
+  } finally {
+    client.release();
   }
 }
 
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
-  const sql = await getSql();
-  await ensureTuningTable(sql);
-
-  const payloadStr = JSON.stringify(config);
-
-  await sql`
-    INSERT INTO desk_tuning_v3 (id, payload)
-    VALUES (1, ${payloadStr})
-    ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
-  `;
-  
-  return config;
+  const client = await db.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS desk_tuning_raw (
+        id INTEGER PRIMARY KEY,
+        min_edge FLOAT,
+        kelly FLOAT,
+        max_legs INTEGER,
+        feeds TEXT
+      )
+    `);
+    
+    await client.query(`
+      INSERT INTO desk_tuning_raw (id, min_edge, kelly, max_legs, feeds)
+      VALUES (1, $1, $2, $3, $4)
+      ON CONFLICT (id) DO UPDATE SET 
+        min_edge = EXCLUDED.min_edge,
+        kelly = EXCLUDED.kelly,
+        max_legs = EXCLUDED.max_legs,
+        feeds = EXCLUDED.feeds
+    `, [
+      config.minEdge,
+      config.kellyMultiplier,
+      config.maxLegs,
+      JSON.stringify(config.activeFeeds)
+    ]);
+    
+    return config;
+  } catch (e) {
+    console.error("DB WRITE ERROR:", e);
+    throw e;
+  } finally {
+    client.release();
+  }
 }
