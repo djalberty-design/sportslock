@@ -4,6 +4,7 @@ import { LedgerPanel } from "./ledger-panel";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
+import { getOddsQuotaFn } from "@/lib/market/server";
 import { ALL_SPORTS } from "@/lib/market/universe";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { useAccess } from "@/lib/use-access";
@@ -40,6 +41,7 @@ export function AdminPage() {
   const [tab, setTab] = useState<Tab>("allowlist");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRootAdmin = pathname === "/admin";
+  const quotaQuery = useQuery({ queryKey: ["odds-quota"], queryFn: () => getOddsQuotaFn(), refetchInterval: 30000 });
 
   return (
     <div className="space-y-6">
@@ -187,7 +189,7 @@ function AllowlistPanel() {
               <li key={r.id} className="rounded-md bg-wash px-3 py-3">
                 <p className="text-sm font-medium text-ink">{r.email}</p>
                 <p className="text-xs text-muted">
-                  {r.name || "No name"} · {r.status}
+                  {r.name || "No name"} Ã‚Â· {r.status}
                 </p>
                 {r.status === "pending" ? (
                   <div className="mt-2 flex gap-2">
@@ -245,7 +247,7 @@ function StatusPanel() {
           <HealthRow name="Polymarket" ping={h.polymarket} />
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feeds…" : "Could not load health."}</p>
+        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feedsÃ¢â‚¬Â¦" : "Could not load health."}</p>
       )}
       <Button type="button" variant="outline" className="mt-4" onClick={() => void q.refetch()}>
         Ping again
@@ -259,7 +261,7 @@ function HealthRow({ name, ping }: { name: string; ping: { ok: boolean; ms: numb
     <li className="flex items-center justify-between rounded-md bg-wash px-3 py-3">
       <span className="text-sm font-medium text-ink">{name}</span>
       <span className={ping.ok ? "text-sm text-up" : "text-sm text-down"}>
-        {ping.ok ? "Up" : "Down"} · {ping.ms} ms{ping.status ? ` · ${ping.status}` : ""}
+        {ping.ok ? "Up" : "Down"} Ã‚Â· {ping.ms} ms{ping.status ? ` Ã‚Â· ${ping.status}` : ""}
       </span>
     </li>
   );

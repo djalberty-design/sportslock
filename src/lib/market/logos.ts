@@ -1,4 +1,4 @@
-/** ESPN public team marks — same art Hard Rock shows next to the matchup. */
+/** ESPN public team marks â€” same art Hard Rock shows next to the matchup. */
 
 const LEAGUE_LOGO: Record<string, string> = {
   NFL: "nfl",
@@ -22,14 +22,14 @@ export function espnLogoUrl(sport: string, abbr?: string, espnTeamId?: string): 
   return `https://a.espncdn.com/i/teamlogos/${league}/500/${a}.png`;
 }
 
-export function teamNick(full: string, abbr?: string, short?: string): string {
+export function teamNick(full: string | undefined, abbr?: string, short?: string): string {
   const s = (short || "").trim();
   if (s && s.length <= 18 && !/\bat\b/i.test(s)) return s;
   if (abbr && abbr.length <= 4) {
-    const parts = full.trim().split(/\s+/);
-    if (parts.length >= 2) return parts.slice(-1)[0] ?? full;
+    const parts = (full || "").trim().split(/\s+/);
+    if (parts.length >= 2) return parts.slice(-1)[0] ?? (full || "");
   }
-  const parts = full.trim().split(/\s+/);
-  if (parts.length >= 2) return parts.slice(-1)[0] ?? full;
-  return full;
+  const parts = (full || "").trim().split(/\s+/);
+  if (parts.length >= 2) return parts.slice(-1)[0] ?? (full || "");
+  return full || "";
 }

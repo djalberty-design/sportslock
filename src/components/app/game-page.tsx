@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
+import { fetchRealPropsFn } from "@/lib/market/server";
+import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, Camera, CloudSun } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
@@ -12,6 +14,20 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [sgpSlip, setSgpSlip] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wager, setWager] = useState("50");
+  const isAdmin = useDeskStore(selectIsAdmin);
+  const [isFetchingProps, setIsFetchingProps] = useState(false);
+
+  const handleFetchRealProps = async () => {
+    if (!firstQuoteRef?.sport) return;
+    setIsFetchingProps(true);
+    try {
+      await fetchRealPropsFn({ data: { sportKey: firstQuoteRef.sport, eventId: firstQuoteRef.eventId } });
+      window.location.reload(); // Quick refresh to pull the new cached data
+    } catch (e) {
+      console.error(e);
+    }
+    setIsFetchingProps(false);
+  };
 
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
@@ -97,7 +113,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     : `-${Math.round(100 / (decPayout - 1))}`;
   if (sgpSlip.length === 0) americanOdds = "";
 
-    const renderGrid = (type: string) => {
+  const renderGrid = (type: string) => {
     let items: any[] = [];
     const lines = gameQuotes.filter((q: any) => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
     
@@ -107,6 +123,25 @@ export function GamePage({ eventId }: { eventId: string }) {
 
     return (
       <div className="flex flex-col gap-3 pb-24">
+        {isAdmin && type === "props" && (
+          <div className="bg-paper p-3 rounded-xl border border-line flex items-center justify-between shadow-sm">
+             <span className="text-xs text-muted font-mono uppercase tracking-wider flex items-center gap-2">
+               <ShieldCheck className="w-4 h-4 text-green-500" /> Admin Sniper
+             </span>
+             <button 
+               onClick={handleFetchRealProps}
+               disabled={isFetchingProps}
+               className="px-4 py-1.5 bg-green-500/10 text-green-500 text-xs font-bold uppercase tracking-wider rounded border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+             >
+               {isFetchingProps ? "Pulling..." : "Fetch Real Props (1 Req)"}
+             </button>
+          </div>
+        )}
+        {items.length === 0 && (
+          <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
+            {type === "props" ? (isAdmin ? "No props yet. Click the button above." : "Player props pending release.") : "No markets available."}
+          </div>
+        )}
         {items.map((q, i) => {
           let amOdds = "";
           let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice;

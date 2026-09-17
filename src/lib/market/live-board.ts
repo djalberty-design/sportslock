@@ -5,7 +5,8 @@ import { ESPN_PATH, fetchPlayerRecent, fetchTeamLastTen, parseEspnSummary, parse
 import { fetchTeamLooks } from "./looks.ts";
 import { mergeForm } from "./form.ts";
 import { fetchKalshiContracts, kalshiHomeWin } from "./kalshi.ts";
-import { fetchPolymarketContracts, fetchPolymarketBySlug, guessPolySlug, polymarketHomeWin, type PolyContract } from "./polymarket.ts";
+import { polyFromEventResearch, type PolyContract, guessPolySlug, polymarketHomeWin } from "./polymarket.ts";
+import { fetchOddsApiMains, getOddsPropsCache } from "./odds-api.ts";
 import { buildChance, parseEra } from "./chance.ts";
 import { twoWayNoVig } from "./engine.ts";
 import { ALL_SPORTS } from "./universe.ts";
@@ -206,7 +207,7 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
     clock: comp.status?.displayClock || (inPlay ? comp.status?.type?.shortDetail : undefined),
     period: comp.status?.period != null ? String(comp.status.period) : undefined,
     situation: inPlay
-      ? [comp.status?.type?.detail, comp.status?.type?.shortDetail, sitLine(comp.situation)].filter(Boolean).join(" · ")
+      ? [comp.status?.type?.detail, comp.status?.type?.shortDetail, sitLine(comp.situation)].filter(Boolean).join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ")
       : undefined,
   };
 
@@ -374,7 +375,17 @@ function capEventIds(quotes: QuoteLine[], sport: string, n: number): QuoteLine[]
   return quotes.filter((q) => q.sport !== sport || ids.includes(q.eventId));
 }
 
+const espnCache = (globalThis as any).__espnCache || {
+  data: null as { quotes: QuoteLine[]; notes: string[] } | null,
+  lastFetch: 0
+};
+(globalThis as any).__espnCache = espnCache;
+
 export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: string[] }> {
+  // ESPN is rate limiting us. Only fetch once an hour at most, or use the cache.
+  if (espnCache.data && Date.now() - espnCache.lastFetch < 1000 * 60 * 60) {
+    return espnCache.data;
+  }
   const yesterday = yyyymmddEt(-1);
   const today = yyyymmddEt(0);
     const plus1 = yyyymmddEt(1);
@@ -433,6 +444,8 @@ export async function fetchLiveQuotes(): Promise<{ quotes: QuoteLine[]; notes: s
   for (const sport of ALL_SPORTS) {
     if (!fetched.has(sport)) notes.push(`${sport} feed missed`);
   }
+  espnCache.data = { quotes, notes };
+  espnCache.lastFetch = Date.now();
   return { quotes, notes };
 }
 
@@ -721,11 +734,12 @@ async function fetchBriefs(
 }
 
 export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promise<DeskSnapshot> {
-  const [{ quotes, notes }, kalshiContracts, polyContracts, rawTape] = await Promise.all([
+  const [{ quotes, notes }, kalshiContracts, polyContracts, rawTape, oddsApiMains] = await Promise.all([
     fetchLiveQuotes(),
     fetchKalshiContracts().catch(() => []),
     fetchPolymarketContracts().catch(() => [] as PolyContract[]),
     fetchActionNetworkTape().catch(() => [] as RawBookTape[]),
+    fetchOddsApiMains().catch(() => []),
   ]);
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();
@@ -797,7 +811,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   const briefs = quotes.length ? await fetchBriefs(quotes, predictByEvent, rawTape) : [];
   const publicSplits = splitsFromTape(quotes, rawTape);
   const tapeNote = publicSplits.length
-    ? ` Ticket vs handle tape on ${publicSplits.length} game${publicSplits.length === 1 ? "" : "s"} (Action Network + line-move inference — not Hard Rock's own book).`
+    ? ` Ticket vs handle tape on ${publicSplits.length} game${publicSplits.length === 1 ? "" : "s"} (Action Network + line-move inference ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â not Hard Rock's own book).`
     : " No public ticket/handle tape on this pull.";
   const et = etParts();
   const upcoming = quotes
@@ -828,7 +842,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
           ? "No upcoming kickoff on the live board"
           : "Live schedule unavailable",
       note: live
-        ? `Live ESPN schedule for every league we cover: ${labels.join(" · ")}. Odds, ESPN model, Kalshi + Polymarket, records, pitchers, rest, injuries, ticket count vs handle. NBA, NHL, and college basketball stay on the board even before books post a number — photograph Hard Rock Bet Florida when they do. Confirm at ${BRAND.venueLive}.`
+        ? `Live ESPN schedule for every league we cover: ${labels.join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ")}. Odds, ESPN model, Kalshi + Polymarket, records, pitchers, rest, injuries, ticket count vs handle. NBA, NHL, and college basketball stay on the board even before books post a number ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â photograph Hard Rock Bet Florida when they do. Confirm at ${BRAND.venueLive}.`
         : "Could not load the live ESPN schedule. Photograph a Hard Rock screen so we still have real games.",
     },
     quotes,
@@ -854,3 +868,40 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
 
 
 
+
+function overlayOddsApiMains(quotes: QuoteLine[], oddsApiData: any[]): QuoteLine[] {
+  if (!oddsApiData || !oddsApiData.length) return quotes;
+  const apiGames: any[] = [];
+  for (const group of oddsApiData) {
+    if (!group || !group.data) continue;
+    apiGames.push(...group.data);
+  }
+  for (const q of quotes) {
+    const matchingGame = apiGames.find(g => 
+      (g.home_team.includes(q.homeNick) || q.homeNick.includes(g.home_team) || g.home_team.includes(q.home) || q.home.includes(g.home_team)) &&
+      (g.away_team.includes(q.awayNick) || q.awayNick.includes(g.away_team) || g.away_team.includes(q.away) || q.away.includes(g.away_team))
+    );
+    if (matchingGame) {
+      let bookmaker = matchingGame.bookmakers.find((b: any) => b.key === 'hardrock') || 
+                      matchingGame.bookmakers.find((b: any) => b.key === 'draftkings') ||
+                      matchingGame.bookmakers.find((b: any) => b.key === 'fanduel');
+      if (!bookmaker) continue;
+      const ml = bookmaker.markets.find((m: any) => m.key === 'h2h');
+      const sp = bookmaker.markets.find((m: any) => m.key === 'spreads');
+      const tot = bookmaker.markets.find((m: any) => m.key === 'totals');
+      if (q.marketType === 'ml' && ml) {
+        const o = ml.outcomes.find((o: any) => q.side === 'home' ? o.name === matchingGame.home_team : o.name === matchingGame.away_team);
+        if (o) { q.price = o.price > 0 ? o.price : (o.price < 0 ? o.price : q.price); q.source = "odds-api"; q.scheduleOnly = false; }
+      }
+      if (q.marketType === 'spread' && sp) {
+        const o = sp.outcomes.find((o: any) => q.side === 'home' ? o.name === matchingGame.home_team : o.name === matchingGame.away_team);
+        if (o) { q.price = o.price; q.point = o.point; q.source = "odds-api"; q.scheduleOnly = false; }
+      }
+      if (q.marketType === 'total' && tot) {
+        const o = tot.outcomes.find((o: any) => q.side === 'home' ? o.name === 'Over' : o.name === 'Under');
+        if (o) { q.price = o.price; q.point = o.point; q.source = "odds-api"; q.scheduleOnly = false; }
+      }
+    }
+  }
+  return quotes;
+}
