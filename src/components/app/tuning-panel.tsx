@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { createServerFn } from "@tanstack/react-start";
 import { getTuning, updateTuning, TuningConfig } from "@/lib/tuning-api";
 
-const fetchTuning = createServerFn({ method: "GET" }).handler(async () => {
+// Changed to POST to bypass aggressive Next.js GET caching
+const fetchTuning = createServerFn({ method: "POST" }).handler(async () => {
   return await getTuning();
 });
 
@@ -50,9 +51,18 @@ export function TuningPanel() {
     return <div className="p-8 text-center text-zinc-500 font-mono text-sm">Loading tuning variables...</div>;
   }
 
+  const toggleFeed = (feed: string) => {
+    setConfig(prev => {
+      const feeds = prev.activeFeeds.includes(feed) 
+        ? prev.activeFeeds.filter(f => f !== feed)
+        : [...prev.activeFeeds, feed];
+      return { ...prev, activeFeeds: feeds };
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-2xl font-mono">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 space-y-6">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 space-y-8">
         <h3 className="text-lg font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-2">
           Algorithmic Tuning
         </h3>
@@ -70,16 +80,70 @@ export function TuningPanel() {
             step="0.1"
             value={config.minEdge}
             onChange={(e) => setConfig({ ...config, minEdge: parseFloat(e.target.value) })}
-            className="w-full accent-emerald-500"
+            className="w-full accent-emerald-500 cursor-pointer"
           />
           <p className="text-[10px] text-zinc-500">Absolute minimum +EV required for a leg to pass the sanity filter.</p>
+        </div>
+
+        {/* Kelly Multiplier */}
+        <div className="space-y-4">
+          <div className="flex justify-between">
+            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Fractional Kelly Multiplier</label>
+            <span className="text-emerald-400 font-bold">{config.kellyMultiplier.toFixed(2)}x</span>
+          </div>
+          <input
+            type="range"
+            min="0.1"
+            max="1.0"
+            step="0.05"
+            value={config.kellyMultiplier}
+            onChange={(e) => setConfig({ ...config, kellyMultiplier: parseFloat(e.target.value) })}
+            className="w-full accent-emerald-500 cursor-pointer"
+          />
+          <p className="text-[10px] text-zinc-500">Scales the theoretical Kelly allocation to reduce overall portfolio volatility.</p>
+        </div>
+
+        {/* Max Legs */}
+        <div className="space-y-4">
+          <div className="flex justify-between">
+            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Maximum Parlay Legs</label>
+            <span className="text-emerald-400 font-bold">{config.maxLegs}</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            value={config.maxLegs}
+            onChange={(e) => setConfig({ ...config, maxLegs: parseInt(e.target.value) })}
+            className="w-full accent-emerald-500 cursor-pointer"
+          />
+          <p className="text-[10px] text-zinc-500">Caps the maximum number of combinations evaluated by the Architect.</p>
+        </div>
+
+        {/* Active Feeds */}
+        <div className="space-y-4">
+          <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Active Prediction Feeds</label>
+          <div className="flex gap-4">
+            {["espn", "kalshi", "polymarket"].map(feed => (
+              <label key={feed} className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={config.activeFeeds.includes(feed)} 
+                  onChange={() => toggleFeed(feed)}
+                  className="accent-emerald-500"
+                />
+                <span className="text-sm text-zinc-300 uppercase">{feed}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="pt-4 border-t border-zinc-800">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+            className="w-full py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-emerald-500/20 disabled:opacity-50 transition-colors cursor-pointer"
           >
             {saved ? "✔ Master Engine Updated" : isSaving ? "Locking..." : "Save Variables"}
           </button>

@@ -51,6 +51,9 @@ export async function getTuning(): Promise<TuningConfig> {
 
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {
   const sql = await getSql();
+  
+  // Nuke the old table to guarantee schema is up-to-date and wipe stale rows
+  await sql`DROP TABLE IF EXISTS desk_tuning`;
   await ensureTuningTable(sql);
 
   await sql`
