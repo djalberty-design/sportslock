@@ -28,13 +28,9 @@ export function claytonJoint(pA: number, pB: number, theta: number): number {
     const sum = Math.pow(a, -theta) + Math.pow(b, -theta) - 1;
     return Math.pow(Math.max(0, sum), -1 / theta);
   } else {
-    // Survival copula approach for negative dependence
-    const t = -theta;
-    const ua = 1 - a;
-    const ub = 1 - b;
-    const sum = Math.pow(ua, -t) + Math.pow(ub, -t) - 1;
-    const surv = Math.pow(Math.max(0, sum), -1 / t);
-    return a + b - 1 + surv;
+    // Negative dependence: blend independence toward Fréchet lower bound
+    const blend = Math.min(1, -theta);
+    return a * b * (1 - blend) + Math.max(0, a + b - 1) * blend;
   }
 }
 

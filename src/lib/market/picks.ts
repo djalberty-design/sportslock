@@ -456,7 +456,7 @@ function fromParlay(p: ParlayCandidate, bucket: PickBucket): DeskPick {
   const quality = parlayInfoQuality(p.legs.length, Boolean(p.sameGame));
   const implied = dec > 1 ? 1 / dec : undefined;
   const edge = implied != null ? p.combinedFair - implied : 0;
-  const price = p.legs[0]?.price;
+  const price = dec >= 2 ? Math.round((dec - 1) * 100) : (dec > 1 ? Math.round(-100 / (dec - 1)) : p.legs[0]?.price);
   const shown = calibratedChance(p.combinedFair, implied, quality);
   return {
     id: parlayTicketId(p),

@@ -284,10 +284,7 @@ function marketFair(price: number, oppositePrice?: number): { p: number; hold: n
     const nv = twoWayNoVig(price, oppositePrice);
     if (Number.isFinite(nv.fairHome)) return { p: nv.fairHome, hold: nv.hold };
   }
-  if (price < 0) {
-    const nv = twoWayNoVig(price, price);
-    if (Number.isFinite(nv.fairHome)) return { p: nv.fairHome, hold: nv.hold };
-  }
+  // When no opposite price exists, fall through to implied probability with vig haircut below
   const implied = americanToImplied(price);
   const p = Number.isFinite(implied) ? Math.min(0.88, Math.max(0.12, implied * 0.97)) : 0.5;
   return { p, hold: Number.isFinite(implied) ? implied - p : 0.05 };
