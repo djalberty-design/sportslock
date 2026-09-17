@@ -1,15 +1,45 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle } from "lucide-react";
+import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } from "lucide-react";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
-import { useDeskStore } from "@/lib/desk-store";
+import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
+import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
   const { snapshot, query } = useDeskDecision();
-  
+  const isAdmin = useDeskStore(selectIsAdmin);
+  const [quota, setQuota] = useState<number | null>(null);
+  const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
+
+  // Reverse map: display sport → Odds API sport key
+  const SPORT_KEY: Record<string, string> = {
+    NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
+    MLB: "baseball_mlb", NBA: "basketball_nba",
+    NHL: "icehockey_nhl", NCAAB: "basketball_ncaab",
+  };
+
+  useEffect(() => {
+    if (isAdmin) getOddsQuotaFn().then(setQuota).catch(() => {});
+  }, [isAdmin]);
+
+  const handleFetchProps = async (eventId: string, sport: string) => {
+    const sportKey = SPORT_KEY[sport];
+    if (!sportKey) return;
+    // Strip our prefix to get the raw Odds API event ID
+    const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
+    setFetchingEvent(eventId);
+    try {
+      await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
+      const q = await getOddsQuotaFn();
+      if (q != null) setQuota(q);
+    } catch (e) { console.error(e); }
+    setFetchingEvent(null);
+  };
+
   // Group by game using the underlying snapshot briefs/quotes
   const gamesMap = new Map<string, any>();
   snapshot?.briefs?.forEach((b: any) => {
@@ -80,9 +110,16 @@ function TheMatrix() {
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2 mb-6 border-b border-line pb-4">
-        <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          <LayoutGrid className="size-6 text-primary" /> Matchups
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
+            <LayoutGrid className="size-6 text-primary" /> Matchups
+          </h1>
+          {isAdmin && quota != null && (
+            <span className="text-xs font-mono bg-panel border border-line rounded-md px-2 py-1 text-muted">
+              API: {quota} / 500
+            </span>
+          )}
+        </div>
         {snapshot?.sourceNote && (
           <p className="text-xs text-muted">{snapshot.sourceNote}</p>
         )}
@@ -243,7 +280,19 @@ function TheMatrix() {
               {/* Footer row */}
               <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
                  <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
-                 <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
+                 <div className="flex items-center gap-3">
+                   {isAdmin && (
+                     <button
+                       onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }}
+                       disabled={fetchingEvent === g.eventId}
+                       className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 disabled:opacity-50"
+                     >
+                       <Zap className="size-3" />
+                       {fetchingEvent === g.eventId ? "Pulling..." : "Fetch Props"}
+                     </button>
+                   )}
+                   <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
+                 </div>
               </div>
 
             </div>
