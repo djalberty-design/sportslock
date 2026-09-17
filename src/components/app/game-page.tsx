@@ -95,7 +95,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     : `-${Math.round(100 / (decPayout - 1))}`;
   if (sgpSlip.length === 0) americanOdds = "";
 
-  const renderGrid = (type: string) => {
+    const renderGrid = (type: string) => {
     let items: any[] = [];
     const lines = gameQuotes.filter((q: any) => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
     
@@ -114,7 +114,7 @@ export function GamePage({ eventId }: { eventId: string }) {
              amOdds = d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
           }
           
-                    const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+          const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
           const playerName = q.player || q.row?.player;
           const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
           const headshotUrl = (q.row as any)?.headshot;
@@ -138,15 +138,6 @@ export function GamePage({ eventId }: { eventId: string }) {
                      )}
                      <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-1">{q.marketType || q.row?.marketType}</span>
                   </div>
-               </div>
-                    <>
-                      <span className="font-bold text-ink text-sm">{playerName}</span>
-                      <span className="text-muted text-xs">{label} {pointText}</span>
-                    </>
-                  ) : (
-                    <span className="font-bold text-ink text-sm">{label} {pointText}</span>
-                  )}
-                  <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-1">{q.marketType || q.row?.marketType}</span>
                </div>
                <button 
                  onClick={() => toggleLeg(q)}
