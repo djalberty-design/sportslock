@@ -16,12 +16,26 @@ export function GamePage({ eventId }: { eventId: string }) {
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
   
-  const gameProps = useMemo(() => {
+    const gameProps = useMemo(() => {
     const fromPicks = picks?.props?.filter((p: any) => {
-      const pE = p.row?.eventId || p.eventId;
-      if (pE === eventId) return true;
-      if (pE && eventId && (eventId.includes(pE) || pE.includes(eventId))) return true;
-      if (firstQuoteRef && p.row?.homeAbbr === firstQuoteRef.homeAbbr && p.row?.awayAbbr === firstQuoteRef.awayAbbr) return true;
+      // 1. Event ID matching
+      const pE1 = p.eventId || "";
+      const pE2 = p.row?.eventId || "";
+      if (pE1 === eventId || pE2 === eventId) return true;
+      if (pE1 && eventId.includes(pE1)) return true;
+      if (pE2 && eventId.includes(pE2)) return true;
+      
+      // 2. Loose Team Matching
+      const h1 = String(p.home || p.row?.home || p.homeAbbr || p.row?.homeAbbr || "").toLowerCase();
+      const a1 = String(p.away || p.row?.away || p.awayAbbr || p.row?.awayAbbr || "").toLowerCase();
+      const h2 = String(firstQuoteRef?.home || firstQuoteRef?.homeAbbr || "").toLowerCase();
+      const a2 = String(firstQuoteRef?.away || firstQuoteRef?.awayAbbr || "").toLowerCase();
+      
+      if (h2 && h1 && (h1.includes(h2) || h2.includes(h1))) return true;
+      if (a2 && a1 && (a1.includes(a2) || a2.includes(a1))) return true;
+      if (h2 && a1 && (a1.includes(h2) || h2.includes(a1))) return true;
+      if (a2 && h1 && (h1.includes(a2) || a2.includes(h1))) return true;
+      
       return false;
     }) || [];
     
@@ -154,7 +168,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                 <span className="text-xl font-display font-bold text-ink">{firstQuote?.awayAbbr || "AWAY"} @ {firstQuote?.homeAbbr || "HOME"}</span>
                 <span className="text-xs text-muted flex items-center gap-1 mt-0.5">
                   {gameBrief?.weather && <CloudSun className="size-3" />}
-                  {gameBrief?.weather ? gameBrief.weather : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}
+                  {gameBrief?.weather ? gameBrief.weather.replace(/[^\x20-\x7E]/g, "").trim() : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}
                 </span>
              </div>
           </div>
