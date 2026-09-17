@@ -13,6 +13,8 @@ export type OfficialPosting = {
 export type OfficialSnap = {
   sport: string;
   officials?: OfficialPosting[];
+  homeFtRate?: number;
+  awayFtRate?: number;
 };
 
 export type OfficialLayer = {
@@ -152,6 +154,20 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
     }
     
     if (o.foulRate != null && Number.isFinite(o.foulRate)) {
+      // Step 3.2: Referee Playstyle Compounding (Hardwood Alpha)
+      if (snap.sport === "NBA" || snap.sport === "NCAAB") {
+        if (snap.homeFtRate != null && snap.awayFtRate != null) {
+          // If a ref is foul-heavy (e.g. Scott Foster), and a team lives at the line, compound it.
+          // average FT Rate is usually ~0.25
+          const homeFtEdge = (snap.homeFtRate - 0.25) * 2;
+          const awayFtEdge = (snap.awayFtRate - 0.25) * 2;
+          
+          if (o.foulRate > 0) {
+             nextH *= 1 + (o.foulRate * homeFtEdge);
+             nextA *= 1 + (o.foulRate * awayFtEdge);
+          }
+        }
+      }
       chaosAdd += clip(o.foulRate, -0.02, 0.04);
     }
   }
