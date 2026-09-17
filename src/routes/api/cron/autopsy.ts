@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const Route = createFileRoute("/api/cron/autopsy")({
   server: {
@@ -12,17 +11,33 @@ export const Route = createFileRoute("/api/cron/autopsy")({
 });
 
 async function callLLM(prompt: string): Promise<string> {
+  const apiKey = process.env.XAI_API_KEY || process.env.GROK_API_KEY;
+  if (!apiKey) {
+    return "[ERROR] XAI_API_KEY environment variable is missing.";
+  }
+
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return "[ERROR] GEMINI_API_KEY environment variable is missing.";
+    const res = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "grok-3-mini-fast",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 300,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return `[LLM ERROR] ${res.status}: ${errText}`;
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "[No response]";
   } catch (err) {
     console.error("LLM Generation Failed:", err);
     return `[LLM ERROR] - ${(err as Error).message}`;

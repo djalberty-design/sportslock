@@ -28,7 +28,7 @@ function AutopsyDashboard() {
       .then((data) => {
         // Only show lost predictions that have an autopsy
         const autopsies = (data as PredictionLog[]).filter(
-          (l) => l.status === "LOST" && l.ai_autopsy
+          (l) => (l.status === "LOST" || l.status === "LOSS") && l.ai_autopsy
         );
         setLogs(autopsies);
       })

@@ -33,21 +33,25 @@ function PredictionDashboard() {
   }, []);
 
   // Stats
-  const graded = logs.filter((l) => l.status === "WON" || l.status === "LOST");
-  const won = graded.filter((l) => l.status === "WON").length;
-  const lost = graded.filter((l) => l.status === "LOST").length;
+  const isWin = (s: string) => s === "WON" || s === "WIN";
+  const isLoss = (s: string) => s === "LOST" || s === "LOSS";
+  const graded = logs.filter((l) => isWin(l.status) || isLoss(l.status));
+  const won = graded.filter((l) => isWin(l.status)).length;
+  const lost = graded.filter((l) => isLoss(l.status)).length;
   const pending = logs.filter((l) => l.status === "PENDING").length;
   const winRate = graded.length > 0 ? ((won / graded.length) * 100).toFixed(1) : "-";
-  const avgEdgeWin = graded.filter((l) => l.status === "WON").length > 0
-    ? (graded.filter((l) => l.status === "WON").reduce((s, l) => s + (l.edge || 0), 0) / won * 100).toFixed(1)
+  const avgEdgeWin = won > 0
+    ? (graded.filter((l) => isWin(l.status)).reduce((s, l) => s + (l.edge || 0), 0) / won * 100).toFixed(1)
     : "-";
   const avgEdgeLoss = lost > 0
-    ? (graded.filter((l) => l.status === "LOST").reduce((s, l) => s + (l.edge || 0), 0) / lost * 100).toFixed(1)
+    ? (graded.filter((l) => isLoss(l.status)).reduce((s, l) => s + (l.edge || 0), 0) / lost * 100).toFixed(1)
     : "-";
 
   const statusColor: Record<string, string> = {
     WON: "text-emerald-400 bg-emerald-500/10",
+    WIN: "text-emerald-400 bg-emerald-500/10",
     LOST: "text-red-400 bg-red-500/10",
+    LOSS: "text-red-400 bg-red-500/10",
     PUSH: "text-amber-400 bg-amber-500/10",
     PENDING: "text-muted bg-line/50",
   };
