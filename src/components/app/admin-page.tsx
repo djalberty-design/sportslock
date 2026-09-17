@@ -70,7 +70,7 @@ export function AdminPage() {
             role="tab"
             aria-selected={isRootAdmin && tab === t.id}
             onClick={() => setTab(t.id)}
-            className={isRootAdmin && tab === t.id ? "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" : "min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"}
+            className={isRootAdmin && tab === t.id ? "min-h-11 rounded-md bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center px-4 text-sm font-medium text-emerald-400" : "min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"}
           >
             {t.label}
           </Link>
@@ -78,21 +78,21 @@ export function AdminPage() {
         <Link
           to="/admin/architect"
           className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
-          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+          activeProps={{ className: "min-h-11 rounded-md bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center px-4 text-sm font-medium text-emerald-400" }}
         >
           Architect
         </Link>
         <Link
           to="/admin/terminal"
           className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
-          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+          activeProps={{ className: "min-h-11 rounded-md bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center px-4 text-sm font-medium text-emerald-400" }}
         >
           Terminal
         </Link>
         <Link
           to="/admin/brain"
           className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
-          activeProps={{ className: "min-h-11 rounded-md bg-gold flex items-center justify-center px-4 text-sm font-medium text-navy-deep" }}
+          activeProps={{ className: "min-h-11 rounded-md bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center px-4 text-sm font-medium text-emerald-400" }}
         >
           Brain
         </Link>
