@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { DeskPage } from "@/components/app/desk-page";
 import { TicketPage } from "@/components/app/ticket-page";
 
 export const Route = createFileRoute("/ticket")({
@@ -18,5 +19,6 @@ function ticketSearchId(s: Record<string, unknown>): string {
 
 function TicketRoute() {
   const { id } = Route.useSearch();
+  if (!id) return <DeskPage />;
   return <TicketPage ticketId={id} />;
 }
