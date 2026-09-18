@@ -13,7 +13,7 @@ export function normalizeEmail(email: string | null | undefined): string {
 export function isAdminEmail(email: string | null | undefined): boolean {
   const e = normalizeEmail(email);
   if (!e) return false;
-  return true; // Whitelist active session for admin access
+  return ADMIN_EMAILS.some((a) => normalizeEmail(a) === e);
 }
 
 export function roleOf(email: string | null | undefined, listedRole?: DeskRole | null): DeskRole {
