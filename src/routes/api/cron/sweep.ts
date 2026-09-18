@@ -2,10 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { buildLiveSnapshot } from "@/lib/market/live-board";
 import { buildScan } from "@/lib/market/engine";
-import { buildDeskPicks } from "@/lib/market/picks";
-import { rowToPick } from "@/lib/market/research";
 import { logPrediction } from "@/lib/market/ledger";
-import type { DeskPick } from "@/lib/market/picks";
+import { rowToPick } from "@/lib/market/research";
+import type { ScanRow } from "@/lib/market/engine";
 
 export const Route = createFileRoute("/api/cron/sweep")({
   server: {
@@ -22,77 +21,62 @@ async function handleSweep() {
   try {
     const snapshot = await buildLiveSnapshot();
     const scan = await buildScan(snapshot, false);
-    const bag = buildDeskPicks(scan, snapshot);
+    const rows = scan.rows;
 
     const now = Date.now();
-    const upcomingPicks = bag.all.filter((p) => {
-      if (!p.start || !p.row) return false;
-      const startMs = new Date(p.start).getTime();
+
+    // Log ALL predictions for games starting within 2 hours
+    // This gives us comprehensive accuracy tracking for brain self-improvement
+    const upcoming = rows.filter((r: ScanRow) => {
+      if (!r.start) return false;
+      const startMs = new Date(r.start).getTime();
       const diffMins = (startMs - now) / 60000;
-      return diffMins >= 0 && diffMins <= 90;
+      return diffMins >= 0 && diffMins <= 120;
     });
 
-    const byEvent = new Map<string, DeskPick[]>();
-    for (const p of upcomingPicks) {
-      if (!p.eventId) continue;
-      const group = byEvent.get(p.eventId) || [];
-      group.push(p);
-      byEvent.set(p.eventId, group);
-    }
-
-    if (byEvent.size === 0) {
+    if (upcoming.length === 0) {
       return new Response(JSON.stringify({ success: true, message: "No upcoming games in sweep window" }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const eventIds = Array.from(byEvent.keys());
-    
+    // Check which event+market combos are already logged to avoid duplicates
+    const eventIds = [...new Set(upcoming.map((r: ScanRow) => r.eventId))];
     const existing = await sql`
-      SELECT event_id FROM prediction_logs 
+      SELECT event_id, market_type, selection FROM prediction_logs 
       WHERE event_id = ANY(${eventIds})
     `;
-    const loggedIds = new Set(existing.map((row) => row.event_id));
+    const loggedKeys = new Set(existing.map((row) => `${row.event_id}|${row.market_type}|${row.selection}`));
 
     const paperSnapshot = { ...snapshot, isPaperTrade: true };
     const insertPromises: Promise<void>[] = [];
     let loggedCount = 0;
+    let skippedCount = 0;
 
-    for (const [eventId, picksForEvent] of byEvent.entries()) {
-      if (loggedIds.has(eventId)) continue;
-
-      // Track the best +EV pick for EACH market type (moneyline, spread, total)
-      const bestByMarket = new Map<string, { pick: any, edge: number }>();
-
-      for (const p of picksForEvent) {
-        const payout = p.price < 0 ? (100 / Math.abs(p.price)) + 1 : (p.price / 100) + 1;
-        const edge = (p.chance * payout) - 1;
-        
-        // STRICT +EV FLOOR: Only log mathematically profitable angles (> 1% edge)
-        if (edge < 0.01) continue;
-
-        const mType = p.row?.marketType || 'moneyline';
-        const currentBest = bestByMarket.get(mType);
-
-        if (!currentBest || edge > currentBest.edge) {
-          bestByMarket.set(mType, { pick: p, edge });
-        }
+    for (const r of upcoming) {
+      const key = `${r.eventId}|${r.marketType}|${r.selection}`;
+      if (loggedKeys.has(key)) {
+        skippedCount++;
+        continue;
       }
 
-      // Queue the best +EV picks for this event
-      for (const { pick } of bestByMarket.values()) {
-        if (pick.row) {
-          const parlayPick = rowToPick(pick.row);
-          insertPromises.push(logPrediction(parlayPick, paperSnapshot) as Promise<void>);
-          loggedCount++;
-        }
-      }
+      // Log every prediction: ML, spread, total, AND props
+      // This is what makes the brain self-improving — we track every angle
+      const pick = rowToPick(r);
+      insertPromises.push(logPrediction(pick, paperSnapshot) as Promise<void>);
+      loggedCount++;
     }
 
-    // Execute all database writes in parallel to prevent serverless timeouts
+    // Execute all database writes in parallel
     await Promise.all(insertPromises);
 
-    return new Response(JSON.stringify({ success: true, loggedCount, sweepWindowTotal: byEvent.size }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      loggedCount, 
+      skippedDuplicates: skippedCount,
+      totalUpcoming: upcoming.length,
+      uniqueEvents: eventIds.length,
+    }), {
       headers: { 'Content-Type': 'application/json' }
     });
 
