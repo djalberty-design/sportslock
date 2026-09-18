@@ -44,3 +44,30 @@ Default wager is $10. Ticket and Feed no longer invent +100 / 98% / hash project
 - My Action ledger wiring (Phase C).
 - Feed mix filters (Phase B).
 - Live scores (Phase E).
+
+## Code — Phase B Feed filters and logos (evening)
+
+SOON chips follow the snapshot board. Mix chips let a guest keep or hide cross-sport ribbons. Legs get a real team mark.
+
+### Added
+
+- `src/lib/market/feed-mix.ts` — snapshot sports, mix classify, ribbon sport + mix filters.
+- `MixFilterBar` in `src/components/app/sport-filter.tsx`.
+- `resolveTeamLogo` / `resolveLegTeam` in `src/lib/market/logos.ts`.
+
+### Changed
+
+- `src/routes/index.tsx` — live sports from quotes/briefs; mix chips; filter the full ribbon (cap 12); season note when a sport filter is empty.
+- `src/components/app/sportslock-parlay-card.tsx` — mix stamp on the card; leg logos from quote, abbr, or full team name; sheet no longer invents 50+i*5.
+
+### Unchanged on purpose
+
+- Guest desk stays open.
+- Cross-sport tickets stay legal; the new chips only filter the Feed.
+- Props stay off the Feed.
+- Phase C ledger write and Phase D 6 AM pull are next.
+
+### Docs
+
+- `GROK-2026-09-18-PLAN.md` — Phase B marked this push; 6 AM ET confirmed.
+- `GROK-2026-09-18-CURRENT.md` — Feed mix filters in the IA table.
