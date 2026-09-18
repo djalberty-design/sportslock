@@ -15,7 +15,8 @@ export function useAccess() {
     queryFn: () => getAccess(),
     enabled: signedIn,
     staleTime: 30_000,
-    retry: 1,
+    retry: 2,
+    retryDelay: 1000,
     refetchOnWindowFocus: false,
   });
   const access: AccessState | null = signedIn && q.data ? q.data : null;
@@ -24,6 +25,7 @@ export function useAccess() {
     user,
     sessionPending: isPending,
     accessPending: signedIn && q.isLoading,
+    accessError: signedIn && q.isError,
     access,
     isAdmin: isApproved && access?.role === "admin",
     isApproved,

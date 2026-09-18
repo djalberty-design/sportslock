@@ -1,7 +1,7 @@
 "use client";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { BRAND } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
@@ -63,11 +63,16 @@ function Login() {
             <button
               type="button"
               className="w-full flex justify-center items-center gap-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white font-bold py-3 px-4 rounded-lg transition-colors cursor-pointer"
-              onClick={() => {
-                signIn("google", { callbackURL: "/" }).catch((err) => {
+              onClick={async () => {
+                try {
+                  await authClient.signIn.social({
+                    provider: "google",
+                    callbackURL: "/",
+                  });
+                } catch (err) {
                   console.error(err);
                   alert("Error: " + (err instanceof Error ? err.message : String(err)));
-                });
+                }
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
