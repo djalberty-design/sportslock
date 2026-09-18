@@ -55,7 +55,7 @@ function SportsLockCommandCenter() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {topParlays.map((p: any, i: number) => (
-            <SportsLockParlayCard key={p.id || i} parlay={p} snapshot={snapshot} onTail={() => alert("Redirecting to Hard Rock FL...")} />
+            <SportsLockParlayCard key={p.id || i} parlay={p} snapshot={snapshot} />
           ))}
         </div>
       )}
