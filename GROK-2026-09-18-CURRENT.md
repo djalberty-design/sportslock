@@ -39,9 +39,9 @@ These override older docs.
 | Player props on the AI Feed | **Off for now.** Odds API quota + ESPN block. Lab may still hold prop machinery for later. |
 | Google OAuth button | **Does not work** on the live site as of this date. |
 | Email/password with Gmail | **Works.** Creator account is recognized as admin. |
-| ESPN | **Blocked / do not hammer.** Board is Odds API + Postgres cache. |
+| ESPN | **Blocked / do not hammer.** Morning pull probes scoreboard once per sport and records 200 vs 403. Empty looks stay Looked. |
 | Feed mix | Sport chips + same-game / same-sport / cross-sport / 2-leg / 3-leg. Cross-sport allowed. SOON follows snapshot quotes, not the ribbon. |
-| Morning pull | 6:00 AM ET. One Odds API mains + one ESPN props attempt. Not implemented until Phase D. |
+| Morning pull | 6:05 AM ET (`5 10 * * *` UTC). One Odds API mains force-fetch. One ESPN scoreboard probe per sport. 26h cache. Not a hijack of grade. |
 | Docs | This file is current. Everything listed in §10 is archived. |
 
 ---
@@ -81,7 +81,7 @@ Moods (Safest / Best Value / Pays more) remain engine law if the ranking code st
 | Source | Status | Role |
 |---|---|---|
 | The Odds API | **Primary board.** Real ML / spread / total prices. Postgres cache so cold starts do not burn quota. | Schedule + lines |
-| ESPN | **Blocked / disabled after 403 and rate limits.** Empty ESPN looks stay Looked — do not invent. | Suspended |
+| ESPN | **Blocked / disabled after 403 and rate limits.** Morning probe records status. Empty ESPN looks stay Looked — do not invent. | Suspended |
 | Kalshi / Polymarket | Research overlays when the snapshot has them. | Research |
 | Action Network tape | Research when posted. | Tickets % vs handle % |
 | Hard Rock | Photo or delayed Odds API. No scrape. | Fill |
@@ -95,10 +95,11 @@ Nightly / periodic jobs (`vercel.json`):
 |---|---|---|
 | `/api/cron/sweep` | `0 3 * * *` | 11pm ET — log model plays |
 | `/api/cron/grade` | `0 10 * * *` | 6am ET — W/L/P |
+| `/api/cron/morning-pull` | `5 10 * * *` | 6:05am ET — Odds API mains + ESPN probe |
 | `/api/cron/autopsy` | `0 11 * * *` | 7am ET — loss analysis via xAI |
 | `/api/cron/sweep-ledger` | `15,45 * * * *` | every 30 min — ledger |
 
-Phase D will add a 6 AM ET pull path. Grade already uses `0 10 * * *` UTC. Do not hijack grade for the pull.
+Odds API mains TTL is **26 hours**. Page views read L1 memory then L2 `odds_api_cache`. The morning job force-fetches and writes key `mains` plus stamp key `morning-pull`.
 
 ---
 
@@ -122,6 +123,7 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 - Phase A honest prices + $10 default
 - Phase B Feed mix filters + snapshot SOON + full names + ESPN numeric college marks
 - Phase C Lock It In writes My Action (`paperTickets` + `prediction_logs`)
+- Phase D 6:05 AM ET Odds API mains + ESPN scoreboard probe, 26h cache
 
 ---
 
@@ -139,8 +141,8 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 
 ## 9. Open work
 
-1. Phase D — 6 AM ET Odds API mains + ESPN props, 26h cache.
-2. Phase E — live scores from free league APIs.
+1. Phase E — live scores from free league APIs. ESPN scoreboard only if the morning probe returned 200.
+2. Confirm morning-pull fires in Vercel and `odds_api_cache` has a `morning-pull` stamp.
 3. Google button still broken; email path works.
 4. Hard Rock fill is still off-site. Lock only writes the research book.
 

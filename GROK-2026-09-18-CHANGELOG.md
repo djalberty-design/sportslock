@@ -92,4 +92,21 @@ Changelog last pass claimed the Feed modal wrote the book. The card on `main` st
 ### Unchanged on purpose
 
 - Site still never places a bet.
-- Phase D 6 AM pull waits for the next go.
+
+## Code — Phase D morning pull (evening)
+
+Last session described this as shipped. `main` still had a 12h TTL, no morning-pull route, and no cron row. This pass lands it.
+
+### Changed
+
+- `src/lib/market/odds-api.ts` — `CACHE_TTL` 12h → 26h. `writeOddsApiCache` exported. `getActiveSports` exported.
+- `src/lib/market/morning-pull.ts` — `fetchOddsApiMains(true)` once, then one ESPN scoreboard GET per sport. Writes stamp key `morning-pull`.
+- `src/routes/api/cron/morning-pull.ts` — GET/POST handler.
+- `vercel.json` — `/api/cron/morning-pull` at `5 10 * * *` UTC (6:05 AM ET). Grade stays on `0 10`.
+
+### Unchanged on purpose
+
+- Feed player props stay off.
+- No Odds API `/scores`.
+- No ESPN retry loop or player-prop scrape. 403 is Looked.
+- Admin Fetch Props on Matchups stays.
