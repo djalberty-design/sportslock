@@ -73,12 +73,10 @@ const TEAM_ABBR: Record<string, string> = {
 export function teamAbbrFromName(fullName: string): string {
   const mapped = TEAM_ABBR[fullName];
   if (mapped) return mapped;
-  // Fuzzy fallback: try case-insensitive match
   const lower = fullName.toLowerCase();
   for (const [key, val] of Object.entries(TEAM_ABBR)) {
     if (key.toLowerCase() === lower) return val;
   }
-  // Last resort: last word, first 3 chars
   const last = fullName.split(" ").pop() || fullName;
   return last.substring(0, 3).toLowerCase();
 }
@@ -106,4 +104,54 @@ export function teamNick(full: string | undefined, abbr?: string, short?: string
   const parts = (full || "").trim().split(/\s+/);
   if (parts.length >= 2) return parts.slice(-1)[0] ?? (full || "");
   return full || "";
+}
+
+export function resolveTeamLogo(
+  sport?: string,
+  opts?: {
+    logo?: string | null;
+    abbr?: string | null;
+    name?: string | null;
+    espnTeamId?: string | null;
+  },
+): string | null {
+  if (opts?.logo) return opts.logo;
+  const fromName = opts?.name ? teamAbbrFromName(opts.name) : undefined;
+  const abbr = (opts?.abbr && String(opts.abbr).trim()) || fromName;
+  return espnLogoUrl(sport || "", abbr || undefined, opts?.espnTeamId || undefined);
+}
+
+export function resolveLegTeam(leg: any, quote?: any) {
+  const sport = String(leg?.sport || quote?.sport || "");
+  const homeName = String(leg?.home || quote?.home || "");
+  const awayName = String(leg?.away || quote?.away || "");
+  const homeAbbr = leg?.homeAbbr || quote?.homeAbbr || (homeName ? teamAbbrFromName(homeName) : undefined);
+  const awayAbbr = leg?.awayAbbr || quote?.awayAbbr || (awayName ? teamAbbrFromName(awayName) : undefined);
+  const homeLogo = resolveTeamLogo(sport, {
+    logo: leg?.homeLogo || quote?.homeLogo,
+    abbr: homeAbbr,
+    name: homeName,
+    espnTeamId: quote?.homeEspnId || leg?.homeEspnId,
+  });
+  const awayLogo = resolveTeamLogo(sport, {
+    logo: leg?.awayLogo || quote?.awayLogo,
+    abbr: awayAbbr,
+    name: awayName,
+    espnTeamId: quote?.awayEspnId || leg?.awayEspnId,
+  });
+  const sel = String(leg?.selection || "");
+  const selLow = sel.toLowerCase();
+  const sideHome = Boolean(
+    (homeName && sel.includes(homeName)) ||
+      (homeAbbr && selLow.includes(String(homeAbbr).toLowerCase())) ||
+      leg?.side === "home",
+  );
+  const sideAway = Boolean(
+    (awayName && sel.includes(awayName)) ||
+      (awayAbbr && selLow.includes(String(awayAbbr).toLowerCase())) ||
+      leg?.side === "away",
+  );
+  const side = sideHome && !sideAway ? "home" : sideAway && !sideHome ? "away" : "game";
+  const selectionLogo = side === "home" ? homeLogo : side === "away" ? awayLogo : homeLogo || awayLogo;
+  return { sport, homeName, awayName, homeAbbr, awayAbbr, homeLogo, awayLogo, selectionLogo, side };
 }
