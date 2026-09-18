@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { fetchRealPropsFn, lockPredictionFn } from "@/lib/market/server";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
-import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, Camera, CloudSun, TrendingUp, Zap, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
@@ -224,11 +224,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                     <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-0.5">{q.marketType || q.row?.marketType}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Quick prob badge */}
-                  <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded hidden sm:inline">
-                    {probPct}%
-                  </span>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleLeg(q); }}
                     className={cn("flex flex-col items-center justify-center min-w-[70px] h-10 rounded-md border transition-colors",
@@ -237,6 +233,22 @@ export function GamePage({ eventId }: { eventId: string }) {
                   >
                     <span className="font-mono text-sm font-bold">{amOdds}</span>
                   </button>
+                </div>
+              </div>
+              {/* Always-visible AI prediction bar */}
+              <div className="mt-2 mx-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
+                  </div>
+                  <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
+                    {probPct}%
+                  </span>
+                  {parseFloat(edgePct) !== 0 && (
+                    <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                      {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -373,7 +385,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                 {/* Combined stats */}
                 <div className="px-4 pt-3 pb-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted">{sgpSlip.length}-Leg SGP <span className="text-primary ml-2">{americanOdds}</span></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted">{sgpSlip.length === 1 ? "Straight Bet" : `${sgpSlip.length}-Leg SGP`} <span className="text-primary ml-2">{americanOdds}</span></span>
                     <span className="text-xs font-bold text-primary font-mono">{hitProbPct}% PROB</span>
                   </div>
                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
@@ -389,12 +401,9 @@ export function GamePage({ eventId }: { eventId: string }) {
                   </div>
 
                   <div className="flex items-center gap-2 mt-1">
-                    <button className="flex-1 md:w-12 h-12 bg-panel border border-line rounded-lg flex items-center justify-center text-muted hover:text-ink transition-colors" title="Magic Scan (Screenshot)">
-                      <Camera className="size-5" />
-                    </button>
                     <button
                       onClick={() => { setIsModalOpen(true); setFinalOdds(americanOdds); }}
-                      className="flex-1 md:flex-none md:w-40 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       Lock It In
                     </button>

@@ -32,8 +32,10 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
   const firstLeg = legs[0];
   const firstQuote = snapshot?.quotes?.find((q: any) => q.eventId === firstLeg?.eventId);
   const firstBrief = snapshot?.briefs?.find((b: any) => b.eventId === firstLeg?.eventId);
-  const homeLogo = firstQuote?.homeLogo || (firstQuote?.homeAbbr ? espnLogoUrl(firstLeg?.sport || "MLB", firstQuote?.homeAbbr) : null);
-  const awayLogo = firstQuote?.awayLogo || (firstQuote?.awayAbbr ? espnLogoUrl(firstLeg?.sport || "MLB", firstQuote?.awayAbbr) : null);
+  const homeAbbrResolved = firstLeg?.homeAbbr || firstQuote?.homeAbbr;
+  const awayAbbrResolved = firstLeg?.awayAbbr || firstQuote?.awayAbbr;
+  const homeLogo = firstLeg?.homeLogo || firstQuote?.homeLogo || (homeAbbrResolved ? espnLogoUrl(firstLeg?.sport || "MLB", homeAbbrResolved) : null);
+  const awayLogo = firstLeg?.awayLogo || firstQuote?.awayLogo || (awayAbbrResolved ? espnLogoUrl(firstLeg?.sport || "MLB", awayAbbrResolved) : null);
   const isLive = firstQuote?.inPlay;
 
   const combinedEv = parlayCand?.combinedEv || 0;
@@ -56,7 +58,7 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                {firstQuote?.awayAbbr || "AWAY"} @ {firstQuote?.homeAbbr || "HOME"}
+                {awayAbbrResolved || firstLeg?.away || "AWAY"} @ {homeAbbrResolved || firstLeg?.home || "HOME"}
               </span>
               <span className="text-[10px] text-muted flex items-center gap-2">
                 {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "TODAY"}
