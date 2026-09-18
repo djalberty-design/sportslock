@@ -2,6 +2,9 @@ import { getSql } from "@/lib/db";
 
 export const ODDS_API_KEY = process.env.ODDS_API_KEY || "c5fa171c7620da6c912ff69d843db37d";
 
+// 26h so a 6 AM ET pull still covers the next morning if cron slips a cycle.
+export const CACHE_TTL = 1000 * 60 * 60 * 26;
+
 // ── L1: in-memory cache (survives warm Vercel instances) ────────────────────
 const globalCache = (globalThis as any).__oddsApiCache || {
   mains: null as any,
@@ -26,7 +29,7 @@ async function readDbCache(key: string): Promise<{ data: any; fetchedAt: Date } 
   }
 }
 
-async function writeDbCache(key: string, data: any): Promise<void> {
+export async function writeOddsApiCache(key: string, data: any): Promise<void> {
   try {
     const sql = await getSql();
     await sql`
@@ -39,8 +42,7 @@ async function writeDbCache(key: string, data: any): Promise<void> {
   }
 }
 
-// ── Season-aware sport list ─────────────────────────────────────────────────
-function getActiveSports(): string[] {
+export function getActiveSports(): string[] {
   const month = new Date().getMonth() + 1;
   const active = [];
   if (month >= 9 || month <= 2) active.push("americanfootball_nfl");
@@ -56,8 +58,6 @@ export function getOddsQuota() {
   return globalCache.quotaRemaining;
 }
 
-const CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
-
 export async function fetchOddsApiMains(force = false) {
   // L1: check in-memory cache first (fastest, survives warm starts)
   if (!force && globalCache.mains && globalCache.mains.length > 0 && Date.now() - globalCache.mainsLastFetch < CACHE_TTL) {
@@ -72,7 +72,6 @@ export async function fetchOddsApiMains(force = false) {
       const age = Date.now() - cached.fetchedAt.getTime();
       if (age < CACHE_TTL) {
         console.log("[odds-api] L2 DB cache hit, age:", Math.round(age / 60000), "min");
-        // Promote to L1
         globalCache.mains = cached.data;
         globalCache.mainsLastFetch = cached.fetchedAt.getTime();
         return cached.data;
@@ -80,7 +79,6 @@ export async function fetchOddsApiMains(force = false) {
     }
   }
 
-  // L3: fetch from Odds API
   console.log("[odds-api] Cache miss — fetching from Odds API...");
   const sports = getActiveSports();
   const results = [];
@@ -107,10 +105,9 @@ export async function fetchOddsApiMains(force = false) {
   }
 
   if (results.length > 0) {
-    // Write to both L1 and L2
     globalCache.mains = results;
     globalCache.mainsLastFetch = Date.now();
-    await writeDbCache("mains", results);
+    await writeOddsApiCache("mains", results);
     console.log("[odds-api] Wrote", results.length, "sport groups to DB cache. Quota remaining:", globalCache.quotaRemaining);
   } else {
     console.warn("[odds-api] API returned 0 results across all sports. Quota remaining:", globalCache.quotaRemaining);
@@ -120,11 +117,9 @@ export async function fetchOddsApiMains(force = false) {
 }
 
 export async function fetchOddsApiProps(sportKey: string, eventId: string) {
-  // L1
   if (globalCache.props[eventId]) {
     return globalCache.props[eventId];
   }
-  // L2
   const cacheKey = `props:${eventId}`;
   const cached = await readDbCache(cacheKey);
   if (cached && cached.data) {
@@ -151,7 +146,7 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string) {
 
     const data = await res.json();
     globalCache.props[eventId] = data;
-    await writeDbCache(cacheKey, data);
+    await writeOddsApiCache(cacheKey, data);
     return data;
   } catch (e) {
     console.error(`[odds-api] Props fetch error:`, e);
