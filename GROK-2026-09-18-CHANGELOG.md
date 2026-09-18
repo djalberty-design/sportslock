@@ -33,3 +33,13 @@ DJ's screenshot still printed `AST @ RAY` and `BIS @ HOR` with empty circles. Sh
 
 - Mix chips stay.
 - Phase C ledger write is next, only after go.
+
+## Code — college logos via numeric ESPN ids (evening)
+
+Matchups still printed HUR / DEA / COU circles. Odds API stores 3-letter leftovers. ESPN college art only exists at `/ncaa/500/{numericId}.png`. Letter URLs 404, then the card hides the image.
+
+### Changed
+
+- `src/lib/market/ncaa-ids.ts` plus `-a`/`-b` — ESPN numeric ids for FBS names.
+- `src/lib/market/logos.ts` — drop letter-path NCAA urls; resolve by school name; never ask ESPN for `/ncaa/500/hur.png`.
+- `src/routes/games.tsx` — Matchups render through `resolveTeamLogo`.
