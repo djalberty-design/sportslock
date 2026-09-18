@@ -14,7 +14,7 @@ const globalCache = (globalThis as any).__oddsApiCache || {
 };
 (globalThis as any).__oddsApiCache = globalCache;
 
-// ── L2: Postgres-backed cache (survives cold starts) ────────────────────────
+// ── L2: Postgres-backed cache (survives cold starts) ──────────────────────
 async function readDbCache(key: string): Promise<{ data: any; fetchedAt: Date } | null> {
   try {
     const sql = await getSql();
@@ -27,6 +27,10 @@ async function readDbCache(key: string): Promise<{ data: any; fetchedAt: Date } 
     console.error("[odds-api] DB cache read failed:", e);
     return null;
   }
+}
+
+export async function readOddsApiCache(key: string) {
+  return readDbCache(key);
 }
 
 export async function writeOddsApiCache(key: string, data: any): Promise<void> {
