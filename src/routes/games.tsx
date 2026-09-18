@@ -6,16 +6,16 @@ import { espnLogoUrl } from "@/lib/market/logos";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
+import { bookAmerican, impliedFromAmerican } from "@/lib/market/book-price";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
-  const { snapshot, query } = useDeskDecision();
+  const { snapshot, query, scan } = useDeskDecision();
   const isAdmin = useDeskStore(selectIsAdmin);
   const [quota, setQuota] = useState<number | null>(null);
   const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
 
-  // Reverse map: display sport → Odds API sport key
   const SPORT_KEY: Record<string, string> = {
     NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
     MLB: "baseball_mlb", NBA: "basketball_nba",
@@ -29,7 +29,6 @@ function TheMatrix() {
   const handleFetchProps = async (eventId: string, sport: string) => {
     const sportKey = SPORT_KEY[sport];
     if (!sportKey) return;
-    // Strip our prefix to get the raw Odds API event ID
     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
     setFetchingEvent(eventId);
     try {
@@ -40,15 +39,14 @@ function TheMatrix() {
     setFetchingEvent(null);
   };
 
-  // Group by game using the underlying snapshot briefs/quotes
   const gamesMap = new Map<string, any>();
   snapshot?.briefs?.forEach((b: any) => {
-    gamesMap.set(b.eventId, { 
-      sport: b.sport || "GAME", 
-      home: b.home || b.homeAbbr || "Home", 
+    gamesMap.set(b.eventId, {
+      sport: b.sport || "GAME",
+      home: b.home || b.homeAbbr || "Home",
       away: b.away || b.awayAbbr || "Away",
       homeAbbr: b.homeAbbr, homeLogo: b.homeLogo,
-      awayAbbr: b.awayAbbr, awayLogo: b.awayLogo, 
+      awayAbbr: b.awayAbbr, awayLogo: b.awayLogo,
       weather: b.weather,
       eventId: b.eventId,
       start: b.start,
@@ -56,7 +54,6 @@ function TheMatrix() {
     });
   });
 
-  // Attach live quotes data and populate markets
   snapshot?.quotes?.forEach((q: any) => {
     let g = gamesMap.get(q.eventId);
     if (!g) {
@@ -70,30 +67,23 @@ function TheMatrix() {
     g.away = q.away || q.awayAbbr || g.away;
     g.homeAbbr = q.homeAbbr || g.homeAbbr; g.homeLogo = q.homeLogo || g.homeLogo;
     g.awayAbbr = q.awayAbbr || g.awayAbbr; g.awayLogo = q.awayLogo || g.awayLogo;
-    
-    // Fill out live info
     g.inPlay = q.inPlay;
     g.homeScore = q.homeScore ?? g.homeScore ?? 0;
     g.awayScore = q.awayScore ?? g.awayScore ?? 0;
-    
-    // Assign markets based on QuoteLine data
     const isHome = q.selection === q.home || q.selection === q.homeAbbr || (g.home && q.selection?.includes(g.home)) || (g.homeAbbr && q.selection?.includes(g.homeAbbr));
-    
-    if (q.marketType === 'ml') {
+    if (q.marketType === "ml") {
       if (isHome) g.markets.homeML = q.price;
       else g.markets.awayML = q.price;
-    } else if (q.marketType === 'spread') {
+    } else if (q.marketType === "spread") {
       if (isHome) g.markets.homeSpread = { point: q.point, price: q.price };
       else g.markets.awaySpread = { point: q.point, price: q.price };
-    } else if (q.marketType === 'total') {
-      if (q.side === 'over') g.markets.over = { point: q.point, price: q.price };
-      else if (q.side === 'under') g.markets.under = { point: q.point, price: q.price };
+    } else if (q.marketType === "total") {
+      if (q.side === "over") g.markets.over = { point: q.point, price: q.price };
+      else if (q.side === "under") g.markets.under = { point: q.point, price: q.price };
     }
-    
     gamesMap.set(q.eventId, g);
   });
 
-  // Filter out the diagnostic "SYS" sport placeholder
   const allGames = Array.from(gamesMap.values()).filter(g => g.sport !== "SYS");
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const games = applySportFilter(allGames, sportFilter);
@@ -106,6 +96,25 @@ function TheMatrix() {
     if (num <= -100 || num >= 100) return num > 0 ? `+${num}` : `${num}`;
     return num >= 2.0 ? `+${Math.round((num - 1) * 100)}` : `-${Math.round(100 / (num - 1))}`;
   };
+
+  function matchupLean(g: any): { label: string; pct: number | null } {
+    const mlHome = scan?.rows?.find((r: any) => r.eventId === g.eventId && r.marketType === "ml" && (r.side === "home" || r.selection === g.home || r.selection === g.homeAbbr));
+    const mlAway = scan?.rows?.find((r: any) => r.eventId === g.eventId && r.marketType === "ml" && (r.side === "away" || r.selection === g.away || r.selection === g.awayAbbr));
+    const modelHome = Number(mlHome?.chance ?? mlHome?.fairProb);
+    const modelAway = Number(mlAway?.chance ?? mlAway?.fairProb);
+    const bookHome = impliedFromAmerican(bookAmerican({ price: g.markets?.homeML }));
+    const bookAway = impliedFromAmerican(bookAmerican({ price: g.markets?.awayML }));
+    const homePct = (Number.isFinite(modelHome) && modelHome > 0.08 && modelHome < 0.9) ? modelHome : bookHome;
+    const awayPct = (Number.isFinite(modelAway) && modelAway > 0.08 && modelAway < 0.9) ? modelAway : bookAway;
+    if (homePct != null && awayPct != null) {
+      return homePct >= awayPct
+        ? { label: g.home, pct: Math.round(homePct * 100) }
+        : { label: g.away, pct: Math.round(awayPct * 100) };
+    }
+    if (homePct != null) return { label: g.home, pct: Math.round(homePct * 100) };
+    if (awayPct != null) return { label: g.away, pct: Math.round(awayPct * 100) };
+    return { label: "", pct: null };
+  }
 
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
@@ -125,12 +134,10 @@ function TheMatrix() {
         )}
       </div>
 
-      {/* Sport Filter */}
       <div className="mb-4">
         <SportFilter sports={liveSports} />
       </div>
 
-      {/* Error / crash banner */}
       {snapshot?.hours?.note && snapshot.hours.note.includes("CRASH") && (
         <div className="bg-red-500/20 text-red-400 p-4 rounded-md mb-6 whitespace-pre-wrap font-mono text-xs">
           <AlertTriangle className="size-4 inline mr-2" />
@@ -138,14 +145,10 @@ function TheMatrix() {
         </div>
       )}
 
-      {/* Loading state */}
       {query.isPending && !snapshot && (
-        <div className="text-center p-12 text-muted">
-          Loading board...
-        </div>
+        <div className="text-center p-12 text-muted">Loading board...</div>
       )}
 
-      {/* Query error state */}
       {query.isError && (
         <div className="bg-red-500/10 text-red-400 p-6 rounded-xl mb-6 border border-red-500/20">
           <AlertTriangle className="size-5 inline mr-2" />
@@ -155,17 +158,10 @@ function TheMatrix() {
 
       <div className="flex flex-col gap-6">
         {games.map(g => {
-          const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : "Upcoming";
-          
-          // Generate a fake but deterministic AI simulation stat based on string hash for demo
-          const hash = g.eventId.split("").reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
-          const aiProb = 50 + (hash % 25); 
-          const aiFavorite = hash % 2 === 0 ? g.home : g.away;
-          
+          const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Upcoming";
+          const lean = matchupLean(g);
           return (
             <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
-              
-              {/* Top Context & Simulation Bar */}
               <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   {g.inPlay ? (
@@ -179,65 +175,38 @@ function TheMatrix() {
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{g.sport}</span>
                   {g.weather && <span className="text-xs text-muted flex items-center gap-1"><CloudSun className="size-3" /> {g.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
                 </div>
-                
-                {/* AI Macro Projection */}
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
                     <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
-                    <span className="text-primary">{aiFavorite} {aiProb}%</span>
+                    <span className="text-primary">{lean.pct != null ? `${lean.label} ${lean.pct}%` : "Looked"}</span>
                   </div>
                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full relative" style={{ width: `${aiProb}%` }}>
+                    <div className="h-full bg-primary rounded-full relative" style={{ width: `${lean.pct ?? 0}%` }}>
                       <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Grid Content */}
               <div className="p-4 flex flex-col md:flex-row">
-                {/* Left Column: Teams */}
                 <div className="w-full md:w-[40%] flex flex-col justify-between py-1 pr-4 mb-4 md:mb-0 border-b md:border-b-0 md:border-r border-line">
-                  
-                  {/* Away Team */}
                   <div className="flex items-center gap-3 h-12">
                     {(g.awayLogo || g.awayAbbr) ? (
-                      <img
-                        src={g.awayLogo || espnLogoUrl(g.sport || "NFL", g.awayAbbr) || ""}
-                        className="size-8 object-contain"
-                        alt=""
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
-                      />
+                      <img src={g.awayLogo || espnLogoUrl(g.sport || "NFL", g.awayAbbr) || ""} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
                     ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.awayLogo || g.awayAbbr) ? "hidden" : ""}`}>
-                      {(g.awayAbbr || g.away || "?").substring(0, 3)}
-                    </div>
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.awayLogo || g.awayAbbr) ? "hidden" : ""}`}>{(g.awayAbbr || g.away || "?").substring(0, 3)}</div>
                     <span className="text-base font-bold text-ink truncate">{g.away}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.awayScore}</span>}
                   </div>
-
-                  {/* Home Team */}
                   <div className="flex items-center gap-3 h-12 mt-2">
                     {(g.homeLogo || g.homeAbbr) ? (
-                      <img
-                        src={g.homeLogo || espnLogoUrl(g.sport || "NFL", g.homeAbbr) || ""}
-                        className="size-8 object-contain"
-                        alt=""
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
-                      />
+                      <img src={g.homeLogo || espnLogoUrl(g.sport || "NFL", g.homeAbbr) || ""} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
                     ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.homeLogo || g.homeAbbr) ? "hidden" : ""}`}>
-                      {(g.homeAbbr || g.home || "?").substring(0, 3)}
-                    </div>
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.homeLogo || g.homeAbbr) ? "hidden" : ""}`}>{(g.homeAbbr || g.home || "?").substring(0, 3)}</div>
                     <span className="text-base font-bold text-ink truncate">{g.home}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.homeScore}</span>}
                   </div>
                 </div>
-
-                {/* Right Column: Odds Grid */}
                 <div className="w-full md:w-[60%] flex gap-2 md:pl-4">
-                  
-                  {/* SPREAD Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Spread</div>
                     <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
@@ -249,8 +218,6 @@ function TheMatrix() {
                       <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
                     </button>
                   </div>
-
-                  {/* TOTAL Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
                     <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
@@ -262,8 +229,6 @@ function TheMatrix() {
                       <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.under?.price ? formatAm(g.markets.under.price) : ""}</span>
                     </button>
                   </div>
-
-                  {/* WINNER Column */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
                     <button className="h-12 flex items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
@@ -273,20 +238,13 @@ function TheMatrix() {
                       <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.homeML ? formatAm(g.markets.homeML) : "-"}</span>
                     </button>
                   </div>
-
                 </div>
               </div>
-
-              {/* Footer row */}
               <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
                  <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
                  <div className="flex items-center gap-3">
                    {isAdmin && (
-                     <button
-                       onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }}
-                       disabled={fetchingEvent === g.eventId}
-                       className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 disabled:opacity-50"
-                     >
+                     <button onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }} disabled={fetchingEvent === g.eventId} className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 disabled:opacity-50">
                        <Zap className="size-3" />
                        {fetchingEvent === g.eventId ? "Pulling..." : "Fetch Props"}
                      </button>
@@ -294,21 +252,13 @@ function TheMatrix() {
                    <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
                  </div>
               </div>
-
             </div>
           );
         })}
-
-        {/* Empty state */}
         {!query.isPending && games.length === 0 && (
           <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
             <p className="text-lg font-semibold mb-2">No games on the board right now</p>
-            <p className="text-sm">
-              {snapshot?.sourceNote || "Check back when games are scheduled."}
-            </p>
-            {snapshot?.hours?.note && (
-              <p className="text-xs mt-3 text-muted/70">{snapshot.hours.note}</p>
-            )}
+            <p className="text-sm">{snapshot?.sourceNote || "Check back when games are scheduled."}</p>
           </div>
         )}
       </div>
