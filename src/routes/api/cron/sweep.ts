@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
-import { buildLiveSnapshot } from "@/lib/market/live-board";
+import { snapshotWithLiveScores } from "@/lib/market/with-live-scores";
 import { buildScan } from "@/lib/market/engine";
 import { logPrediction } from "@/lib/market/ledger";
 import { rowToPick } from "@/lib/market/research";
@@ -19,14 +19,12 @@ async function handleSweep() {
   const sql = await getSql();
 
   try {
-    const snapshot = await buildLiveSnapshot();
+    const snapshot = await snapshotWithLiveScores();
     const scan = await buildScan(snapshot, false);
     const rows = scan.rows;
 
     const now = Date.now();
 
-    // Log ALL predictions for games starting within 2 hours
-    // This gives us comprehensive accuracy tracking for brain self-improvement
     const upcoming = rows.filter((r: ScanRow) => {
       if (!r.start) return false;
       const startMs = new Date(r.start).getTime();
@@ -40,7 +38,6 @@ async function handleSweep() {
       });
     }
 
-    // Check which event+market combos are already logged to avoid duplicates
     const eventIds = [...new Set(upcoming.map((r: ScanRow) => r.eventId))];
     const existing = await sql`
       SELECT event_id, market_type, selection FROM prediction_logs 
@@ -60,14 +57,11 @@ async function handleSweep() {
         continue;
       }
 
-      // Log every prediction: ML, spread, total, AND props
-      // This is what makes the brain self-improving — we track every angle
       const pick = rowToPick(r);
       insertPromises.push(logPrediction(pick, paperSnapshot) as Promise<void>);
       loggedCount++;
     }
 
-    // Execute all database writes in parallel
     await Promise.all(insertPromises);
 
     return new Response(JSON.stringify({ 
