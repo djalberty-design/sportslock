@@ -1,5 +1,6 @@
 import { sportLabel } from "@/lib/copy";
 import { useDeskStore } from "@/lib/desk-store";
+import { MIX_OPTIONS, type MixFilter } from "@/lib/market/feed-mix";
 import { ALL_SPORTS } from "@/lib/market/universe";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,37 @@ export function SportFilter({ sports }: { sports: string[] }) {
             {s === "ALL" ? "All" : s === "NCAAF" ? "College Football" : s === "NCAAB" ? "College Basketball" : s}
             {soon ? <span className="ml-1 text-xs uppercase tracking-wide opacity-70">soon</span> : null}
             <span className="sr-only">{s === "ALL" ? "All sports" : sportLabel(s)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MixFilterBar({
+  value,
+  onChange,
+}: {
+  value: MixFilter;
+  onChange: (v: MixFilter) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 pb-1" role="tablist" aria-label="Filter by mix">
+      {MIX_OPTIONS.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.id)}
+            className={cn(
+              "min-h-11 rounded-md px-3 text-sm font-medium",
+              active ? "bg-neon text-obsidian" : "bg-panel text-muted hover:text-ink",
+            )}
+          >
+            {opt.label}
           </button>
         );
       })}

@@ -1,21 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
 import { Sparkles, Activity } from "lucide-react";
-import { SportFilter } from "@/components/app/sport-filter";
+import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
+import {
+  applyMixFilter,
+  applyRibbonSportFilter,
+  snapshotSports,
+  type MixFilter,
+} from "@/lib/market/feed-mix";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
 function SportsLockCommandCenter() {
   const { picks, snapshot } = useDeskDecision();
-  
-  const allParlays = picks?.ribbon?.slice(0, 5) || [];
   const sportFilter = useDeskStore((s) => s.sportFilter);
-  const topParlays = (!sportFilter || sportFilter === "ALL")
-    ? allParlays
-    : allParlays.filter((p: any) => p.sport === sportFilter || p.legs?.some((l: any) => l.sport === sportFilter));
-  const liveSports = [...new Set(allParlays.flatMap((p: any) => [p.sport, ...(p.legs?.map((l: any) => l.sport) || [])]).filter(Boolean))];
+  const [mixFilter, setMixFilter] = useState<MixFilter>("ALL");
+
+  const ribbon = picks?.ribbon || [];
+  const liveSports = snapshotSports(snapshot);
+  const filtered = applyMixFilter(applyRibbonSportFilter(ribbon, sportFilter), mixFilter);
+  const topParlays = filtered.slice(0, 12);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -29,9 +36,9 @@ function SportsLockCommandCenter() {
         </p>
       </div>
 
-      {/* Sport Filter */}
-      <div>
+      <div className="space-y-2">
         <SportFilter sports={liveSports} />
+        <MixFilterBar value={mixFilter} onChange={setMixFilter} />
       </div>
 
       {topParlays.length === 0 ? (
@@ -39,11 +46,16 @@ function SportsLockCommandCenter() {
           <Activity className="size-8 text-muted mb-3" />
           <p className="text-ink font-medium">No Gold Ribbon Parlays currently detected.</p>
           <p className="text-muted text-sm mt-1">SportsLock AI is waiting for more sportsbook data.</p>
+          {sportFilter && sportFilter !== "ALL" ? (
+            <div className="mt-4 max-w-lg text-left">
+              <SportSeasonNote sport={sportFilter} />
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {topParlays.map((p, i) => (
-            <SportsLockParlayCard key={i} parlay={p} snapshot={snapshot} onTail={() => alert("Redirecting to Hard Rock FL...")} />
+          {topParlays.map((p: any, i: number) => (
+            <SportsLockParlayCard key={p.id || i} parlay={p} snapshot={snapshot} onTail={() => alert("Redirecting to Hard Rock FL...")} />
           ))}
         </div>
       )}
