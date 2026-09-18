@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Flame, BarChart2, X, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Flame, BarChart2, X, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam } from "@/lib/market/logos";
+import { FeedLockModal } from "./feed-lock-modal";
 
 function TeamMark({ src, name }: { src: string | null; name: string }) {
   const letter = (name || "?").replace(/^(the)\s+/i, "").charAt(0).toUpperCase() || "?";
@@ -32,8 +33,8 @@ function displaySelection(leg: any, teams: { homeName?: string; awayName?: strin
   return sel;
 }
 
-export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any; snapshot?: any; onTail?: () => void }) {
-  const [wager, setWager] = useState("50");
+export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapshot?: any }) {
+  const [wager, setWager] = useState("10");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -230,47 +231,14 @@ export function SportsLockParlayCard({ parlay, snapshot, onTail }: { parlay: any
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-4 bg-background/80 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              className="w-full max-w-md bg-panel border border-line rounded-2xl shadow-2xl overflow-hidden"
-            >
-              <div className="p-4 border-b border-line flex items-center justify-between">
-                <h3 className="font-display font-bold text-lg flex items-center gap-2"><ShieldCheck className="text-primary size-5" /> Ledger Confirmation</h3>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-obsidian rounded-full transition-colors"><X className="size-5 text-muted" /></button>
-              </div>
-              <div className="p-6">
-                 <p className="text-sm text-muted mb-4">Edit to precisely match Hard Rock odds before saving.</p>
-                 <div className="space-y-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Final Odds (American)</label>
-                      <input type="text" defaultValue={americanOdds} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary" />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted">Wager Amount ($)</label>
-                      <input type="number" value={wager} onChange={(e) => setWager(e.target.value)} className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary text-lg" />
-                    </div>
-                 </div>
-              </div>
-              <div className="p-4 bg-obsidian border-t border-line">
-                <button
-                  onClick={() => {
-                    if (onTail) onTail();
-                    setIsModalOpen(false);
-                  }}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  Save to SportsLock Ledger <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <FeedLockModal
+        key={isModalOpen ? "open" : "shut"}
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        parlay={parlay}
+        snapshot={snapshot}
+        americanOdds={americanOdds}
+      />
     </>
   );
 }
