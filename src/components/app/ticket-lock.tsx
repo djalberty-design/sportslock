@@ -1,14 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { formatBetUsd, formatChancePct, profitOnStake, shortPick } from "@/lib/copy";
+import { shortPick } from "@/lib/copy";
 import { useDeskStore, selectTicketPulse, selectUnit } from "@/lib/desk-store";
 import { americanToDecimal, decimalToAmerican, product } from "@/lib/market/engine";
-import { lineShiftAlert } from "@/lib/market/edge";
-import { photoBlockedReason, photoVerdict } from "@/lib/market/photo-law";
+import { photoBlockedReason } from "@/lib/market/photo-law";
 import { namesHit } from "@/lib/market/research";
 import type { PaperTicket, ParsedTicket, ScanRow } from "@/lib/market/types";
-import { cn, formatAmerican } from "@/lib/utils";
-import { WagerMeter, HitReadout, ticketMath } from "./wager-meter";
+import { cn } from "@/lib/utils";
 
 export function delayedMatch(rows: ScanRow[], ticket: ParsedTicket): ScanRow | undefined {
   return rows.find(
@@ -36,37 +34,19 @@ export function TicketReview({
   const multi = (legs?.filter((l) => l.selection && Number.isFinite(l.price)) ?? []).length >= 2;
   const items = multi ? (legs ?? []).filter((l) => l.selection && Number.isFinite(l.price)) : draft ? [draft] : [];
   if (!items.length) return null;
-
-  const delayed = items.map((t) => delayedMatch(rows, t));
-  const livePrices = items.map((t) => t.price);
-  const delayedPrices = delayed.map((r, i) => r?.price ?? livePrices[i]);
-  const fairs = items.map((_, i) => delayed[i]?.fairProb).filter((p): p is number => p != null && Number.isFinite(p) && p > 0);
-  const chance = fairs.length === items.length ? (multi ? product(fairs) : fairs[0]) : undefined;
-  const decimal = product(livePrices.map((p) => americanToDecimal(p)));
-  const delayedDecimal = product(delayedPrices.map((p) => americanToDecimal(p)));
-  const liveAmerican = items.length === 1 ? livePrices[0] : decimalToAmerican(decimal);
-  const delayedAmerican = items.length === 1 ? delayedPrices[0] : decimalToAmerican(delayedDecimal);
-  const moved = delayedAmerican !== liveAmerican;
   const blocked = photoBlockedReason(items);
-  const verdict = photoVerdict(chance, liveAmerican);
   const title =
     items.length === 1
       ? shortPick(items[0].selection, items[0].marketType)
       : `${items.length}-game parlay`;
-
   return (
     <div className="mt-5 space-y-4 rounded-md bg-wash p-4 ring-1 ring-gold/40">
       <div>
-        <p className="stamp text-emerald-500">Not on Log yet · check the live number</p>
+        <p className="stamp text-emerald-500">Not on My Action yet</p>
         <h3 className="font-display mt-2 text-2xl text-ink">{title}</h3>
-        <p className="mt-1 text-sm text-ink">
-          {items.length === 1
-            ? `${items[0].away} at ${items[0].home}`
-            : items.map((t) => shortPick(t.selection, t.marketType)).join(" + ")}
-        </p>
       </div>
       <Button className="w-full" size="lg" onClick={onLock} disabled={Boolean(blocked)}>
-        Lock live number and save to Log
+        Lock live number and save to My Action
       </Button>
       {error ? <p className="text-sm text-down">{error}</p> : null}
     </div>
@@ -74,13 +54,15 @@ export function TicketReview({
 }
 
 export function LockedStamp({ ticket }: { ticket: PaperTicket }) {
-  const payout = ticket.price != null ? profitOnStake(ticket.stake, ticket.price) : null;
   const tickets = useDeskStore((s) => s.paperTickets);
   const pulse = selectTicketPulse({ paperTickets: tickets });
   return (
     <section className="paper-card overflow-hidden p-5 text-center ring-2 ring-gold">
-      <p className="stamp mt-2 text-emerald-500">On Log · waiting</p>
+      <p className="stamp mt-2 text-emerald-500">On My Action · waiting</p>
       <h2 className="font-display mt-2 text-2xl text-ink">{ticket.description}</h2>
+      <p className="mt-3 text-sm text-emerald-500">
+        {pulse.openCount} open {pulse.openCount === 1 ? "ticket" : "tickets"}
+      </p>
       <Link
         to="/ticket"
         className="mt-4 inline-flex min-h-12 items-center justify-center rounded-md bg-emerald-500 px-5 text-base font-medium text-zinc-950"
