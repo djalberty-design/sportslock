@@ -276,3 +276,176 @@ export const saveTuningFn = createServerFn({ method: "POST" })
       return { ok: false };
     }
   });
+
+export type BrainStats = {
+  total: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  pending: number;
+  winRate: number;
+  byMarket: { market: string; total: number; wins: number; winRate: number }[];
+  bySport: { sport: string; total: number; wins: number; winRate: number }[];
+  byEdgeTier: { tier: string; total: number; wins: number; winRate: number }[];
+  recentLogs: {
+    id: string;
+    eventId: string;
+    selection: string;
+    marketType: string;
+    modelProb: number;
+    edge: number;
+    status: string;
+    autopsy: string | null;
+    createdAt: string;
+  }[];
+  autopsySummary: { highVariance: number; modelError: number; unreviewed: number };
+  streakData: { currentStreak: number; streakType: string; longestWin: number; longestLoss: number };
+};
+
+export const getBrainStatsFn = createServerFn({ method: "GET" })
+  .handler(async (): Promise<BrainStats> => {
+    try {
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+
+      // Overall stats
+      const totals = await sql`
+        SELECT 
+          count(*)::int as total,
+          count(*) filter (where status = 'WIN')::int as wins,
+          count(*) filter (where status = 'LOSS')::int as losses,
+          count(*) filter (where status = 'PUSH')::int as pushes,
+          count(*) filter (where status = 'PENDING')::int as pending
+        FROM prediction_logs
+      `;
+      const t = totals[0] || { total: 0, wins: 0, losses: 0, pushes: 0, pending: 0 };
+      const decided = t.wins + t.losses;
+      const winRate = decided > 0 ? Math.round((t.wins / decided) * 1000) / 10 : 0;
+
+      // By market type
+      const byMarketRaw = await sql`
+        SELECT market_type as market,
+          count(*)::int as total,
+          count(*) filter (where status = 'WIN')::int as wins
+        FROM prediction_logs
+        WHERE status IN ('WIN', 'LOSS')
+        GROUP BY market_type ORDER BY total DESC
+      `;
+      const byMarket = byMarketRaw.map((r) => ({
+        market: r.market || "unknown",
+        total: r.total,
+        wins: r.wins,
+        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      }));
+
+      // By sport (extracted from event_id prefix)
+      const bySportRaw = await sql`
+        SELECT 
+          split_part(event_id, '-', 2) as sport,
+          count(*)::int as total,
+          count(*) filter (where status = 'WIN')::int as wins
+        FROM prediction_logs
+        WHERE status IN ('WIN', 'LOSS')
+        GROUP BY split_part(event_id, '-', 2) ORDER BY total DESC
+      `;
+      const bySport = bySportRaw.map((r) => ({
+        sport: r.sport || "unknown",
+        total: r.total,
+        wins: r.wins,
+        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      }));
+
+      // By edge tier
+      const byEdgeRaw = await sql`
+        SELECT 
+          CASE 
+            WHEN edge >= 0.10 THEN 'HIGH (10%+)'
+            WHEN edge >= 0.05 THEN 'MEDIUM (5-10%)'
+            WHEN edge >= 0.02 THEN 'LOW (2-5%)'
+            ELSE 'MICRO (<2%)'
+          END as tier,
+          count(*)::int as total,
+          count(*) filter (where status = 'WIN')::int as wins
+        FROM prediction_logs
+        WHERE status IN ('WIN', 'LOSS')
+        GROUP BY tier ORDER BY total DESC
+      `;
+      const byEdgeTier = byEdgeRaw.map((r) => ({
+        tier: r.tier,
+        total: r.total,
+        wins: r.wins,
+        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      }));
+
+      // Recent logs (last 50)
+      const recentRaw = await sql`
+        SELECT id, event_id, selection, market_type, model_probability, edge, status, ai_autopsy, created_at
+        FROM prediction_logs
+        ORDER BY created_at DESC
+        LIMIT 50
+      `;
+      const recentLogs = recentRaw.map((r) => ({
+        id: r.id,
+        eventId: r.event_id,
+        selection: r.selection,
+        marketType: r.market_type,
+        modelProb: Number(r.model_probability) || 0,
+        edge: Number(r.edge) || 0,
+        status: r.status,
+        autopsy: r.ai_autopsy,
+        createdAt: r.created_at,
+      }));
+
+      // Autopsy summary
+      const autopsyRaw = await sql`
+        SELECT 
+          count(*) filter (where ai_autopsy ILIKE '%HIGH VARIANCE%')::int as high_variance,
+          count(*) filter (where ai_autopsy ILIKE '%MODEL ERROR%')::int as model_error,
+          count(*) filter (where status = 'LOSS' AND ai_autopsy IS NULL)::int as unreviewed
+        FROM prediction_logs
+      `;
+      const a = autopsyRaw[0] || { high_variance: 0, model_error: 0, unreviewed: 0 };
+      const autopsySummary = { highVariance: a.high_variance, modelError: a.model_error, unreviewed: a.unreviewed };
+
+      // Streak calculation
+      const streakRaw = await sql`
+        SELECT status FROM prediction_logs
+        WHERE status IN ('WIN', 'LOSS')
+        ORDER BY created_at DESC
+        LIMIT 100
+      `;
+      let currentStreak = 0;
+      let streakType = "NONE";
+      let longestWin = 0;
+      let longestLoss = 0;
+      let curW = 0;
+      let curL = 0;
+      for (const r of streakRaw) {
+        if (r.status === "WIN") { curW++; curL = 0; if (curW > longestWin) longestWin = curW; }
+        else { curL++; curW = 0; if (curL > longestLoss) longestLoss = curL; }
+      }
+      // Current streak from most recent
+      if (streakRaw.length > 0) {
+        streakType = streakRaw[0].status;
+        currentStreak = 1;
+        for (let i = 1; i < streakRaw.length; i++) {
+          if (streakRaw[i].status === streakType) currentStreak++;
+          else break;
+        }
+      }
+
+      return {
+        total: t.total, wins: t.wins, losses: t.losses, pushes: t.pushes, pending: t.pending,
+        winRate, byMarket, bySport, byEdgeTier, recentLogs, autopsySummary,
+        streakData: { currentStreak, streakType, longestWin, longestLoss },
+      };
+    } catch (e: any) {
+      console.error("getBrainStatsFn error:", e);
+      return {
+        total: 0, wins: 0, losses: 0, pushes: 0, pending: 0, winRate: 0,
+        byMarket: [], bySport: [], byEdgeTier: [], recentLogs: [],
+        autopsySummary: { highVariance: 0, modelError: 0, unreviewed: 0 },
+        streakData: { currentStreak: 0, streakType: "NONE", longestWin: 0, longestLoss: 0 },
+      };
+    }
+  });

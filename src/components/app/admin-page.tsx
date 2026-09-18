@@ -5,8 +5,6 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
 import { getOddsQuotaFn } from "@/lib/market/server";
-import { ALL_SPORTS } from "@/lib/market/universe";
-import { useDeskDecision } from "@/lib/market/use-board";
 import { useAccess } from "@/lib/use-access";
 import {
   addAllowlistEmail,
@@ -14,18 +12,10 @@ import {
   getFeedHealth,
   listAccessRequests,
   listAllowlist,
-  listMasterLedger,
   revokeAllowlistEmail,
-  saveDeskSettings,
-  updateLedgerBet,
 } from "@/lib/desk-api";
-import { downloadLedger } from "@/lib/ledger";
-import { formatBetUsd, formatChancePct } from "@/lib/copy";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { sportLabel } from "@/lib/copy";
-import type { DeskSettings, SportFeeds } from "@/lib/desk-settings";
-import type { LedgerResult } from "@/lib/ledger";
 
 const TABS = [
   { id: "allowlist", label: "Allowlist" },
@@ -47,7 +37,7 @@ export function AdminPage() {
     <div className="space-y-6">
       <header className="max-w-2xl flex justify-between items-start">
         <div>
-          <p className="text-sm text-emerald-500">Owner desk • {OWNER_ADMIN_EMAIL}</p>
+          <p className="text-sm text-emerald-500">Owner desk &bull; {OWNER_ADMIN_EMAIL}</p>
           <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
           <p className="mt-2 text-sm text-ink/80">
             Allowlist, algorithm knobs, master ledger, and feed health.
@@ -102,7 +92,14 @@ export function AdminPage() {
           className="min-h-11 rounded-md bg-wash flex items-center justify-center px-4 text-sm font-medium text-muted hover:text-ink"
           activeProps={{ className: "min-h-11 rounded-md bg-emerald-500/10 flex items-center justify-center px-4 text-sm font-bold text-emerald-400 border border-emerald-500/50" }}
         >
-          Brain
+          Engine Bay
+        </Link>
+        <Link
+          to="/admin/brain-intel"
+          className="min-h-11 rounded-md bg-primary/10 flex items-center justify-center px-4 text-sm font-medium text-primary hover:text-ink border border-primary/30"
+          activeProps={{ className: "min-h-11 rounded-md bg-primary/20 flex items-center justify-center px-4 text-sm font-bold text-primary border border-primary/50" }}
+        >
+          🧠 Brain Intel
         </Link>
       </div>
 
@@ -110,7 +107,7 @@ export function AdminPage() {
       {isRootAdmin && tab === "tune" ? <TuningPanel /> : null}
       {isRootAdmin && tab === "ledger" ? <LedgerPanel /> : null}
       {isRootAdmin && tab === "status" ? <StatusPanel /> : null}
-      
+
       <Outlet />
     </div>
   );
@@ -195,7 +192,7 @@ function AllowlistPanel() {
               <li key={r.id} className="rounded-md bg-wash px-3 py-3">
                 <p className="text-sm font-medium text-ink">{r.email}</p>
                 <p className="text-xs text-muted">
-                  {r.name || "No name"} Ãƒâ€šÃ‚Â· {r.status}
+                  {r.name || "No name"} &middot; {r.status}
                 </p>
                 {r.status === "pending" ? (
                   <div className="mt-2 flex gap-2">
@@ -236,8 +233,6 @@ function AllowlistPanel() {
   );
 }
 
-
-
 function StatusPanel() {
   const q = useQuery({ queryKey: ["feed-health"], queryFn: () => getFeedHealth(), staleTime: 30_000 });
   const h = q.data;
@@ -253,7 +248,7 @@ function StatusPanel() {
           <HealthRow name="Polymarket" ping={h.polymarket} />
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feedsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Could not load health."}</p>
+        <p className="mt-3 text-sm text-muted">{q.isPending ? "Pinging feeds\u2026" : "Could not load health."}</p>
       )}
       <Button type="button" variant="outline" className="mt-4" onClick={() => void q.refetch()}>
         Ping again
@@ -267,17 +262,8 @@ function HealthRow({ name, ping }: { name: string; ping: { ok: boolean; ms: numb
     <li className="flex items-center justify-between rounded-md bg-wash px-3 py-3">
       <span className="text-sm font-medium text-ink">{name}</span>
       <span className={ping.ok ? "text-sm text-up" : "text-sm text-down"}>
-        {ping.ok ? "Up" : "Down"} Ãƒâ€šÃ‚Â· {ping.ms} ms{ping.status ? ` Ãƒâ€šÃ‚Â· ${ping.status}` : ""}
+        {ping.ok ? "Up" : "Down"} &middot; {ping.ms} ms{ping.status ? ` \u00b7 ${ping.status}` : ""}
       </span>
     </li>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="paper-card p-4">
-      <p className="text-xs uppercase tracking-[0.14em] text-muted">{label}</p>
-      <p className="font-display mt-1 text-2xl text-ink">{value}</p>
-    </div>
   );
 }
