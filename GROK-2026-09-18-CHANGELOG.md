@@ -29,11 +29,6 @@ DJ's screenshot still printed `AST @ RAY` and `BIS @ HOR` with empty circles. Sh
 - `src/lib/market/logos.ts` — expand nicknames (`Astros`, `Rays`, `HOR`) to official names; NCAA numeric IDs for Sac State / NDSU and a few others; match snapshot quotes by team name when event ids differ.
 - `src/components/app/sportslock-parlay-card.tsx` — header and each leg show both team marks plus **Away at Home** full names.
 
-### Unchanged on purpose
-
-- Mix chips stay.
-- Phase C ledger write is next, only after go.
-
 ## Code — college logos via numeric ESPN ids (evening)
 
 Matchups still printed HUR / DEA / COU circles. Odds API stores 3-letter leftovers. ESPN college art only exists at `/ncaa/500/{numericId}.png`. Letter URLs 404, then the card hides the image.
@@ -43,3 +38,54 @@ Matchups still printed HUR / DEA / COU circles. Odds API stores 3-letter leftove
 - `src/lib/market/ncaa-ids.ts` plus `-a`/`-b` — ESPN numeric ids for FBS names.
 - `src/lib/market/logos.ts` — drop letter-path NCAA urls; resolve by school name; never ask ESPN for `/ncaa/500/hur.png`.
 - `src/routes/games.tsx` — Matchups render through `resolveTeamLogo`.
+
+### How the logo bug was resolved
+
+MLB marks loaded because ESPN serves `/mlb/500/{HOU|TB}.png`. College marks did not.
+
+What the board actually stored:
+
+- Odds API / cache often kept 3-letter leftovers (`HOR`, `BIS`, `HUR`, `DEA`) or nicknames (`Astros`, `Rays`) instead of official school names.
+- Feed legs sometimes omitted `sport`, so the NCAA path was skipped and a letter filename was built instead.
+- ESPN's college CDN 404s on `/ncaa/500/hor.png`. The card's `onError` then hid the `<img>`, leaving the letter circle.
+
+What we did:
+
+1. Nickname / alias map (`HOR` → Sacramento State, `BIS` / `Bison` → North Dakota State, `Astros` → Houston Astros, etc.).
+2. `ncaaIdFor` walks the official name even when the sport tag is missing.
+3. Numeric ESPN ids (NDSU `2449`, Sac State `16`, plus the FBS catalog in `ncaa-ids.ts`). Public CFB logo references — ESPN scoreboard scrape is 403.
+4. `resolveTeamLogo` throws away any `/ncaa/500/[letters].png` URL so a bad cache logo cannot short-circuit the numeric lookup.
+5. `matchSnapshotEvent` fuzzy-matches by team name when event ids on the ribbon and the snapshot disagree.
+6. Matchups (`games.tsx`) stopped preferring `g.homeLogo` first and went through the same helper.
+
+Obstacles along the way:
+
+- First `logos.ts` push landed as a placeholder (empty helpers). Cards had no resolver at all until the real file shipped.
+- NDSU was first mapped to the wrong ESPN id; bison art 404ed until it was set to `2449`.
+- Vercel lagged a commit behind GitHub, so a hard refresh still showed letters after the fix was on `main`.
+- Feed cards were already on the helper; Matchups were not. That is why MLB parlays looked fine while the college Matchups row stayed HUR / DEA.
+
+Phase B is closed once those college marks paint after deploy.
+
+## Code — Phase C Lock It In → My Action (evening)
+
+Lock writes the device book and `prediction_logs`. The open-ticket chip counts opens. `/desk` sends you to `/ticket`. Empty `/ticket` is the personal book.
+
+### Changed
+
+- `src/routes/ticket.tsx` — no `id` → `DeskPage` (My Action). `id` still opens the breakdown.
+- `src/routes/desk.tsx` — added so the generated `/desk` route exists; it navigates to `/ticket`.
+- `src/components/app/ticket-lock.tsx` — chip and locked stamp go to `/ticket`.
+- `src/components/app/desk-page.tsx` — titled My Action.
+- `src/components/app/sportslock-parlay-card.tsx` — $10 default; Save writes `paperTickets` + `lockPredictionFn`. No Hard Rock `alert`.
+- `src/routes/index.tsx` — dropped `onTail` alert stub.
+- `src/components/app/game-page.tsx` — same $10 lock write to paper + `prediction_logs`.
+- `src/components/app/fast-log-modal.tsx` — wager starts at $10.
+- `src/lib/desk-store.ts` — `fastLog` skips the screenshot wall and does not require Start cash. Research lock is a book entry, not a bankroll debit.
+- `src/components/app/shell.tsx` — open-count chip on the desktop rail too.
+
+### Unchanged on purpose
+
+- Guest desk stays open. Guests write the device book. Signed-in sessions can still sync later.
+- Site still never places a bet.
+- Phase D 6 AM pull is next.

@@ -55,12 +55,12 @@ What a user actually hits on `main` today:
 | AI Feed | `/` | Gold Ribbon parlays from `picks.ribbon`. Sport filter + mix filter (same game / same sport / cross sport / 2-leg / 3-leg). SOON chips follow snapshot quotes, not the ribbon. |
 | Matchups | `/games` | Games list, sport filter, admin Fetch Props + quota badge. Card → `/game/$eventId`. |
 | The Lab | `/picks` | Props / research workbench. Sport filter. |
-| Game ticket | `/game/$eventId` | Markets, sim panel, SGP legs, Lock It In → `prediction_logs`. |
-| Ticket | `/ticket` | Breakdown / rules stamps. |
+| Game ticket | `/game/$eventId` | Markets, sim panel, SGP legs, Lock It In → paperTickets + `prediction_logs`. |
+| My Action | `/ticket` | Personal book (open / hit / miss). `/ticket?id=` is still the breakdown. `/desk` redirects here. |
 | Login | `/login` | Google (broken) + email/password (working). |
 | Admin | `/admin` and children | Engine Bay, Live Status, Predictions, Autopsy, Brain Intel. Admin email only. |
 
-Older blueprint desks (`/today`, `/board`, `/parlay`, `/live`, `/desk`) and “Start `/` is bankroll” are **not** current IA. Supporting components for some of those still exist in `src/components/app/` (live, desk, start, slate, DFS). Treat them as leftover surface, not the product map, until a later pass says otherwise.
+Older blueprint desks (`/today`, `/board`, `/parlay`, `/live`) and “Start `/` is bankroll” are **not** current IA. `/desk` now redirects to My Action. Supporting components for some leftover surfaces still exist in `src/components/app/` (live, start, slate, DFS).
 
 Moods (Safest / Best Value / Pays more) remain engine law if the ranking code still applies them. They are not the homepage chrome right now.
 
@@ -117,10 +117,11 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 
 ## 7. What shipped (through Sep 18, 2026)
 
-- Overhaul IA: Feed / Matchups / Lab / game ticket / Admin
+- Overhaul IA: Feed / Matchups / Lab / game ticket / My Action / Admin
 - Guest desk
 - Phase A honest prices + $10 default
-- Phase B Feed mix filters + snapshot SOON + leg logos
+- Phase B Feed mix filters + snapshot SOON + full names + ESPN numeric college marks
+- Phase C Lock It In writes My Action (`paperTickets` + `prediction_logs`)
 
 ---
 
@@ -138,11 +139,10 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 
 ## 9. Open work
 
-1. Phase C — Lock It In writes paperTickets + prediction_logs. My Action counts opens.
-2. Phase D — 6 AM ET Odds API mains + ESPN props, 26h cache.
-3. Phase E — live scores from free league APIs.
-4. Google button still broken; email path works.
-5. Hard Rock “Tail” is still `alert("Redirecting to Hard Rock FL...")`.
+1. Phase D — 6 AM ET Odds API mains + ESPN props, 26h cache.
+2. Phase E — live scores from free league APIs.
+3. Google button still broken; email path works.
+4. Hard Rock fill is still off-site. Lock only writes the research book.
 
 ---
 
