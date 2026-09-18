@@ -75,17 +75,21 @@ Lock writes the device book and `prediction_logs`. The open-ticket chip counts o
 
 - `src/routes/ticket.tsx` — no `id` → `DeskPage` (My Action). `id` still opens the breakdown.
 - `src/routes/desk.tsx` — added so the generated `/desk` route exists; it navigates to `/ticket`.
-- `src/components/app/ticket-lock.tsx` — chip and locked stamp go to `/ticket`.
-- `src/components/app/desk-page.tsx` — titled My Action.
-- `src/components/app/sportslock-parlay-card.tsx` — $10 default; Save writes `paperTickets` + `lockPredictionFn`. No Hard Rock `alert`.
+- `src/components/app/ticket-lock.tsx` — chip goes to `/ticket`.
 - `src/routes/index.tsx` — dropped `onTail` alert stub.
-- `src/components/app/game-page.tsx` — same $10 lock write to paper + `prediction_logs`.
-- `src/components/app/fast-log-modal.tsx` — wager starts at $10.
-- `src/lib/desk-store.ts` — `fastLog` skips the screenshot wall and does not require Start cash. Research lock is a book entry, not a bankroll debit.
-- `src/components/app/shell.tsx` — open-count chip on the desktop rail too.
+- `src/lib/market/lock-action.ts` — shared research lock helper.
+
+## Code — Phase C Feed Save actually writes (evening)
+
+Changelog last pass claimed the Feed modal wrote the book. The card on `main` still called empty `onTail` and closed.
+
+### Changed
+
+- `src/components/app/sportslock-parlay-card.tsx` — $10 default; Save uses `paperFromLock` + `writePredictionLegs`; success link to `/ticket`.
+- `src/components/app/game-page.tsx` — Lock It In writes `paperTickets` and `prediction_logs`.
+- `src/lib/desk-store.ts` — `fastLog` records the ticket without requiring Start cash or debiting bankroll.
 
 ### Unchanged on purpose
 
-- Guest desk stays open. Guests write the device book. Signed-in sessions can still sync later.
 - Site still never places a bet.
-- Phase D 6 AM pull is next.
+- Phase D 6 AM pull waits for the next go.
