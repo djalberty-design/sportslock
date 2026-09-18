@@ -7,6 +7,8 @@ const LEAGUE_LOGO: Record<string, string> = {
   NHL: "nhl",
   NCAAF: "ncaa",
   NCAAB: "ncaa",
+  CFB: "ncaa",
+  CBB: "ncaa",
 };
 
 const TEAM_ABBR: Record<string, string> = {
@@ -67,13 +69,16 @@ export function teamAbbrFromName(fullName: string): string {
   return last.substring(0, 3).toLowerCase();
 }
 
+function isCollegeSport(sport?: string | null): boolean {
+  const s = String(sport || "").toUpperCase();
+  return s.includes("NCAA") || s === "CFB" || s === "CBB" || s.includes("COLLEGE");
+}
+
 export function espnLogoUrl(sport: string, abbr?: string, espnTeamId?: string): string | null {
-  const league = LEAGUE_LOGO[sport];
+  const id = String(espnTeamId || "").replace(/[^0-9]/g, "");
+  if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
+  const league = LEAGUE_LOGO[sport] || (isCollegeSport(sport) ? "ncaa" : undefined);
   if (!league) return null;
-  if ((sport === "NCAAF" || sport === "NCAAB") && espnTeamId) {
-    const id = espnTeamId.replace(/[^0-9]/g, "");
-    if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
-  }
   if (!abbr) return null;
   const a = abbr.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!a) return null;
@@ -142,12 +147,15 @@ const NCAA_ID: Record<string, { id: string; name: string }> = {
   sacramentostatehornets: { id: "16", name: "Sacramento State Hornets" },
   sacramentostate: { id: "16", name: "Sacramento State Hornets" },
   sacstate: { id: "16", name: "Sacramento State Hornets" },
+  sacramentost: { id: "16", name: "Sacramento State Hornets" },
   hor: { id: "16", name: "Sacramento State Hornets" },
-  northdakotastatebison: { id: "261", name: "North Dakota State Bison" },
-  northdakotastate: { id: "261", name: "North Dakota State Bison" },
-  ndsu: { id: "261", name: "North Dakota State Bison" },
-  bis: { id: "261", name: "North Dakota State Bison" },
-  bison: { id: "261", name: "North Dakota State Bison" },
+  northdakotastatebison: { id: "2449", name: "North Dakota State Bison" },
+  northdakotastate: { id: "2449", name: "North Dakota State Bison" },
+  ndakota: { id: "2449", name: "North Dakota State Bison" },
+  ndakotast: { id: "2449", name: "North Dakota State Bison" },
+  ndsu: { id: "2449", name: "North Dakota State Bison" },
+  bis: { id: "2449", name: "North Dakota State Bison" },
+  bison: { id: "2449", name: "North Dakota State Bison" },
   alabama: { id: "333", name: "Alabama Crimson Tide" },
   georgia: { id: "61", name: "Georgia Bulldogs" },
   ohiostate: { id: "194", name: "Ohio State Buckeyes" },
@@ -181,13 +189,10 @@ for (const [k, v] of Object.entries(NICK_TO_OFFICIAL)) OFFICIAL_BY_KEY[k] = v;
 export function officialTeamName(sport: string, raw?: string | null, hint?: string | null): string {
   const source = String(raw || "").trim();
   const hintText = String(hint || "").trim();
-  if (sport === "NCAAF" || sport === "NCAAB") {
-    const fromHint = NCAA_ID[compactKey(hintText)];
-    if (fromHint && source.length <= 4) return fromHint.name;
-    const fromRaw = NCAA_ID[compactKey(source)];
-    if (fromRaw) return fromRaw.name;
-    if (source.split(/\s+/).length >= 2) return source;
-  }
+  const fromHint = NCAA_ID[compactKey(hintText)];
+  if (fromHint && source.length <= 4) return fromHint.name;
+  const fromRaw = NCAA_ID[compactKey(source)];
+  if (fromRaw) return fromRaw.name;
   if (!source) return hintText;
   if (OFFICIAL_BY_KEY[compactKey(source)]) return OFFICIAL_BY_KEY[compactKey(source)];
   const lower = source.toLowerCase();
@@ -201,7 +206,8 @@ export function officialTeamName(sport: string, raw?: string | null, hint?: stri
 }
 
 export function ncaaIdFor(name?: string | null): string | undefined {
-  return NCAA_ID[compactKey(String(name || ""))]?.id;
+  const raw = String(name || "");
+  return NCAA_ID[compactKey(raw)]?.id || NCAA_ID[compactKey(raw.replace(/\s+(hornets|bison|bulldogs|tigers|eagles|wildcats)$/i, ""))]?.id;
 }
 
 export function resolveTeamLogo(
@@ -210,10 +216,10 @@ export function resolveTeamLogo(
 ): string | null {
   if (opts?.logo) return opts.logo;
   const official = officialTeamName(sport || "", opts?.name || opts?.abbr || "");
-  const ncaaId = opts?.espnTeamId || ncaaIdFor(official) || ncaaIdFor(opts?.name) || ncaaIdFor(opts?.abbr);
-  if ((sport === "NCAAF" || sport === "NCAAB") && ncaaId) return espnLogoUrl(sport, undefined, ncaaId);
+  const ncaaId = String(opts?.espnTeamId || ncaaIdFor(official) || ncaaIdFor(opts?.name) || ncaaIdFor(opts?.abbr) || "").replace(/[^0-9]/g, "");
+  if (ncaaId) return espnLogoUrl(sport || "NCAAF", undefined, ncaaId);
   const abbr = TEAM_ABBR[official] || (opts?.abbr && String(opts.abbr).trim().toLowerCase()) || teamAbbrFromName(official);
-  return espnLogoUrl(sport || "", abbr || undefined, ncaaId || undefined);
+  return espnLogoUrl(sport || "", abbr || undefined);
 }
 
 export function matchSnapshotEvent(snapshot: any, leg: any) {
