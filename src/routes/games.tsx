@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } from "lucide-react";
-import { espnLogoUrl } from "@/lib/market/logos";
+import { resolveTeamLogo } from "@/lib/market/logos";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
@@ -160,6 +160,8 @@ function TheMatrix() {
         {games.map(g => {
           const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Upcoming";
           const lean = matchupLean(g);
+          const awayMark = resolveTeamLogo(g.sport, { logo: g.awayLogo, abbr: g.awayAbbr, name: g.away });
+          const homeMark = resolveTeamLogo(g.sport, { logo: g.homeLogo, abbr: g.homeAbbr, name: g.home });
           return (
             <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
               <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -190,18 +192,18 @@ function TheMatrix() {
               <div className="p-4 flex flex-col md:flex-row">
                 <div className="w-full md:w-[40%] flex flex-col justify-between py-1 pr-4 mb-4 md:mb-0 border-b md:border-b-0 md:border-r border-line">
                   <div className="flex items-center gap-3 h-12">
-                    {(g.awayLogo || g.awayAbbr) ? (
-                      <img src={g.awayLogo || espnLogoUrl(g.sport || "NFL", g.awayAbbr) || ""} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                    {awayMark ? (
+                      <img src={awayMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
                     ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.awayLogo || g.awayAbbr) ? "hidden" : ""}`}>{(g.awayAbbr || g.away || "?").substring(0, 3)}</div>
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${awayMark ? "hidden" : ""}`}>{(g.awayAbbr || g.away || "?").substring(0, 3)}</div>
                     <span className="text-base font-bold text-ink truncate">{g.away}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.awayScore}</span>}
                   </div>
                   <div className="flex items-center gap-3 h-12 mt-2">
-                    {(g.homeLogo || g.homeAbbr) ? (
-                      <img src={g.homeLogo || espnLogoUrl(g.sport || "NFL", g.homeAbbr) || ""} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                    {homeMark ? (
+                      <img src={homeMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
                     ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${(g.homeLogo || g.homeAbbr) ? "hidden" : ""}`}>{(g.homeAbbr || g.home || "?").substring(0, 3)}</div>
+                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${homeMark ? "hidden" : ""}`}>{(g.homeAbbr || g.home || "?").substring(0, 3)}</div>
                     <span className="text-base font-bold text-ink truncate">{g.home}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.homeScore}</span>}
                   </div>
