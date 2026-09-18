@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/auth-debug")({
     handlers: {
       GET: async ({ request }) => {
         const cookies = request.headers.get("cookie") ?? "(no cookies)";
-        const sessionCookiePresent = cookies.includes("__Host-grok-auth.session_token");
+        const sessionCookiePresent = cookies.includes("sportslock.session_token");
 
         let sessionResult: unknown = null;
         let sessionError: string | null = null;
