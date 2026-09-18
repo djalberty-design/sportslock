@@ -55,7 +55,7 @@ function Login() {
         <p className="text-sm text-emerald-500">{BRAND.kicker}</p>
         <h1 className="font-display mt-2 text-4xl text-ink">Sign In</h1>
         <p className="mt-3 text-sm text-ink/80">
-          Sign in or create an account to access SportsLock. New accounts require admin approval. This site never places a bet.
+          The desk is open without an account. Sign in to use admin tools and save a ticket log. This site never places a bet.
         </p>
 
         <section className="paper-card mt-6 space-y-3 p-5">

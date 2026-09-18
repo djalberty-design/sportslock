@@ -1,38 +1,24 @@
 # Grok changelog — 2026-09-18
 
-Session with DJ Alberty. Docs only. No application code changed.
+Session with DJ Alberty.
 
-## Decisions recorded
+## Code — guest desk (same day, after archive)
 
-- Product IA = current overhaul (AI Feed / Matchups / Lab / Admin), not the old five-desk blueprint.
-- Google sign-in broken on production; email/password with Gmail works and grants admin.
-- Player props off on the AI Feed for Odds API quota + ESPN block.
+Login is optional so the public desk can be audited on production. Admin rights stay on the signed-in creator email.
 
-## Files
+### Changed
 
-### Added
+- `src/components/app/access-gate.tsx` — unsigned visitors get the overhaul desk. No redirect to `/login`. No Access Pending wall. Session spinner only.
+- `src/lib/auth/gates.tsx` — signed-out control is **Sign in** → `/login` (was **Owner** → `/admin/terminal`).
+- `src/routes/login.tsx` — copy says the desk is open without an account.
 
-- `GROK-2026-09-18-CURRENT.md` — current product / principles / implementation.
-- `GROK-2026-09-18-CHANGELOG.md` — this file.
-- `archive/README.md` — how to read the archive.
+### Unchanged on purpose
 
-### Moved to `archive/` (renamed `OUTDATED-*`)
+- `/admin` still checks `isAdmin`.
+- Fetch Props / quota badge still `isAdmin` on `/games`.
+- Email/password and Google button still on `/login`.
+- `getBoardSnapshot` was already unauthenticated.
 
-- `IMPLEMENTATION_PLAN.md`
-- `ROADMAP.md`
-- `THE_BRAIN_BIBLE.md`
-- `SPORTS_LOCK_BLUEPRINT.md`
-- `SPORTS_LOCK_ALGORITHM.md`
-- `SPORTS_LOCK_ALGORITHM_v2.md`
-- `BIBLE.md`
-- `plan.md`
-- `attachments/SPORTS_LOCK_ALGORITHM.md`
+### Docs
 
-### Updated
-
-- `README.md` — points at current law.
-- `AGENTS.project.md` — points at current law; IA lines updated to the overhaul.
-
-### Not moved (size)
-
-- `artifacts/sports-lock-master-spec.md` — outdated Sep 12/13 spec, ~1MB. Treat as archive-in-place.
+- `GROK-2026-09-18-CURRENT.md` §1, §3, §4, §9 updated for guest desk.
