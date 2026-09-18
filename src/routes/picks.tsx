@@ -99,18 +99,18 @@ function TheLab() {
                 </div>
               </div>
 
-              {/* Middle: AI Analytics (WagerMeter & Delta) */}
-              <div className="flex-1 max-w-xs hidden lg:flex flex-col gap-2 px-4 border-l border-line">
+              {/* AI Analytics — always visible */}
+              <div className="flex flex-col gap-1.5 mt-2 md:mt-0 md:max-w-xs md:px-4 md:border-l md:border-line">
                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
-                   <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Prob</span>
-                   <span className="text-primary">{hitProb}%</span>
+                   <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Prediction</span>
+                   <span className={cn(hitProb >= 55 ? "text-emerald-400" : hitProb >= 45 ? "text-amber-400" : "text-red-400")}>{hitProb}%</span>
                  </div>
                  <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-                   <div className="h-full bg-primary rounded-full relative" style={{ width: `${hitProb}%` }}></div>
+                   <div className={cn("h-full rounded-full transition-all duration-500", hitProb >= 55 ? "bg-emerald-500" : hitProb >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${hitProb}%` }} />
                  </div>
-                 <div className="flex items-center justify-between mt-1">
+                 <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted font-mono">Vegas: {vegasImplied}%</span>
-                    <span className="text-[9px] text-primary font-mono border border-primary/20 bg-primary/10 px-1 rounded">Delta: +{edgeVal.toFixed(1)}%</span>
+                    <span className={cn("text-[9px] font-mono px-1 rounded", edgeVal > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>Edge: {edgeVal > 0 ? "+" : ""}{edgeVal.toFixed(1)}%</span>
                  </div>
               </div>
 
