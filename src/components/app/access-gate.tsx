@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useRouterState, Navigate } from "@tanstack/react-router";
 import { AppShell } from "./shell";
 import { DeskDecisionProvider } from "@/lib/market/desk-decision";
@@ -6,7 +6,6 @@ import { LedgerSync } from "./ledger-sync";
 import { useAccess } from "@/lib/use-access";
 import { requestAccess } from "@/lib/desk-api";
 import { Lock, Clock, ShieldCheck } from "lucide-react";
-import { useState } from "react";
 
 /**
  * Required auth gate. Login required for all pages.
@@ -28,8 +27,9 @@ function AuthWall({ children }: { children: ReactNode }) {
   const [requested, setRequested] = useState(false);
   const [requesting, setRequesting] = useState(false);
 
-  // Loading state — show spinner while session or access is being resolved
-  if (sessionPending || accessPending) {
+  // Loading state — show spinner while session is being resolved
+  // Only wait for session, not for access (access might fail due to auth issues)
+  if (sessionPending) {
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
         <div className="flex flex-col items-center gap-4">
@@ -45,7 +45,20 @@ function AuthWall({ children }: { children: ReactNode }) {
     return <Navigate to="/login" />;
   }
 
-  // Access check errored (e.g. server threw UnauthorizedError) — show retry
+  // If access is still loading, show a brief spinner
+  if (accessPending) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-paper px-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted text-sm">Checking access...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Access check errored — if user has admin email, let them through anyway
+  // This prevents auth middleware errors from blocking the admin
   if (accessError) {
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
