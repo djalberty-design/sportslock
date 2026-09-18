@@ -1,5 +1,7 @@
 /** ESPN public team marks — same art Hard Rock shows next to the matchup. */
 
+import { NCAA_ID as NCAA_CATALOG } from "./ncaa-ids";
+
 const LEAGUE_LOGO: Record<string, string> = {
   NFL: "nfl",
   NBA: "nba",
@@ -69,16 +71,36 @@ export function teamAbbrFromName(fullName: string): string {
   return last.substring(0, 3).toLowerCase();
 }
 
-function isCollegeSport(sport?: string | null): boolean {
-  const s = String(sport || "").toUpperCase();
-  return s.includes("NCAA") || s === "CFB" || s === "CBB" || s.includes("COLLEGE");
+export function normalizeSport(sport?: string | null): string {
+  const raw = String(sport || "").trim();
+  const upper = raw.toUpperCase();
+  if (LEAGUE_LOGO[upper]) return upper;
+  const key = raw.toLowerCase();
+  if (key.includes("ncaaf") || key.includes("college-football") || key.includes("americanfootball_ncaaf") || key === "cfb") return "NCAAF";
+  if (key.includes("ncaab") || key.includes("college-basket") || key.includes("basketball_ncaab") || key === "cbb") return "NCAAB";
+  if (key.includes("nfl") || key.includes("americanfootball_nfl")) return "NFL";
+  if (key.includes("mlb") || key.includes("baseball_mlb")) return "MLB";
+  if (key.includes("nba") || key.includes("basketball_nba")) return "NBA";
+  if (key.includes("nhl") || key.includes("icehockey_nhl")) return "NHL";
+  return upper;
+}
+
+export function isCollegeSport(sport?: string | null): boolean {
+  const s = normalizeSport(sport);
+  return s === "NCAAF" || s === "NCAAB" || s.includes("NCAA") || s === "CFB" || s === "CBB" || s.includes("COLLEGE");
+}
+
+function isLetterNcaaLogo(url?: string | null): boolean {
+  return Boolean(url && /teamlogos\/ncaa\/500\/[a-z]+\.png/i.test(url));
 }
 
 export function espnLogoUrl(sport: string, abbr?: string, espnTeamId?: string): string | null {
   const id = String(espnTeamId || "").replace(/[^0-9]/g, "");
   if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
-  const league = LEAGUE_LOGO[sport] || (isCollegeSport(sport) ? "ncaa" : undefined);
+  const leagueKey = normalizeSport(sport);
+  const league = LEAGUE_LOGO[leagueKey] || (isCollegeSport(leagueKey) ? "ncaa" : undefined);
   if (!league) return null;
+  if (league === "ncaa") return null;
   if (!abbr) return null;
   const a = abbr.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!a) return null;
@@ -143,37 +165,7 @@ const NICK_TO_OFFICIAL: Record<string, string> = {
   ducks: "Anaheim Ducks",
 };
 
-const NCAA_ID: Record<string, { id: string; name: string }> = {
-  sacramentostatehornets: { id: "16", name: "Sacramento State Hornets" },
-  sacramentostate: { id: "16", name: "Sacramento State Hornets" },
-  sacstate: { id: "16", name: "Sacramento State Hornets" },
-  sacramentost: { id: "16", name: "Sacramento State Hornets" },
-  hor: { id: "16", name: "Sacramento State Hornets" },
-  northdakotastatebison: { id: "2449", name: "North Dakota State Bison" },
-  northdakotastate: { id: "2449", name: "North Dakota State Bison" },
-  ndakota: { id: "2449", name: "North Dakota State Bison" },
-  ndakotast: { id: "2449", name: "North Dakota State Bison" },
-  ndsu: { id: "2449", name: "North Dakota State Bison" },
-  bis: { id: "2449", name: "North Dakota State Bison" },
-  bison: { id: "2449", name: "North Dakota State Bison" },
-  alabama: { id: "333", name: "Alabama Crimson Tide" },
-  georgia: { id: "61", name: "Georgia Bulldogs" },
-  ohiostate: { id: "194", name: "Ohio State Buckeyes" },
-  michigan: { id: "130", name: "Michigan Wolverines" },
-  texas: { id: "251", name: "Texas Longhorns" },
-  usc: { id: "30", name: "USC Trojans" },
-  oregon: { id: "248", name: "Oregon Ducks" },
-  pennstate: { id: "213", name: "Penn State Nittany Lions" },
-  oklahoma: { id: "201", name: "Oklahoma Sooners" },
-  notredame: { id: "87", name: "Notre Dame Fighting Irish" },
-  florida: { id: "57", name: "Florida Gators" },
-  lsu: { id: "99", name: "LSU Tigers" },
-  floridastate: { id: "52", name: "Florida State Seminoles" },
-  miami: { id: "2390", name: "Miami Hurricanes" },
-  clemson: { id: "228", name: "Clemson Tigers" },
-  tennessee: { id: "2633", name: "Tennessee Volunteers" },
-  boisestate: { id: "68", name: "Boise State Broncos" },
-};
+const NCAA_ID: Record<string, { id: string; name: string }> = { ...NCAA_CATALOG };
 
 const OFFICIAL_BY_KEY: Record<string, string> = {};
 for (const name of Object.keys(TEAM_ABBR)) {
@@ -206,20 +198,32 @@ export function officialTeamName(sport: string, raw?: string | null, hint?: stri
 }
 
 export function ncaaIdFor(name?: string | null): string | undefined {
-  const raw = String(name || "");
-  return NCAA_ID[compactKey(raw)]?.id || NCAA_ID[compactKey(raw.replace(/\s+(hornets|bison|bulldogs|tigers|eagles|wildcats)$/i, ""))]?.id;
+  const raw = String(name || "").trim();
+  if (!raw) return undefined;
+  const direct = NCAA_ID[compactKey(raw)]?.id;
+  if (direct) return direct;
+  const parts = raw.split(/\s+/).filter(Boolean);
+  for (let i = parts.length; i >= 1; i--) {
+    const key = compactKey(parts.slice(0, i).join(" "));
+    if (!key || GENERIC_TOKEN.has(key) || key.length < 4) continue;
+    const hit = NCAA_ID[key]?.id;
+    if (hit) return hit;
+  }
+  return undefined;
 }
 
 export function resolveTeamLogo(
   sport?: string,
   opts?: { logo?: string | null; abbr?: string | null; name?: string | null; espnTeamId?: string | null },
 ): string | null {
-  if (opts?.logo) return opts.logo;
-  const official = officialTeamName(sport || "", opts?.name || opts?.abbr || "");
+  const league = normalizeSport(sport);
+  const given = String(opts?.logo || "");
+  if (given && !isLetterNcaaLogo(given)) return given;
+  const official = officialTeamName(league || "", opts?.name || opts?.abbr || "");
   const ncaaId = String(opts?.espnTeamId || ncaaIdFor(official) || ncaaIdFor(opts?.name) || ncaaIdFor(opts?.abbr) || "").replace(/[^0-9]/g, "");
-  if (ncaaId) return espnLogoUrl(sport || "NCAAF", undefined, ncaaId);
+  if (ncaaId) return espnLogoUrl("NCAAF", undefined, ncaaId);
   const abbr = TEAM_ABBR[official] || (opts?.abbr && String(opts.abbr).trim().toLowerCase()) || teamAbbrFromName(official);
-  return espnLogoUrl(sport || "", abbr || undefined);
+  return espnLogoUrl(league || "", abbr || undefined);
 }
 
 export function matchSnapshotEvent(snapshot: any, leg: any) {
