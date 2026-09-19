@@ -119,19 +119,46 @@ export function applyMixFilter<T>(rows: T[], mix: MixFilter | undefined): T[] {
   });
 }
 
-/** Gold ribbon first, then ranked catalog 2/3 + SGP. Does not loosen ribbon floors. */
+/**
+ * Value-based feed ranking.
+ * Filters out extreme favorites (-500 and heavier) and no-edge picks.
+ * Gold ribbon = best value parlay. Catalog = top 10 by value score.
+ * Value score balances probability, payout, and edge — not just safety.
+ */
+function feedValueFilter(pick: any): boolean {
+  const legs = (pick?.parlay?.legs ?? pick?.legs ?? [pick?.row]).filter(Boolean);
+  // Filter out picks where ANY leg is an extreme favorite
+  for (const leg of legs) {
+    const price = leg?.price ?? leg?.hardRockPrice ?? 0;
+    if (price < -500) return false; // -500 or heavier = no value
+  }
+  // Require minimum edge
+  const edge = pick?.edge ?? pick?.parlay?.edge ?? 0;
+  const chance = pick?.chance ?? pick?.parlay?.combinedFair ?? 0;
+  // Don't show coin-flip garbage (< 35% combined probability)
+  if (chance < 0.35 && !pick?.parlay) return false;
+  return true;
+}
+
 export function buildFeedParlays(picks: {
   ribbon?: any[];
   two?: any[];
   three?: any[];
   sgp?: any[];
 } | null | undefined): any[] {
-  const ribbon = (picks?.ribbon ?? []).filter((p) => p?.parlay);
+  const ribbon = (picks?.ribbon ?? []).filter((p) => p?.parlay).filter(feedValueFilter);
   const seen = new Set(ribbon.map((p) => String(p.id || "")));
-  const gold = ribbon.map((p) => ({ ...p, feedLane: "gold" as const }));
+  // Gold: top 1 by score (value-ranked, not just safest)
+  const gold = ribbon
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, 1)
+    .map((p) => ({ ...p, feedLane: "gold" as const }));
+  // Catalog: top 10 by score, filtered for value
   const catalog = [...(picks?.two ?? []), ...(picks?.three ?? []), ...(picks?.sgp ?? [])]
     .filter((p) => p?.parlay && !seen.has(String(p.id || "")))
+    .filter(feedValueFilter)
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, 10)
     .map((p) => {
       seen.add(String(p.id || ""));
       return { ...p, feedLane: "catalog" as const };

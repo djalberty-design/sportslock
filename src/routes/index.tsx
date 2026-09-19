@@ -37,7 +37,7 @@ function SportsLockCommandCenter() {
           <Sparkles className="size-8 text-primary" />
           SportsLock AI Feed
         </h1>
-        <p className="text-muted text-sm">Every ranked 2- and 3-leg on this mix. Gold is the stand-behind lane. Catalog is the rest. Research, not a lock.</p>
+        <p className="text-muted text-sm">Top value picks ranked by probability, payout, and edge. Gold is the best bet on the board. Research, not a lock.</p>
       </div>
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
@@ -60,7 +60,7 @@ function SportsLockCommandCenter() {
             <div>
               <h2 className="text-lg font-display font-bold text-ink tracking-tight">Gold ticket</h2>
               <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
-                Highest-hit 2- or 3-leg the desk will stand behind. Still research — this site never places the bet.
+                Best value parlay — highest expected return weighing probability, payout, and edge. Still research — this site never places the bet.
               </p>
             </div>
             {gold.length === 0 ? (
