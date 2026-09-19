@@ -216,7 +216,7 @@ function TheMatrix() {
                 {hasOdds && (
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> Market Projection</span>
+                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> % to Win</span>
                     <span className="text-primary">{projFavorite} {projProb}%</span>
                   </div>
                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">

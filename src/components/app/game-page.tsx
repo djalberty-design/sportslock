@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
 import { MarketTip } from "./market-tip";
 import { ProjectedScore, PublicSharpMeter, StreakBadge } from "./competitive-widgets";
+import { ticketHitPct } from "@/lib/market/hit-pct";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
@@ -82,8 +83,14 @@ export function GamePage({ eventId }: { eventId: string }) {
   const isDecimal = (v: number) => v > 1 && v < 20;
 
   const getProb = (q: any): number => {
-    if (q.fairProb && Number.isFinite(q.fairProb)) return q.fairProb;
-    if (q.row?.fairProb && Number.isFinite(q.row.fairProb)) return q.row.fairProb;
+    // Use ticketHitPct for consistency with the Matchups board percentages
+    const hitPct = ticketHitPct({
+      chance: q.chance ?? q.row?.chance,
+      fairProb: q.fairProb ?? q.row?.fairProb,
+      price: q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice,
+    });
+    if (hitPct != null) return hitPct;
+    // Final fallback: American odds implied probability
     const p = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
     const am = isDecimal(p) ? toAmerican(p) : p;
     return am < 0 ? -am / (-am + 100) : 100 / (am + 100);
@@ -424,17 +431,26 @@ export function GamePage({ eventId }: { eventId: string }) {
         )}
 
         {/* Projected Score */}
-        <ProjectedScore
-          homeAbbr={firstQuoteRef?.homeAbbr}
-          awayAbbr={firstQuoteRef?.awayAbbr}
-          homePf={gameBrief?.homePf}
-          homePa={gameBrief?.homePa}
-          awayPf={gameBrief?.awayPf}
-          awayPa={gameBrief?.awayPa}
-          total={gameBrief?.total}
-          homeSpread={gameBrief?.homeSpread}
-          className="mb-3"
-        />
+        {(() => {
+          // Try gameBrief first, then derive from quotes
+          const homeSpreadQuote = gameQuotes.find((q: any) => q.marketType === "spread" && (q.selection === firstQuote?.home || q.side === "home"));
+          const totalQuote = gameQuotes.find((q: any) => q.marketType === "total" && /over/i.test(q.selection || ""));
+          const derivedTotal = gameBrief?.total ?? totalQuote?.point ?? totalQuote?.row?.point;
+          const derivedSpread = gameBrief?.homeSpread ?? (homeSpreadQuote?.point ?? homeSpreadQuote?.row?.point);
+          return (
+            <ProjectedScore
+              homeAbbr={firstQuoteRef?.homeAbbr}
+              awayAbbr={firstQuoteRef?.awayAbbr}
+              homePf={gameBrief?.homePf}
+              homePa={gameBrief?.homePa}
+              awayPf={gameBrief?.awayPf}
+              awayPa={gameBrief?.awayPa}
+              total={derivedTotal}
+              homeSpread={derivedSpread}
+              className="mb-3"
+            />
+          );
+        })()}
 
         {/* Streak badges */}
         {gameBrief?.form && (
@@ -445,13 +461,20 @@ export function GamePage({ eventId }: { eventId: string }) {
         )}
 
         {/* Public vs Sharp Money */}
-        <PublicSharpMeter
-          ticketPct={gameBrief?.ticketHome}
-          handlePct={gameBrief?.handleHome}
-          home={firstQuoteRef?.homeAbbr || firstQuote?.home || "Home"}
-          away={firstQuoteRef?.awayAbbr || firstQuote?.away || "Away"}
-          className="mb-3"
-        />
+        {(() => {
+          const tkt = gameBrief?.ticketHome ?? gameQuotes[0]?.ticketPct;
+          const hdl = gameBrief?.handleHome ?? gameQuotes[0]?.handlePct;
+          if (tkt == null || hdl == null) return null;
+          return (
+            <PublicSharpMeter
+              ticketPct={tkt}
+              handlePct={hdl}
+              home={firstQuoteRef?.homeAbbr || firstQuote?.home || "Home"}
+              away={firstQuoteRef?.awayAbbr || firstQuote?.away || "Away"}
+              className="mb-3"
+            />
+          );
+        })()}
 
         {/* Tabs */}
         <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-line/0">

@@ -113,7 +113,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
 
         <div className="mb-4 bg-obsidian rounded-lg p-2.5 border border-line/30 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
-            <span className="flex items-center gap-1"><BarChart2 className={cn("size-3", isGold ? "text-amber-300" : "text-primary")} /> AI Matchup Projection</span>
+            <span className="flex items-center gap-1"><BarChart2 className={cn("size-3", isGold ? "text-amber-300" : "text-primary")} /> % to Hit</span>
             <span className={isGold ? "text-amber-300" : "text-primary"}>{combinedProb}% HIT PROB</span>
           </div>
           <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
@@ -228,6 +228,21 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                              <span className="text-xs font-bold text-muted">{leg.marketType} &bull; {teams.matchup}</span>
                            </div>
                          </div>
+                         {/* % to hit this leg */}
+                         {leg.fairProb != null && (
+                           <div className="mt-1">
+                             <div className="flex items-center justify-between text-[10px] text-muted mb-0.5">
+                               <span>% to hit this leg</span>
+                               <span className="font-bold text-ink">{Math.round(leg.fairProb * 100)}%</span>
+                             </div>
+                             <div className="h-2 rounded-full bg-line/50 overflow-hidden">
+                               <div className={`h-full rounded-full ${leg.fairProb >= 0.6 ? 'bg-emerald-500' : leg.fairProb >= 0.45 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.round(leg.fairProb * 100)}%` }} />
+                             </div>
+                             <p className="text-[9px] text-muted mt-0.5">
+                               {leg.fairProb >= 0.65 ? 'Strong favorite — high chance' : leg.fairProb >= 0.55 ? 'Slight edge — better than a coin flip' : leg.fairProb >= 0.45 ? 'Close to a toss-up — could go either way' : leg.fairProb >= 0.3 ? 'Underdog — lower chance, bigger payout' : 'Long shot — risky but high reward'}
+                             </p>
+                           </div>
+                         )}
                        </div>
                      );
                    })}

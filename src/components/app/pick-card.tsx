@@ -51,7 +51,7 @@ export function PickCard({
   return (
     <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured || isSelected ? "ring-2 ring-neon" : ""))}>
       {/* Confidence badge */}
-      <div className={cn("absolute top-3 right-3 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider z-10",
+      <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider w-fit ml-auto mb-1",
         edgeTone === "high" ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30" :
         edgeTone === "medium" ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30" :
         "bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30"
