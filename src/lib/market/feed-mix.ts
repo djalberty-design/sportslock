@@ -75,3 +75,23 @@ export function applyMixFilter<T>(rows: T[], mix: MixFilter | undefined): T[] {
     return true;
   });
 }
+
+/** Gold ribbon first, then ranked catalog 2/3 + SGP. Does not loosen ribbon floors. */
+export function buildFeedParlays(picks: {
+  ribbon?: any[];
+  two?: any[];
+  three?: any[];
+  sgp?: any[];
+} | null | undefined): any[] {
+  const ribbon = (picks?.ribbon ?? []).filter((p) => p?.parlay);
+  const seen = new Set(ribbon.map((p) => String(p.id || "")));
+  const gold = ribbon.map((p) => ({ ...p, feedLane: "gold" as const }));
+  const catalog = [...(picks?.two ?? []), ...(picks?.three ?? []), ...(picks?.sgp ?? [])]
+    .filter((p) => p?.parlay && !seen.has(String(p.id || "")))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .map((p) => {
+      seen.add(String(p.id || ""));
+      return { ...p, feedLane: "catalog" as const };
+    });
+  return [...gold, ...catalog].slice(0, 12);
+}

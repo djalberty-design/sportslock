@@ -8,6 +8,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import {
   applyMixFilter,
   applyRibbonSportFilter,
+  buildFeedParlays,
   snapshotSports,
   type MixFilter,
 } from "@/lib/market/feed-mix";
@@ -19,10 +20,11 @@ function SportsLockCommandCenter() {
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const [mixFilter, setMixFilter] = useState<MixFilter>("ALL");
 
-  const ribbon = picks?.ribbon || [];
+  const feed = buildFeedParlays(picks);
   const liveSports = snapshotSports(snapshot);
-  const filtered = applyMixFilter(applyRibbonSportFilter(ribbon, sportFilter), mixFilter);
+  const filtered = applyMixFilter(applyRibbonSportFilter(feed, sportFilter), mixFilter);
   const topParlays = filtered.slice(0, 12);
+  const goldCount = topParlays.filter((p: any) => p.feedLane === "gold").length;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -32,20 +34,25 @@ function SportsLockCommandCenter() {
           SportsLock AI Feed
         </h1>
         <p className="text-muted text-sm">
-          The AI has scanned the board. Here are the most mathematically sound correlations today.
+          Gold ribbon first. Then catalog 2- and 3-leg tickets the engine already ranked. Research, not a lock.
         </p>
       </div>
 
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
         <MixFilterBar value={mixFilter} onChange={setMixFilter} />
+        {topParlays.length > 0 ? (
+          <p className="text-[11px] text-muted font-mono">
+            {goldCount} gold · {topParlays.length - goldCount} catalog
+          </p>
+        ) : null}
       </div>
 
       {topParlays.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-line rounded-xl">
           <Activity className="size-8 text-muted mb-3" />
-          <p className="text-ink font-medium">No Gold Ribbon Parlays currently detected.</p>
-          <p className="text-muted text-sm mt-1">SportsLock AI is waiting for more sportsbook data.</p>
+          <p className="text-ink font-medium">No ranked parlays on this mix.</p>
+          <p className="text-muted text-sm mt-1">Wait for more pregame mains, or clear the sport filter.</p>
           {sportFilter && sportFilter !== "ALL" ? (
             <div className="mt-4 max-w-lg text-left">
               <SportSeasonNote sport={sportFilter} />
