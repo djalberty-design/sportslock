@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { snapshotWithLiveScores } from "./with-live-scores";
+import { dropFinishedGames, snapshotWithLiveScores } from "./with-live-scores";
 import type { DeskSnapshot } from "./types";
 
 export const getLiveBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
   try {
-    return await snapshotWithLiveScores();
+    const snap = await snapshotWithLiveScores();
+    return dropFinishedGames(snap);
   } catch (err: any) {
     console.error("LIVE_SNAPSHOT_ERROR:", err);
     return {
@@ -18,6 +19,6 @@ export const getLiveBoardSnapshot = createServerFn({ method: "GET" }).handler(as
       briefs: [],
       predict: [],
       sourceNote: "FATAL SERVER ERROR: " + (err?.stack || err?.message || String(err)),
-    };
+    } as DeskSnapshot;
   }
 });
