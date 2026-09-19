@@ -4,37 +4,41 @@ Goal: a closed tape of **game markets only**, then human-approved brain suggesti
 
 Suggestions appear in Overseer. DJ Accept / Reject / Later. Accept writes overrides. Engine reads overrides. Nothing auto-applies.
 
-## H1 — Market tape (shipping now)
+## H1 — Market tape (shipped, confirmed 2026-09-18 10:35 ET)
 
-Table `market_tape`. Writer on `/api/cron/sweep-ledger` (already `:15` and `:45` each hour).
+Table `market_tape`. Writer on `/api/cron/sweep-ledger` and on Live Status open (`getTapeStats(true)`), because Hobby UTC crons were not writing.
 
-Each snap: event id (Odds API), sport, teams, start, market (ml / spread / total), side, selection, line, price, clipped model chance (1–99%), edge, phase, score, period/clock.
+DJ confirmed: **1245 snaps / 134 events**, Live Status LIVE, finished games gone from Matchups (129 events tracked).
 
-Phases:
+Each snap: Odds API event id, sport, teams, start, ml / spread / total, side, selection, line, price, clipped model chance (1–99%), edge, phase, score, period/clock.
 
-- **pregame** — at most once per 6 hours per event+market+side
-- **live** — while `inPlay`, at most once per 20 minutes
-- **final** — once when the overlay has a score and the game is no longer live
+Phases: pregame (6h cap), live (20 min cap), final (once).
 
-No props. No full desk dump. Compact JSON only.
+No props. Compact JSON only.
 
-Live Status shows tape counts.
+## H2 — Grade the tape (shipping now)
 
-## H2 — Grade the tape
+Settle pending `market_tape` rows against complete scores from MLB StatsAPI / NHL web / ESPN **web** host (same `fetchLiveScores` overlay). Match on sport + team names, not `espn-…` ids.
 
-Settle final snaps off StatsAPI / NHL / ESPN **web** host. Understand `oddsapi-…` ids and `ml` vs moneyline. WIN / LOSS / PUSH + official score. Do not use `site.api.espn.com`.
+- `ml` / `moneyline` — home/away side or team name
+- `spread` — side + line vs final margin
+- `total` — over/under + line vs final sum
+- Writes `WIN` / `LOSS` / `PUSH`, official home/away score, `graded_at`
+- Does not use `site.api.espn.com`
+- Does not grade props
+- Live Status tape line includes W-L-P after open
 
-## H3 — Autopsy buckets
+Live games stay PENDING until Final.
 
-Wins and losses. Count-based buckets (variance, echoed the book, wrong-way vs close, sport/market miss). Optional 2-sentence note. Not the learning step.
+## H3 — Autopsy buckets (next)
+
+Wins and losses. Count-based buckets. Optional 2-sentence note. Not the learning step.
 
 ## H4 — Suggestion queue
 
-Overseer tab **Brain Suggestions**. One proposed knob per row. Accept / Reject / Later. Reject is remembered.
+Overseer tab **Brain Suggestions**. Accept / Reject / Later.
 
 ## H5 — Engine reads accepted overrides only
-
-Scan/ribbon honor `brain_overrides` after DJ locks a suggestion.
 
 ## Out of scope until later
 

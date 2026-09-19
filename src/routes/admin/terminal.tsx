@@ -13,10 +13,24 @@ type FeedStatus = {
   detail: string;
 };
 
+type TapeView = {
+  total: number;
+  pregame: number;
+  live: number;
+  final: number;
+  events: number;
+  wins?: number;
+  losses?: number;
+  pushes?: number;
+  graded?: number;
+  pendingGrades?: number;
+  lastError?: string;
+};
+
 function LiveStatus() {
   const { snapshot } = useDeskDecision();
   const [quota, setQuota] = useState<number | null>(null);
-  const [tape, setTape] = useState<{ total: number; pregame: number; live: number; final: number; events: number } | null>(null);
+  const [tape, setTape] = useState<TapeView | null>(null);
   const [lastRefresh] = useState(new Date().toISOString());
 
   useEffect(() => {
@@ -30,6 +44,13 @@ function LiveStatus() {
   const sourceNote = snapshot?.sourceNote || "";
   const liveNote = sourceNote.includes("Live scores:");
   const predict = snapshot?.predict ?? [];
+  const hasPublicTape = /ticket\/handle/i.test(sourceNote) && !/no public ticket\/handle/i.test(sourceNote);
+
+  const tapeDetail = !tape
+    ? "Opening this page writes and grades the tape"
+    : tape.lastError
+      ? `Error: ${tape.lastError}`
+      : `${tape.total} snaps / ${tape.events} events · graded ${tape.graded ?? 0} (W ${tape.wins ?? 0} / L ${tape.losses ?? 0} / P ${tape.pushes ?? 0}) · pending ${tape.pendingGrades ?? 0}`;
 
   const feeds: FeedStatus[] = [
     {
@@ -49,9 +70,7 @@ function LiveStatus() {
     {
       name: "Market tape",
       status: tape && tape.total > 0 ? "connected" : "unknown",
-      detail: tape
-        ? `${tape.total} snaps / ${tape.events} events (pregame ${tape.pregame}, live ${tape.live}, final ${tape.final})`
-        : "Waiting on 30-min ledger cron",
+      detail: tapeDetail,
     },
     {
       name: "Kalshi Markets",
@@ -69,12 +88,8 @@ function LiveStatus() {
     },
     {
       name: "Action Network Tape",
-      status: /ticket\/handle tape on this pull/i.test(sourceNote) ? "connected" : "unknown",
-      detail: /no public ticket\/handle/i.test(sourceNote)
-        ? "No public ticket/handle"
-        : sourceNote.includes("tape")
-          ? "Tape data present"
-          : "No public ticket/handle",
+      status: hasPublicTape ? "connected" : "unknown",
+      detail: hasPublicTape ? "Ticket/handle tape on this pull" : "No public ticket/handle",
     },
     {
       name: "Postgres Database",
