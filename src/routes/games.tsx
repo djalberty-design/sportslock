@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } from "lucide-react";
 import { resolveTeamLogo } from "@/lib/market/logos";
+import { leagueOfficialName, stripWrongCollegeLogo } from "@/lib/market/logo-guard";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
-import { bookAmerican, impliedFromAmerican } from "@/lib/market/book-price";
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
 
@@ -111,6 +111,14 @@ function TheMatrix() {
     return ticketHitPct({ chance: row?.chance, fairProb: row?.fairProb, price });
   }
 
+  function mark(sport: string, logo: string | undefined, abbr: string | undefined, name: string) {
+    return resolveTeamLogo(sport, {
+      logo: stripWrongCollegeLogo(sport, logo),
+      abbr,
+      name: leagueOfficialName(sport, name) || name,
+    });
+  }
+
   function LineBox({ label, sub, hit }: { label: string; sub?: string; hit: number | null }) {
     const empty = !label || label === "-";
     return (
@@ -158,31 +166,13 @@ function TheMatrix() {
         <SportFilter sports={liveSports} />
       </div>
 
-      {snapshot?.hours?.note && snapshot.hours.note.includes("CRASH") && (
-        <div className="bg-red-500/20 text-red-400 p-4 rounded-md mb-6 whitespace-pre-wrap font-mono text-xs">
-          <AlertTriangle className="size-4 inline mr-2" />
-          {snapshot.hours.note}
-        </div>
-      )}
-
-      {query.isPending && !snapshot && (
-        <div className="text-center p-12 text-muted">Loading board...</div>
-      )}
-
-      {query.isError && (
-        <div className="bg-red-500/10 text-red-400 p-6 rounded-xl mb-6 border border-red-500/20">
-          <AlertTriangle className="size-5 inline mr-2" />
-          Failed to load board data. {query.error?.message}
-        </div>
-      )}
-
       <div className="flex flex-col gap-6">
         {games.map(g => {
           const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Upcoming";
           const livePeriod = formatLivePeriod({ sport: g.sport, period: g.period, clock: g.clock, statusText: g.statusText });
           const lean = matchupLean(g);
-          const awayMark = resolveTeamLogo(g.sport, { logo: g.awayLogo, abbr: g.awayAbbr, name: g.away });
-          const homeMark = resolveTeamLogo(g.sport, { logo: g.homeLogo, abbr: g.homeAbbr, name: g.home });
+          const awayMark = mark(g.sport, g.awayLogo, g.awayAbbr, g.away);
+          const homeMark = mark(g.sport, g.homeLogo, g.homeAbbr, g.home);
           return (
             <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
               <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -196,14 +186,13 @@ function TheMatrix() {
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{g.sport}</span>
-                  {g.weather && <span className="text-xs text-muted flex items-center gap-1"><CloudSun className="size-3" /> {g.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
                 </div>
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
                     <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
                     <span className="text-primary">{lean.pct != null ? `${lean.label} ${lean.pct}%` : "Looked"}</span>
                   </div>
-                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance this moneyline hits. Not a lock.</p>
+                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance the moneyline favorite hits. Each box below is that ticket. Not a lock.</p>
                   <div className="h-1.5 w-full bg-line/40 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${lean.pct != null ? "bg-primary" : "bg-line/70"}`} style={{ width: `${lean.pct ?? 0}%` }} />
                   </div>
@@ -212,18 +201,12 @@ function TheMatrix() {
               <div className="p-4 flex flex-col md:flex-row">
                 <div className="w-full md:w-[40%] flex flex-col justify-between py-1 pr-4 mb-4 md:mb-0 border-b md:border-b-0 md:border-r border-line">
                   <div className="flex items-center gap-3 h-12">
-                    {awayMark ? (
-                      <img src={awayMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
-                    ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${awayMark ? "hidden" : ""}`}>{(g.awayAbbr || g.away || "?").substring(0, 3)}</div>
+                    {awayMark ? <img src={awayMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : <div className="size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted">{(g.awayAbbr || g.away || "?").substring(0, 3)}</div>}
                     <span className="text-base font-bold text-ink truncate">{g.away}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.awayScore}</span>}
                   </div>
                   <div className="flex items-center gap-3 h-12 mt-2">
-                    {homeMark ? (
-                      <img src={homeMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
-                    ) : null}
-                    <div className={`size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted ${homeMark ? "hidden" : ""}`}>{(g.homeAbbr || g.home || "?").substring(0, 3)}</div>
+                    {homeMark ? <img src={homeMark} className="size-8 object-contain" alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : <div className="size-8 rounded-full bg-line flex items-center justify-center text-xs font-bold text-muted">{(g.homeAbbr || g.home || "?").substring(0, 3)}</div>}
                     <span className="text-base font-bold text-ink truncate">{g.home}</span>
                     {g.inPlay && <span className="ml-auto font-mono font-bold text-lg">{g.homeScore}</span>}
                   </div>
@@ -237,7 +220,7 @@ function TheMatrix() {
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
                     <LineBox label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} />
-                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under.price)} />
+                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under?.price)} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
