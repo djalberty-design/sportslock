@@ -11,7 +11,7 @@ function isFinishedQuote(q: QuoteLine): boolean {
   if (!Number.isFinite(start)) return false;
   const ageH = (Date.now() - start) / 3_600_000;
   const sport = String(q.sport || "");
-  const limit = sport === "NCAAF" || sport === "NFL" ? 4.25 : 3.25;
+  const limit = sport === "NCAAF" || sport === "NFL" ? 4.25 : 2.85;
   return ageH >= limit;
 }
 
