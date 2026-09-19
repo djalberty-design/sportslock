@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Terminal, Settings, ShieldAlert, Cpu, BarChart2, Brain, Activity } from "lucide-react";
+import { ShieldAlert, Cpu, BarChart2, Brain, Activity, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccess } from "@/lib/use-access";
 
@@ -10,6 +10,7 @@ const TABS = [
   { to: "/admin/terminal", label: "Live Status", icon: Activity },
   { to: "/admin/predictions", label: "Predictions", icon: BarChart2 },
   { to: "/admin/autopsy", label: "AI Autopsy", icon: Brain },
+  { to: "/admin/suggestions", label: "Suggestions", icon: Lightbulb },
 ];
 
 function AdminOverseer() {
@@ -36,11 +37,10 @@ function AdminOverseer() {
           The Overseer
         </h1>
         <p className="text-muted text-sm">
-          God-mode access. Throttle the Apex AI, manage waitlists, and view live telemetry.
+          Research desk controls. Suggestions do not change the engine until you accept them and H5 is on.
         </p>
       </div>
 
-      {/* Internal Navigation */}
       <nav className="flex flex-wrap gap-2">
         {TABS.map((tab) => {
           const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
@@ -60,7 +60,6 @@ function AdminOverseer() {
         })}
       </nav>
 
-      {/* Main Panel Content */}
       <div className="rounded-2xl border border-line bg-panel p-6 shadow-sm min-h-[50vh]">
         <Outlet />
       </div>

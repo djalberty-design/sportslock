@@ -1,6 +1,6 @@
 # Brain tape + suggestions — plan (locked 2026-09-18 evening)
 
-Goal: a closed tape of **game markets only**, then human-approved brain suggestions. Not an LLM that edits `engine.ts`. Not Feed props.
+Goal: closed tape of game markets, then human-approved suggestions. No LLM edit of `engine.ts`. No Feed props.
 
 ## H1 — Market tape (shipped, confirmed 10:35 ET)
 
@@ -8,24 +8,25 @@ Goal: a closed tape of **game markets only**, then human-approved brain suggesti
 
 ## H2 — Grade the tape (shipped)
 
-Pending snaps grade WIN / LOSS / PUSH off StatsAPI / NHL / ESPN web complete scores. Team-name match. `ml` / spread / total. Live games stay pending. Live Status shows W-L-P.
+WIN / LOSS / PUSH off StatsAPI / NHL / ESPN web. Team-name match. Live stays pending.
 
-## H3 — Autopsy buckets (shipping now)
+## H3 — Autopsy buckets (shipped)
 
-After grade, tag each settled snap:
+model_miss / echoed_book / high_variance / settled. Autopsy page reads `market_tape`.
 
-- **model_miss** — LOSS at ≥62% model, or WIN at ≤38%
-- **echoed_book** — model within 2.5 pts of implied price
-- **high_variance** — model 47–53% or |edge| < 3%
-- **settled** — everything else
+## H4 — Suggestion queue (shipping now)
 
-Template note, no LLM. AI Autopsy page reads `market_tape`, not the old empty `prediction_logs` list. Counts by bucket / sport / market. Does **not** change Engine Bay or `chance.ts`.
+New Overseer tab **Suggestions**. Built from graded counts.
 
-## H4 — Suggestion queue (next)
+- Slice needs 8+ decided snaps (WIN+LOSS) to propose a sport/market note
+- Below that: one honest card, sample too small, do not move Kelly / EV floor
+- Accept / Reject / Later write `brain_suggestions` only
+- Rejected fingerprints stay quiet 14 days; Later 2 days
+- **Does not change the engine**
 
-Overseer tab Brain Suggestions. Accept / Reject / Later.
+## H5 — Engine reads accepted overrides (next)
 
-## H5 — Engine reads accepted overrides only
+Only after an Accept. Haircuts / sit flags / tuning writes wait for that slice.
 
 ## Out of scope
 
