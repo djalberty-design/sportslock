@@ -83,13 +83,13 @@ export function GamePage({ eventId }: { eventId: string }) {
   const isDecimal = (v: number) => v > 1 && v < 20;
 
   const getProb = (q: any): number => {
-    // Use ticketHitPct for consistency with the Matchups board percentages
+    // ticketHitPct returns 1-99 (percentage). Convert to 0-1 decimal.
     const hitPct = ticketHitPct({
       chance: q.chance ?? q.row?.chance,
       fairProb: q.fairProb ?? q.row?.fairProb,
       price: q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice,
     });
-    if (hitPct != null) return hitPct;
+    if (hitPct != null) return hitPct / 100;
     // Final fallback: American odds implied probability
     const p = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
     const am = isDecimal(p) ? toAmerican(p) : p;
