@@ -11,8 +11,10 @@ import { downloadLedger, paperToLedger } from "@/lib/ledger";
 import { ledgerBrier, pendingLayerHaircuts } from "@/lib/market/ledger-law";
 import { DESK_VERSION } from "@/lib/market/rules";
 import { BankrollTracker } from "./bankroll-tracker";
+import { useDeskDecision } from "@/lib/market/use-board";
 
 export function DeskPage() {
+  const { snapshot } = useDeskDecision();
   const paperTickets = useDeskStore((s) => s.paperTickets);
   const liveBankroll = useDeskStore((s) => s.liveBankroll);
   const weekAnchor = useDeskStore((s) => s.weekAnchorBankroll);
@@ -66,17 +68,43 @@ export function DeskPage() {
           <ul className="mt-3 grid gap-3">
             {open.map((t) => {
               const pay = t.price != null ? profitOnStake(t.stake, t.price) : null;
+              // Check if this game is live or final from the snapshot
+              const matchQuote = snapshot?.quotes.find((q) =>
+                (t.gameIds || []).includes(q.eventId) ||
+                (t.home && t.away && q.home?.toLowerCase().includes(t.home.toLowerCase()) && q.away?.toLowerCase().includes(t.away.toLowerCase()))
+              );
+              const isLive = matchQuote?.inPlay;
+              const isFinal = matchQuote?.statusText?.toLowerCase().includes("final") || (matchQuote as any)?.complete;
+              const liveScore = matchQuote && (matchQuote.homeScore != null) ? `${matchQuote.awayScore} - ${matchQuote.homeScore}` : null;
+              
               return (
-                <li key={t.id} className="paper-card p-5">
-                  <p className="stamp text-emerald-500">Waiting</p>
+                <li key={t.id} className={cn("paper-card p-5", isLive && "ring-2 ring-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]")}>
+                  <div className="flex items-center gap-2">
+                    {isLive ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-bold text-red-400 ring-1 ring-red-500/30 animate-pulse">
+                        <span className="size-1.5 rounded-full bg-red-400" />
+                        LIVE
+                      </span>
+                    ) : isFinal ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/15 px-2.5 py-0.5 text-xs font-bold text-zinc-400 ring-1 ring-zinc-500/30">
+                        FINAL
+                      </span>
+                    ) : (
+                      <p className="stamp text-emerald-500">Waiting</p>
+                    )}
+                    {liveScore && (
+                      <span className="font-mono text-sm font-bold text-ink">{liveScore}</span>
+                    )}
+                  </div>
                   <h3 className="font-display mt-2 text-xl text-ink">{t.description}</h3>
                   {t.home && t.away ? (
                     <p className="mt-1 text-sm text-muted">
                       {t.away} at {t.home}
+                      {matchQuote?.statusText ? ` · ${matchQuote.statusText}` : ""}
                     </p>
                   ) : null}
                   <p className="mt-1 text-sm text-ink">
-                    {formatChancePct(t.chance) ? `${formatChancePct(t.chance)} chance it hits` : "Chance not posted"}
+                    {formatChancePct(t.chance) ? `${formatChancePct(t.chance)} % to hit` : "Chance not posted"}
                     {t.livePrice != null || t.price != null
                       ? ` · Hard Rock ${formatAmerican(t.livePrice ?? t.price!)}`
                       : ""}
@@ -85,6 +113,11 @@ export function DeskPage() {
                     If it hits you get {pay ? formatBetUsd(pay.total) : "the payout"}. If it misses you lose{" "}
                     {formatBetUsd(t.stake)}.
                   </p>
+                  {isFinal && (
+                    <p className="mt-2 text-sm text-amber-400 font-medium">
+                      ⚠️ Game is final — tap Hit, Miss, or Push to close this ticket
+                    </p>
+                  )}
                   <div className="mt-4 grid gap-2 sm:grid-cols-3">
                     <Button className="min-h-14 text-base" onClick={() => grade(t.id, "win", t.livePrice ?? t.price)}>
                       Hit

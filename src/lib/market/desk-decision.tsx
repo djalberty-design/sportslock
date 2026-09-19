@@ -8,6 +8,7 @@ import {
   type DeskDecision,
 } from "./use-board";
 import { useDeskStore, selectDailyHalt, selectWeeklyHalt, selectUnit } from "@/lib/desk-store";
+import { useAutoGrade, AutoGradeToasts } from "@/lib/auto-grade";
 import type { DeskPicks } from "./picks";
 import type { ScanBundle } from "./types";
 import { oddsFingerprint, rankDesk } from "./rank";
@@ -188,5 +189,12 @@ export function DeskDecisionProvider({ children }: { children: ReactNode }) {
     remoteHidden,
   };
 
-  return <DeskDecisionContext.Provider value={value}>{children}</DeskDecisionContext.Provider>;
+  const { notifications, dismiss } = useAutoGrade(snapshot);
+
+  return (
+    <DeskDecisionContext.Provider value={value}>
+      {children}
+      <AutoGradeToasts notifications={notifications} onDismiss={dismiss} />
+    </DeskDecisionContext.Provider>
+  );
 }
