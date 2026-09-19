@@ -71,7 +71,7 @@ export function WagerMeter({
   price,
   decimalPayout,
   size = "md",
-  label = "Chance it hits",
+  label = "% to hit",
   className,
   heatTone,
 }: {

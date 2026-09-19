@@ -509,7 +509,7 @@ function GameCard({
                 chance={fav.chance}
                 price={g.price}
                 heatTone={getEdgeTone(fav.chance, null, g.price)}
-                label={`${fav.name} to win`}
+                label={`${fav.name} · % to hit`}
               />
             ) : Number.isFinite(g.fairProb) ? (
               <WagerMeter className="mt-3" size="lg" chance={g.fairProb} price={g.price} heatTone={getEdgeTone(g.fairProb, null, g.price)} />
@@ -524,7 +524,7 @@ function GameCard({
                 chance={fav.chance}
                 price={g.price}
                 heatTone={getEdgeTone(fav.chance, null, g.price)}
-                label={`${fav.name} to win`}
+                label={`${fav.name} · % to hit`}
               />
             ) : Number.isFinite(g.fairProb) ? (
               <WagerMeter className="mt-3" size="sm" chance={g.fairProb} price={g.price} heatTone={getEdgeTone(g.fairProb, null, g.price)} />

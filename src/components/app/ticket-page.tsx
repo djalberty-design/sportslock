@@ -179,7 +179,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
           chance={pick.chance}
           price={pick.price}
           decimalPayout={pick.decimalPayout}
-          label={pick.parlay ? "Chance every leg hits" : "Chance it hits"}
+          label={pick.parlay ? "% to hit all legs" : "% to hit"}
         />
         {pick.implied != null ? <EdgeRow pick={pick} className="mt-4" /> : null}
         <ConfidenceChips pick={pick} className="mt-3" />
@@ -613,7 +613,7 @@ function LegBlock({
       ) : null}
       {pick ? (
         <>
-          <WagerMeter className="mt-1" size="sm" chance={pick.chance} price={pick.price} label="This leg" />
+          <WagerMeter className="mt-1" size="sm" chance={pick.chance} price={pick.price} label="% to hit this leg" />
           {pick.implied != null ? <EdgeRow pick={pick} /> : null}
           <SimLine pick={pick} />
           {pick.processSource ? (
@@ -623,7 +623,7 @@ function LegBlock({
           ) : null}
         </>
       ) : (
-        <WagerMeter className="mt-1" size="sm" chance={fallback.fairProb} price={fallback.price} label="This leg" />
+        <WagerMeter className="mt-1" size="sm" chance={fallback.fairProb} price={fallback.price} label="% to hit this leg" />
       )}
       {layers.length ? <LayerList layers={layers} /> : null}
       <RulesRan kind={kind} layers={layers} />

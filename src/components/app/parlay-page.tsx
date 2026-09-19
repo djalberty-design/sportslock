@@ -185,7 +185,7 @@ export function ParlayPage() {
                     size="sm"
                     chance={fav?.chance ?? g.fairProb}
                     price={g.price}
-                    label={fav ? `${fav.name} to win` : "Chance it hits"}
+                    label={fav ? `${fav.name} · % to hit` : "% to hit"}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -346,7 +346,7 @@ function ParlayCatalog({
                   size="sm"
                   chance={shownParlayChance(p)}
                   decimalPayout={p.decimalPayout}
-                  label="Chance they all hit"
+                  label="% to hit all legs"
                 />
                 <ConfidenceChips
                   className="mt-2"
@@ -449,7 +449,7 @@ function LegResearchCard({ leg, index, onRemove }: { leg: ParlayPick; index: num
         Away: {leg.away || "—"} · Home: {leg.home || "—"}
       </p>
       <p className="text-sm text-emerald-500">{leg.start ? formatKickoff(leg.start) : "Time TBA"}</p>
-      <WagerMeter className="mt-3" size="sm" chance={leg.fairProb} price={leg.price} label="This leg" />
+      <WagerMeter className="mt-3" size="sm" chance={leg.fairProb} price={leg.price} label="% to hit this leg" />
       <p className="mt-2 text-sm text-ink/90">{why}</p>
       {prop?.customize ? <p className="mt-2 text-sm text-emerald-500">{prop.customize}</p> : null}
       {injuries.length ? (
@@ -667,7 +667,7 @@ function BuiltTicket({
             size="md"
             chance={combined}
             decimalPayout={opened?.decimalPayout ?? grade?.decimalPayout}
-            label="Chance every leg hits"
+            label="% to hit all legs"
           />
         ) : null}
         {opened?.parlay?.correlation || grade?.correlation ? (

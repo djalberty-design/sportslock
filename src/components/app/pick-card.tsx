@@ -101,7 +101,7 @@ export function PickCard({
               price={pick.price}
               decimalPayout={pick.decimalPayout}
               heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
-              label={pick.parlay ? "Chance they all hit" : "Chance it hits"}
+              label={pick.parlay ? "% to hit all legs" : "% to hit"}
             />
             {pick.implied != null ? <EdgeRow pick={pick} className="mt-3" /> : null}
             {profit ? (
@@ -120,7 +120,7 @@ export function PickCard({
               chance={pick.chance}
               decimalPayout={pick.decimalPayout}
               heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
-              label="Chance they all hit"
+              label="% to hit all legs"
             />
             {pick.parlay?.sameGame ? (
               <p className="mt-2 text-xs text-neon">Same-game combo. They move together.</p>
