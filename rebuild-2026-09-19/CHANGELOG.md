@@ -98,3 +98,24 @@ All now require: authenticated session (authMiddleware) + verified admin role (a
 **Files changed:** `src/lib/db.ts`, `src/lib/auth/server.ts`
 **What:** Set `max: 2` on both Postgres connection pools.
 **Why:** Default `pg` pool is `max: 10`. Two pools × 10 = 20 connections per cold start. Neon serverless limits are typically 50-100. Multiple concurrent Vercel functions could exhaust the limit, causing "too many connections" errors.
+
+---
+
+### Phase 3: Fix Grading Pipeline
+
+#### 3A. Rewrite Grade Cron ✅
+**Files changed:** `src/routes/api/cron/grade.ts`
+**What:** Complete rewrite. Was using `parseInternalEventId()` which only matched `espn-SPORT-ID` format. All events now use `oddsapi-SPORT-UUID`. New approach uses `fetchLiveScores()` + fuzzy team name matching via `teamsMatch()`, plus `gradeMarket()` from `grade-tape.ts` which correctly handles `ml`, `moneyline`, `spread`, and `total` market types.
+**Before:** 0 predictions ever graded (regex returned null for every Odds API event)
+**After:** Matches predictions to completed games by team name across ESPN/MLB/NHL scoreboards
+
+#### 3B. Rewrite Sweeper ✅
+**Files changed:** `src/lib/market/sweeper.ts`
+**What:** Same problem — was trying to resolve Odds API event IDs to ESPN event IDs (always returned null). Rewritten to use `fetchLiveScores()` + `teamsMatch()` + `gradeMarket()`.
+
+#### 3C. Fix Cron Schedules ✅
+**Files changed:** `vercel.json`
+**What:** 
+- **Sweep**: Was `0 3 * * *` (once at 11pm EDT). Now `30 16,18,20,22,0,2 * * *` (6 runs across game windows: noon, 2pm, 4pm, 6pm, 8pm, 10pm EDT)
+- **Grade**: Was `0 10 * * *` (once at 6am EDT). Now `0 1,3,5,7,9,13 * * *` (6 runs spread through the day: 9pm, 11pm, 1am, 3am, 5am, 9am EDT)
+**Why:** Previous schedule ran sweep once/day at 11pm and grade once/day at 6am, missing 95%+ of game completions

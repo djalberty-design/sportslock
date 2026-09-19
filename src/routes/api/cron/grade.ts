@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
-import { parseInternalEventId, ESPN_PATH } from "@/lib/market/research";
+import { fetchLiveScores, teamsMatch, type LiveScore } from "@/lib/market/live-scores";
+import { gradeMarket } from "@/lib/market/grade-tape";
 
 export const Route = createFileRoute("/api/cron/grade")({
   server: {
@@ -11,96 +12,106 @@ export const Route = createFileRoute("/api/cron/grade")({
   }
 });
 
+/**
+ * Grade pending predictions against final scores from ESPN/MLB/NHL scoreboards.
+ * 
+ * We match predictions to completed games by team name (fuzzy matching),
+ * not by event ID — because event IDs are in Odds API format (oddsapi-NFL-...)
+ * and don't map to ESPN IDs.
+ */
 async function handleGrade() {
   const sql = await getSql();
 
-  const pending = await sql`SELECT * FROM prediction_logs WHERE status = 'PENDING'`;
+  // Fetch all completed scores from live APIs
+  const scores = await fetchLiveScores().catch(() => []);
+  const finals = scores.filter((s) => s.complete);
+  
+  if (!finals.length) {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      gradedCount: 0, 
+      message: "No completed games found in scoreboards" 
+    }), { headers: { "Content-Type": "application/json" } });
+  }
+
+  const pending = await sql`
+    SELECT * FROM prediction_logs 
+    WHERE status = 'PENDING' 
+    ORDER BY created_at DESC 
+    LIMIT 100
+  `;
 
   let gradedCount = 0;
+  let unmatchedCount = 0;
+
   for (const log of pending) {
     try {
-      const parsed = parseInternalEventId(log.event_id as string);
-      if (!parsed) continue;
-
-      const path = ESPN_PATH[parsed.sport as keyof typeof ESPN_PATH];
-      if (!path) continue;
-
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${parsed.espnId}`;
-      const res = await fetch(url);
-      if (!res.ok) continue;
-
-      const data = await res.json();
+      const selection = (log.selection as string) || "";
+      const marketType = (log.market_type as string) || "";
+      const eventId = (log.event_id as string) || "";
       
-      const header = data.header || {};
-      const competitions = header.competitions || [];
-      const comp = competitions[0];
-      if (!comp) continue;
-
-      const statusDesc = comp.status?.type?.name; // e.g., "STATUS_FINAL"
-      if (statusDesc !== "STATUS_FINAL") {
-        continue; // Game is not finished
-      }
-
-      const homeC = comp.competitors.find((c: any) => c.homeAway === "home");
-      const awayC = comp.competitors.find((c: any) => c.homeAway === "away");
-      const homeScore = parseInt(homeC?.score, 10) || 0;
-      const awayScore = parseInt(awayC?.score, 10) || 0;
-      const homeTeam = homeC?.team?.displayName || "";
-      const awayTeam = awayC?.team?.displayName || "";
-
-      let outcome = 'PENDING';
-      const selection = log.selection as string;
-      const marketType = log.market_type as string;
+      // Extract sport and team info from the prediction
+      // Event IDs look like: oddsapi-NFL-abc123 or espn-NFL-12345
+      const sportMatch = eventId.match(/^(?:oddsapi|espn)-([A-Z]+)-/);
+      const sport = sportMatch?.[1] || null;
       
-      if (marketType === 'moneyline') {
-        let winner = '';
-        if (homeScore > awayScore) winner = homeTeam;
-        else if (awayScore > homeScore) winner = awayTeam;
-
-        if (winner === selection) outcome = 'WIN';
-        else if (homeScore === awayScore) outcome = 'PUSH';
-        else outcome = 'LOSS';
-      } else if (marketType === 'spread') {
-        const line = Number(log.line) || 0;
-        const isHome = selection === homeTeam;
-        const diff = isHome ? (homeScore - awayScore) : (awayScore - homeScore);
-        const covered = diff + line;
-        
-        if (covered > 0) outcome = 'WIN';
-        else if (covered === 0) outcome = 'PUSH';
-        else outcome = 'LOSS';
-      } else if (marketType === 'total') {
-        const line = Number(log.line) || 0;
-        const total = homeScore + awayScore;
-        const isOver = selection.toLowerCase().includes('over');
-        
-        if (isOver) {
-          if (total > line) outcome = 'WIN';
-          else if (total === line) outcome = 'PUSH';
-          else outcome = 'LOSS';
-        } else {
-          if (total < line) outcome = 'WIN';
-          else if (total === line) outcome = 'PUSH';
-          else outcome = 'LOSS';
-        }
+      // Try to find the completed game by matching the selection to home/away teams
+      const hit = finals.find(
+        (s) =>
+          (!sport || !s.sport || s.sport === sport) &&
+          (teamsMatch(selection, s.home, s.homeAbbr) || 
+           teamsMatch(selection, s.away, s.awayAbbr))
+      );
+      
+      if (!hit) {
+        unmatchedCount++;
+        continue;
       }
 
-      if (outcome !== 'PENDING') {
-        await sql`
-          UPDATE prediction_logs
-          SET status = ${outcome},
-              actual_result = ${JSON.stringify(data)}::jsonb,
-              updated_at = now()
-          WHERE id = ${log.id}
-        `;
-        gradedCount++;
+      // Use the grade-tape grading logic which handles ml, moneyline, spread, total
+      const outcome = gradeMarket({
+        marketType,
+        side: log.side as string | null,
+        selection,
+        line: log.line != null ? Number(log.line) : (log.point != null ? Number(log.point) : null),
+        home: hit.home,
+        away: hit.away,
+        homeScore: hit.homeScore,
+        awayScore: hit.awayScore,
+      });
+
+      if (!outcome) {
+        unmatchedCount++;
+        continue;
       }
+
+      await sql`
+        UPDATE prediction_logs
+        SET status = ${outcome},
+            actual_result = ${JSON.stringify({ 
+              home: hit.home, 
+              away: hit.away, 
+              homeScore: hit.homeScore, 
+              awayScore: hit.awayScore,
+              source: hit.source,
+              gradedBy: "cron-v2"
+            })}::jsonb,
+            updated_at = now()
+        WHERE id = ${log.id}
+      `;
+      gradedCount++;
     } catch (e) {
       console.error(`Failed to grade log ${log.id}`, e);
     }
   }
 
-  return new Response(JSON.stringify({ success: true, gradedCount }), {
-    headers: { 'Content-Type': 'application/json' }
+  return new Response(JSON.stringify({ 
+    success: true, 
+    gradedCount, 
+    unmatched: unmatchedCount,
+    totalPending: pending.length,
+    finalsAvailable: finals.length
+  }), {
+    headers: { "Content-Type": "application/json" }
   });
 }
