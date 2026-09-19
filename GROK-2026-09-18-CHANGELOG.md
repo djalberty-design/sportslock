@@ -78,7 +78,6 @@ Odds API quotes hard-coded `inPlay: false` and never carried a score. Matchups a
 ### Unchanged on purpose
 
 - No Odds API `/scores`.
-- No ESPN fetch when the morning probe is missing or 403.
 - Official NBA CDN returned 403; NBA/NFL/college wait on ESPN-if-up.
 - Feed player props stay off.
 
@@ -99,3 +98,26 @@ Odds API quotes hard-coded `inPlay: false` and never carried a score. Matchups a
 
 - Feed player props stay off. This is scoreboard only. No Odds API `/event` props. Admin Fetch Props on a matchup is still one Odds API request.
 - No Odds API `/scores`.
+
+### Confirmed
+
+DJ, evening 2026-09-18: live inning on the ticket works.
+
+## Hold — player boards / featured props (evening)
+
+Dug after the inning confirm. Decision: **hold**. Documented in CURRENT §2a and PLAN HOLD table.
+
+Not building:
+
+- StatsAPI/NHL roster boards without book lines
+- Generic-prop parlay hit forecasts on the Feed
+- Auto top-3 Odds API event-prop pulls
+- Any path that invents Hard Rock prices from stats
+
+Still allowed: photo slip, typed line, admin Fetch Props on one game.
+
+## Code — Phase F chrome and ET stamp (evening)
+
+### Changed
+
+- `src/components/app/shell.tsx` — top bar uses compact `formatKickoff` Eastern stamp (`Desk Fri Sep 18 · 8:59 p.m. ET`). Drops “Live Feed Synced: Just now”, “AI Engine: Optimal”, and `v4.2.0`.

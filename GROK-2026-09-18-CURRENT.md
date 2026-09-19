@@ -36,14 +36,36 @@ These override older docs.
 |---|---|
 | Product IA | **Current overhaul**, not the old five-desk blueprint (`/today`, `/board`, `/parlay`, `/live`, `/desk`). |
 | Home `/` | **SportsLock AI Feed** — gold ribbon parlays. Not the bankroll start essay. |
-| Player props on the AI Feed | **Off for now.** Odds API quota + ESPN block. Lab may still hold prop machinery for later. |
+| Player props on the AI Feed | **Off.** Stay off. |
+| Player boards without book lines | **HOLD.** Do not build StatsAPI/ESPN roster → generic-prop parlay engine this session. See §2a. |
+| Auto “top 3 featured” Odds API props | **HOLD.** Admin Fetch Props (1 request per event) remains the only props buy. |
 | Google OAuth button | **Does not work** on the live site as of this date. |
 | Email/password with Gmail | **Works.** Creator account is recognized as admin. |
-| ESPN | **Blocked / do not hammer.** Morning pull probes scoreboard once per sport and records 200 vs 403. Empty looks stay Looked. Live scores may reuse ESPN scoreboard only when that probe was 200. |
+| ESPN `site.api.espn.com` | **Treat as dead / 403.** Do not hammer. Do not wait for the block to lift. Duration unknown. |
+| ESPN `site.web.api.espn.com` | **Allowed.** Morning probe + live scoreboard + per-game research. Same path, different host. |
 | Feed mix | Sport chips + same-game / same-sport / cross-sport / 2-leg / 3-leg. Cross-sport allowed. SOON follows snapshot quotes, not the ribbon. |
-| Morning pull | 6:05 AM ET (`5 10 * * *` UTC). One Odds API mains force-fetch. One ESPN scoreboard probe per sport. 26h cache. Not a hijack of grade. |
-| Live scores | MLB StatsAPI + NHL web API always. ESPN scoreboard for NFL/NBA/NCAAF/NCAAB only if morning probe `ok`. 2-minute cache. No Odds API `/scores`. |
+| Morning pull | 6:05 AM ET (`5 10 * * *` UTC). One Odds API mains force-fetch. One ESPN **web-host** scoreboard probe per sport. 26h cache. Not a hijack of grade. |
+| Live scores | MLB StatsAPI + NHL web API always. ESPN web-host scoreboard for NFL/NBA/NCAAF/NCAAB. 2-minute cache. No Odds API `/scores`. |
+| Live inning / quarter | **Confirmed on production** (DJ, evening 2026-09-18). Ticket + Matchups + Feed LIVE chip use `formatLivePeriod` (Top/Bot/Mid/End + inning; Q/P otherwise). |
 | Docs | This file is current. Everything listed in §10 is archived. |
+
+### 2a. HOLD — player lists / generic props / parlay hit forecasts
+
+Dug 2026-09-18 evening. DJ confirmed live innings, then **hold**. Do not implement until a later explicit go.
+
+What was considered:
+
+- Pull **players without lines** from MLB StatsAPI / NHL web (zero Odds API credits) and run `buildPropChance` on generic numbers (H 0.5, TB 1.5, HR yes, K 4.5, SOG 2.5).
+- Optionally spend 3 Odds API event-prop credits on a scored “featured” slate.
+
+Why it is held:
+
+- That path can **rank** same-game stacks. It cannot print Hard Rock EV. No line → no P(over 24.5) and no priced parlay edge.
+- Odds API does not sell “lines without players.” One event props call returns player + number + price and costs a credit.
+- ESPN research already fills `ResearchPlayer` when a ticket is opened. Photo slip + Fetch Props already feed `buildPropChance`.
+- Building a no-line player engine now would look like fake Feed props and split attention from chrome / morning-pull verify.
+
+Reopen later only as: MLB-only roster + last-10 from StatsAPI, generic markets, stamp `research`, Feed stays off. Featured-3 scoring rubric (open ticket, scan EV, ticket/handle split, predict volume, injuries, start window) stays on paper until then.
 
 ---
 
@@ -52,11 +74,11 @@ These override older docs.
 What a user actually hits on `main` today:
 
 | Surface | Route | Role |
-|---|---|---|
-| AI Feed | `/` | Gold Ribbon parlays from `picks.ribbon`. Sport filter + mix filter (same game / same sport / cross sport / 2-leg / 3-leg). SOON chips follow snapshot quotes, not the ribbon. |
-| Matchups | `/games` | Games list, sport filter, admin Fetch Props + quota badge. Card → `/game/$eventId`. LIVE + score when overlay marks `inPlay`. |
+|---|---|
+| AI Feed | `/` | Gold Ribbon parlays from `picks.ribbon`. Sport filter + mix filter (same game / same sport / cross sport / 2-leg / 3-leg). SOON chips follow snapshot quotes, not the ribbon. LIVE chip can show period. |
+| Matchups | `/games` | Games list, sport filter, admin Fetch Props + quota badge. Card → `/game/$eventId`. LIVE + score + inning/quarter. |
 | The Lab | `/picks` | Props / research workbench. Sport filter. |
-| Game ticket | `/game/$eventId` | Markets, sim panel, SGP legs, Lock It In → paperTickets + `prediction_logs`. |
+| Game ticket | `/game/$eventId` | Markets, sim panel, SGP legs, Lock It In → paperTickets + `prediction_logs`. Live header: score + period. |
 | My Action | `/ticket` | Personal book (open / hit / miss). `/ticket?id=` is still the breakdown. `/desk` redirects here. |
 | Login | `/login` | Google (broken) + email/password (working). |
 | Admin | `/admin` and children | Engine Bay, Live Status, Predictions, Autopsy, Brain Intel. Admin email only. |
@@ -80,24 +102,25 @@ Moods (Safest / Best Value / Pays more) remain engine law if the ranking code st
 ## 5. Data sources and quota
 
 | Source | Status | Role |
-|---|---|---|
-| The Odds API | **Primary board.** Real ML / spread / total prices. Postgres cache so cold starts do not burn quota. | Schedule + lines |
-| ESPN | **Blocked / disabled after 403 and rate limits.** Morning probe records status. Empty ESPN looks stay Looked — do not invent. | Suspended |
-| MLB StatsAPI / NHL web | **Live scores.** 2-minute cache. | In-play overlay |
+|---|---|
+| The Odds API | **Primary board.** Real ML / spread / total prices. Postgres cache so cold starts do not burn quota. ~500 req/mo shown in the admin badge. | Schedule + lines |
+| ESPN `site.api` | **403 / dead.** | Do not use |
+| ESPN `site.web.api` | **Live + research.** Morning probe + scoreboard + summary/roster. | Scores / research |
+| MLB StatsAPI / NHL web | **Live scores** (and later, held, rosters). 2-minute cache. | In-play overlay |
 | Kalshi / Polymarket | Research overlays when the snapshot has them. | Research |
 | Action Network tape | Research when posted. | Tickets % vs handle % |
 | Hard Rock | Photo or delayed Odds API. No scrape. | Fill |
 | Postgres | Cache, ledger, prediction logs, brain config. | Durable |
 
-**Props:** fetching player props costs Odds API requests. Admin can press **Fetch Props** on a matchup (1 request). Global AI-Feed props are **off** until quota and ESPN recover.
+**Props:** fetching player props costs Odds API requests. Admin can press **Fetch Props** on a matchup (1 request). Global AI-Feed props are **off**. No auto featured-N pull. No player-board phase until the hold lifts.
 
 Nightly / periodic jobs (`vercel.json`):
 
 | Cron | UTC | Intent (ET) |
-|---|---|---|
+|---|---|
 | `/api/cron/sweep` | `0 3 * * *` | 11pm ET — log model plays |
 | `/api/cron/grade` | `0 10 * * *` | 6am ET — W/L/P |
-| `/api/cron/morning-pull` | `5 10 * * *` | 6:05am ET — Odds API mains + ESPN probe |
+| `/api/cron/morning-pull` | `5 10 * * *` | 6:05am ET — Odds API mains + ESPN web-host probe |
 | `/api/cron/autopsy` | `0 11 * * *` | 7am ET — loss analysis via xAI |
 | `/api/cron/sweep-ledger` | `15,45 * * * *` | every 30 min — ledger |
 
@@ -115,6 +138,7 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 4. **Alpha hooks** only when a market inefficiency trigger fires.
 5. **SGP** — ribbon is 2- or 3-leg mains with hit-rate floors, not lottery posters. Cross-sport is allowed and filterable.
 6. Displayed % is calibrated chance, clipped at 99%.
+7. Player tickets already run `buildPropChance` when a **point** exists (photo, typed, or Fetch Props). No point → no priced over/under.
 
 ---
 
@@ -126,7 +150,9 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 - Phase B Feed mix filters + snapshot SOON + full names + ESPN numeric college marks
 - Phase C Lock It In writes My Action (`paperTickets` + `prediction_logs`)
 - Phase D 6:05 AM ET Odds API mains + ESPN scoreboard probe, 26h cache
-- Phase E live scores (MLB + NHL + ESPN-if-up) overlaid on the board snapshot
+- Phase E live scores overlay (MLB + NHL + ESPN web host)
+- Phase E follow-up: Top/Bot inning + Q/P on ticket, Matchups, Feed — **confirmed live**
+- Phase F chrome: ET desk stamp in the top bar; drop Just now / Optimal / v4.2.0
 
 ---
 
@@ -136,18 +162,19 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 2. Match existing code style. No generator comments, no new branding in source.
 3. Document every change in `GROK-2026-09-18-CHANGELOG.md`.
 4. Push to `main` only after explicit go. Vercel deploy follows the GitHub push.
-5. Do not re-enable ESPN hammering or bulk prop fetches without a quota plan.
+5. Do not re-enable ESPN `site.api` hammering or bulk prop fetches without a quota plan.
 6. Do not revive archived docs as if they were current.
 7. Florida honesty rules in §1 do not move.
+8. Do not lift the §2a hold without an explicit go.
 
 ---
 
 ## 9. Open work
 
-1. Phase F — local date+time stamp. Drop Just now / Optimal / v4.2.0.
-2. Confirm morning-pull fires in Vercel and `odds_api_cache` has a `morning-pull` stamp. College/NBA/NFL live scores wait on that stamp.
-3. Google button still broken; email path works.
-4. Hard Rock fill is still off-site. Lock only writes the research book.
+1. Phase G — verify morning-pull fires in Vercel and `odds_api_cache` has a `morning-pull` stamp. Confirm NFL/NBA/college LIVE after that stamp.
+2. Google button still broken; email path works.
+3. Hard Rock fill is still off-site. Lock only writes the research book.
+4. **Held:** player boards without lines; featured-3 Odds API props; Feed props.
 
 ---
 

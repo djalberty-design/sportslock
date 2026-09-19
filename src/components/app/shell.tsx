@@ -1,13 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Activity, Beaker, Hexagon, Ticket, Settings } from "lucide-react";
-import { type ReactNode } from "react";
-import { BRAND } from "@/lib/brand";
+import { useEffect, useState, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
-import { cn } from "@/lib/utils";
-import { CollapsibleParlayPill } from "./collapsible-parlay-pill";
+import { cn, formatKickoff } from "@/lib/utils";
 import { TicketChip } from "./ticket-lock";
-import { MobileMoreDrawer } from "./mobile-more-drawer";
 
 const TABS = [
   { to: "/", label: "SportsLock", icon: Hexagon },
@@ -21,20 +18,31 @@ function isActive(pathname: string, to: string) {
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
+function DeskStamp() {
+  const [stamp, setStamp] = useState("");
+  useEffect(() => {
+    const tick = () => setStamp(formatKickoff(new Date().toISOString(), true));
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+      {stamp ? `Desk ${stamp}` : "Desk"}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin } = useAccess();
 
   return (
         <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
-      {/* Global Trust / Sync Header */}
       <div className="fixed top-0 left-0 right-0 z-50 h-7 bg-obsidian border-b border-line/50 flex items-center justify-between px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-primary animate-pulse"></span> Live Feed Synced: Just now</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="hidden md:inline-block">AI Engine: Optimal</span>
-          <span className="text-primary font-mono tracking-normal">v4.2.0</span>
+          <DeskStamp />
         </div>
       </div>
       {/* Mobile Bottom App Bar */}
