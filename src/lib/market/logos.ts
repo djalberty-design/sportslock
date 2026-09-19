@@ -95,12 +95,15 @@ function isLetterNcaaLogo(url?: string | null): boolean {
 }
 
 export function espnLogoUrl(sport: string, abbr?: string, espnTeamId?: string): string | null {
-  const id = String(espnTeamId || "").replace(/[^0-9]/g, "");
-  if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
   const leagueKey = normalizeSport(sport);
+  const id = String(espnTeamId || "").replace(/[^0-9]/g, "");
+  if (id && isCollegeSport(leagueKey)) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
   const league = LEAGUE_LOGO[leagueKey] || (isCollegeSport(leagueKey) ? "ncaa" : undefined);
   if (!league) return null;
-  if (league === "ncaa") return null;
+  if (league === "ncaa") {
+    if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
+    return null;
+  }
   if (!abbr) return null;
   const a = abbr.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!a) return null;
@@ -179,12 +182,15 @@ for (const name of Object.keys(TEAM_ABBR)) {
 for (const [k, v] of Object.entries(NICK_TO_OFFICIAL)) OFFICIAL_BY_KEY[k] = v;
 
 export function officialTeamName(sport: string, raw?: string | null, hint?: string | null): string {
+  const league = normalizeSport(sport);
   const source = String(raw || "").trim();
   const hintText = String(hint || "").trim();
-  const fromHint = NCAA_ID[compactKey(hintText)];
-  if (fromHint && source.length <= 4) return fromHint.name;
-  const fromRaw = NCAA_ID[compactKey(source)];
-  if (fromRaw) return fromRaw.name;
+  if (isCollegeSport(league)) {
+    const fromHint = NCAA_ID[compactKey(hintText)];
+    if (fromHint && source.length <= 4) return fromHint.name;
+    const fromRaw = NCAA_ID[compactKey(source)];
+    if (fromRaw) return fromRaw.name;
+  }
   if (!source) return hintText;
   if (OFFICIAL_BY_KEY[compactKey(source)]) return OFFICIAL_BY_KEY[compactKey(source)];
   const lower = source.toLowerCase();
@@ -218,10 +224,17 @@ export function resolveTeamLogo(
 ): string | null {
   const league = normalizeSport(sport);
   const given = String(opts?.logo || "");
-  if (given && !isLetterNcaaLogo(given)) return given;
+  if (given && !isLetterNcaaLogo(given) && !(given.includes("/ncaa/") && !isCollegeSport(league))) return given;
+  if (given.includes("/ncaa/") && !isCollegeSport(league)) {
+    /* fall through to pro league path */
+  } else if (given && !isLetterNcaaLogo(given)) {
+    return given;
+  }
   const official = officialTeamName(league || "", opts?.name || opts?.abbr || "");
-  const ncaaId = String(opts?.espnTeamId || ncaaIdFor(official) || ncaaIdFor(opts?.name) || ncaaIdFor(opts?.abbr) || "").replace(/[^0-9]/g, "");
-  if (ncaaId) return espnLogoUrl("NCAAF", undefined, ncaaId);
+  if (isCollegeSport(league)) {
+    const ncaaId = String(opts?.espnTeamId || ncaaIdFor(official) || ncaaIdFor(opts?.name) || ncaaIdFor(opts?.abbr) || "").replace(/[^0-9]/g, "");
+    if (ncaaId) return espnLogoUrl("NCAAF", undefined, ncaaId);
+  }
   const abbr = TEAM_ABBR[official] || (opts?.abbr && String(opts.abbr).trim().toLowerCase()) || teamAbbrFromName(official);
   return espnLogoUrl(league || "", abbr || undefined);
 }
@@ -258,17 +271,18 @@ export function resolveLegTeam(leg: any, quote?: any) {
   const awayName = officialTeamName(sport, rawAway || quote?.away, "");
   const homeAbbr = TEAM_ABBR[homeName] || quote?.homeAbbr || (homeName ? teamAbbrFromName(homeName) : undefined);
   const awayAbbr = TEAM_ABBR[awayName] || quote?.awayAbbr || (awayName ? teamAbbrFromName(awayName) : undefined);
+  const college = isCollegeSport(sport);
   const homeLogo = resolveTeamLogo(sport, {
     logo: leg?.homeLogo || quote?.homeLogo,
     abbr: homeAbbr,
     name: homeName,
-    espnTeamId: quote?.homeEspnId || leg?.homeEspnId || ncaaIdFor(homeName),
+    espnTeamId: college ? quote?.homeEspnId || leg?.homeEspnId || ncaaIdFor(homeName) : quote?.homeEspnId,
   });
   const awayLogo = resolveTeamLogo(sport, {
     logo: leg?.awayLogo || quote?.awayLogo,
     abbr: awayAbbr,
     name: awayName,
-    espnTeamId: quote?.awayEspnId || leg?.awayEspnId || ncaaIdFor(awayName),
+    espnTeamId: college ? quote?.awayEspnId || leg?.awayEspnId || ncaaIdFor(awayName) : quote?.awayEspnId,
   });
   const selLow = sel.toLowerCase();
   const sideHome = Boolean(
