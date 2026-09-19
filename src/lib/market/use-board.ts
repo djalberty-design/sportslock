@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getBoardSnapshot } from "./server";
+import { getLiveBoardSnapshot } from "./board-snapshot";
 import { overlaySnapshot } from "./research";
 import type { DeskSnapshot, OptionStatus, ParsedTicket, PlayBoard, ScanBundle } from "./types";
 import type { DeskPicks } from "./picks";
@@ -26,7 +26,7 @@ export const DeskDecisionContext = createContext<DeskDecision | null>(null);
 export function useBoardQuery() {
   return useQuery({
     queryKey: ["board"],
-    queryFn: () => getBoardSnapshot(),
+    queryFn: () => getLiveBoardSnapshot(),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchInterval: 60_000,
