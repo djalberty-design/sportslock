@@ -39,9 +39,10 @@ These override older docs.
 | Player props on the AI Feed | **Off for now.** Odds API quota + ESPN block. Lab may still hold prop machinery for later. |
 | Google OAuth button | **Does not work** on the live site as of this date. |
 | Email/password with Gmail | **Works.** Creator account is recognized as admin. |
-| ESPN | **Blocked / do not hammer.** Morning pull probes scoreboard once per sport and records 200 vs 403. Empty looks stay Looked. |
+| ESPN | **Blocked / do not hammer.** Morning pull probes scoreboard once per sport and records 200 vs 403. Empty looks stay Looked. Live scores may reuse ESPN scoreboard only when that probe was 200. |
 | Feed mix | Sport chips + same-game / same-sport / cross-sport / 2-leg / 3-leg. Cross-sport allowed. SOON follows snapshot quotes, not the ribbon. |
 | Morning pull | 6:05 AM ET (`5 10 * * *` UTC). One Odds API mains force-fetch. One ESPN scoreboard probe per sport. 26h cache. Not a hijack of grade. |
+| Live scores | MLB StatsAPI + NHL web API always. ESPN scoreboard for NFL/NBA/NCAAF/NCAAB only if morning probe `ok`. 2-minute cache. No Odds API `/scores`. |
 | Docs | This file is current. Everything listed in §10 is archived. |
 
 ---
@@ -53,7 +54,7 @@ What a user actually hits on `main` today:
 | Surface | Route | Role |
 |---|---|---|
 | AI Feed | `/` | Gold Ribbon parlays from `picks.ribbon`. Sport filter + mix filter (same game / same sport / cross sport / 2-leg / 3-leg). SOON chips follow snapshot quotes, not the ribbon. |
-| Matchups | `/games` | Games list, sport filter, admin Fetch Props + quota badge. Card → `/game/$eventId`. |
+| Matchups | `/games` | Games list, sport filter, admin Fetch Props + quota badge. Card → `/game/$eventId`. LIVE + score when overlay marks `inPlay`. |
 | The Lab | `/picks` | Props / research workbench. Sport filter. |
 | Game ticket | `/game/$eventId` | Markets, sim panel, SGP legs, Lock It In → paperTickets + `prediction_logs`. |
 | My Action | `/ticket` | Personal book (open / hit / miss). `/ticket?id=` is still the breakdown. `/desk` redirects here. |
@@ -82,6 +83,7 @@ Moods (Safest / Best Value / Pays more) remain engine law if the ranking code st
 |---|---|---|
 | The Odds API | **Primary board.** Real ML / spread / total prices. Postgres cache so cold starts do not burn quota. | Schedule + lines |
 | ESPN | **Blocked / disabled after 403 and rate limits.** Morning probe records status. Empty ESPN looks stay Looked — do not invent. | Suspended |
+| MLB StatsAPI / NHL web | **Live scores.** 2-minute cache. | In-play overlay |
 | Kalshi / Polymarket | Research overlays when the snapshot has them. | Research |
 | Action Network tape | Research when posted. | Tickets % vs handle % |
 | Hard Rock | Photo or delayed Odds API. No scrape. | Fill |
@@ -99,7 +101,7 @@ Nightly / periodic jobs (`vercel.json`):
 | `/api/cron/autopsy` | `0 11 * * *` | 7am ET — loss analysis via xAI |
 | `/api/cron/sweep-ledger` | `15,45 * * * *` | every 30 min — ledger |
 
-Odds API mains TTL is **26 hours**. Page views read L1 memory then L2 `odds_api_cache`. The morning job force-fetches and writes key `mains` plus stamp key `morning-pull`.
+Odds API mains TTL is **26 hours**. Page views read L1 memory then L2 `odds_api_cache`. The morning job force-fetches and writes key `mains` plus stamp key `morning-pull`. Live scores write key `live-scores` (2 min).
 
 ---
 
@@ -124,6 +126,7 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 - Phase B Feed mix filters + snapshot SOON + full names + ESPN numeric college marks
 - Phase C Lock It In writes My Action (`paperTickets` + `prediction_logs`)
 - Phase D 6:05 AM ET Odds API mains + ESPN scoreboard probe, 26h cache
+- Phase E live scores (MLB + NHL + ESPN-if-up) overlaid on the board snapshot
 
 ---
 
@@ -141,8 +144,8 @@ Intent (from the Sep 17 Alpha rewrite, still the math story):
 
 ## 9. Open work
 
-1. Phase E — live scores from free league APIs. ESPN scoreboard only if the morning probe returned 200.
-2. Confirm morning-pull fires in Vercel and `odds_api_cache` has a `morning-pull` stamp.
+1. Phase F — local date+time stamp. Drop Just now / Optimal / v4.2.0.
+2. Confirm morning-pull fires in Vercel and `odds_api_cache` has a `morning-pull` stamp. College/NBA/NFL live scores wait on that stamp.
 3. Google button still broken; email path works.
 4. Hard Rock fill is still off-site. Lock only writes the research book.
 
