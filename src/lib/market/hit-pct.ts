@@ -1,7 +1,30 @@
 /** Single ticket hit %. Clip 1–99. Prefer model when it is sane; else the book. */
 
+/** Hard Rock Florida almost never posts past this. Do not invent -5000 from a fairProb. */
+export const HARD_ROCK_ODDS_CAP = 2000;
+
+export function bookAmerican(raw?: number | null): number | null {
+  const p = Number(raw);
+  if (!Number.isFinite(p) || p === 0) return null;
+  if (p > 1 && p < 100) {
+    const am = p >= 2 ? Math.round((p - 1) * 100) : Math.round(-100 / (p - 1));
+    if (!Number.isFinite(am) || Math.abs(am) < 100 || Math.abs(am) > HARD_ROCK_ODDS_CAP) return null;
+    return am;
+  }
+  if (Math.abs(p) < 100) return null;
+  if (Math.abs(p) > HARD_ROCK_ODDS_CAP) return null;
+  return Math.round(p);
+}
+
+export function formatAmerican(raw?: number | null): string {
+  const am = bookAmerican(raw);
+  if (am == null) return "-";
+  return am > 0 ? `+${am}` : `${am}`;
+}
+
 export function americanImplied(price?: number | null): number | null {
-  const p = Number(price);
+  const am = bookAmerican(price);
+  const p = am ?? Number(price);
   if (!Number.isFinite(p) || p === 0) return null;
   if (Math.abs(p) < 100 && p > 1 && p < 50) {
     return p >= 2 ? 1 / p : null;
