@@ -226,7 +226,10 @@ export const getPredictionLogs = createServerFn({ method: "GET" })
     return [];
   }
 });
-export const getOddsQuotaFn = createServerFn({ method: "GET" }).handler(async (): Promise<number | null> => {
+export const getOddsQuotaFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<number | null> => {
+  await assertAdmin(context.userId);
   return getOddsQuota();
 });
 
