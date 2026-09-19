@@ -4,6 +4,7 @@ import { useState } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
+import { cn } from "@/lib/utils";
 
 function TeamMark({ src, name }: { src: string | null; name: string }) {
   const letter = (name || "?").replace(/^(the)\s+/i, "").charAt(0).toUpperCase() || "?";
@@ -41,6 +42,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
   const pick = parlay;
   const parlayCand = pick?.parlay || pick;
   const legs = parlayCand?.legs || [];
+  const isGold = pick?.feedLane === "gold";
 
   const fairDec = parlayCand?.combinedFair ? (1 / parlayCand.combinedFair).toFixed(2) : "0.00";
   const payoutDec = (pick?.decimalPayout || parlayCand?.decimalPayout)
@@ -74,9 +76,15 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-sm flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
+        className={cn(
+          "relative overflow-hidden rounded-xl p-4 shadow-sm flex flex-col cursor-pointer transition-colors",
+          isGold
+            ? "border border-amber-400/35 bg-gradient-to-b from-amber-500/[0.12] via-panel to-panel hover:border-amber-300/50"
+            : "border border-line bg-panel hover:border-primary/50",
+        )}
         onClick={() => setIsSheetOpen(true)}
       >
+        {isGold ? <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" /> : null}
         <div className="flex items-center justify-between mb-4 border-b border-line/50 pb-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center -space-x-2">
@@ -99,17 +107,17 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
               <span className="text-[10px] font-bold uppercase tracking-widest">LIVE</span>
             </div>
           ) : (
-            <div className="text-lg font-bold text-primary font-mono">{americanOdds}</div>
+            <div className={cn("text-lg font-bold font-mono", isGold ? "text-amber-300" : "text-primary")}>{americanOdds}</div>
           )}
         </div>
 
         <div className="mb-4 bg-obsidian rounded-lg p-2.5 border border-line/30 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
-            <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
-            <span className="text-primary">{combinedProb}% HIT PROB</span>
+            <span className="flex items-center gap-1"><BarChart2 className={cn("size-3", isGold ? "text-amber-300" : "text-primary")} /> AI Matchup Projection</span>
+            <span className={isGold ? "text-amber-300" : "text-primary"}>{combinedProb}% HIT PROB</span>
           </div>
           <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full relative" style={{ width: `${combinedProb}%` }}>
+            <div className={cn("h-full rounded-full relative", isGold ? "bg-amber-400" : "bg-primary")} style={{ width: `${combinedProb}%` }}>
               <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
             </div>
           </div>
@@ -117,8 +125,15 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
 
         <div className="text-ink font-display font-bold text-base mb-3 flex items-center gap-2 flex-wrap">
           {legs.length}-Leg Parlay
+          {isGold ? (
+            <span className="text-amber-200 text-[10px] font-mono uppercase tracking-wider bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-400/30">Gold ticket</span>
+          ) : (
+            <span className="text-muted text-[10px] font-mono uppercase tracking-wider bg-obsidian px-1.5 py-0.5 rounded border border-line">Catalog</span>
+          )}
           <span className="text-muted text-[10px] font-mono uppercase tracking-wider bg-obsidian px-1.5 py-0.5 rounded border border-line">{mix.label}</span>
-          <span className="text-primary text-xs font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+{Math.round(combinedEv * 100)}% EDGE</span>
+          <span className={cn("text-xs font-mono px-1.5 py-0.5 rounded border", isGold ? "text-amber-200 bg-amber-500/10 border-amber-400/20" : "text-primary bg-primary/10 border-primary/20")}>
+            +{Math.round(combinedEv * 100)}% EDGE
+          </span>
         </div>
 
         <div className="mb-4 flex-1 space-y-4">
@@ -150,7 +165,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
           })}
         </div>
 
-        <div className="mt-2 mb-4 p-3 bg-primary/5 border border-primary/10 rounded-lg text-xs text-primary/90 italic border-l-2 border-l-primary">
+        <div className={cn("mt-2 mb-4 p-3 rounded-lg text-xs italic border-l-2", isGold ? "bg-amber-500/5 border border-amber-400/15 text-amber-100/80 border-l-amber-400" : "bg-primary/5 border border-primary/10 text-primary/90 border-l-primary")}>
           "{aiInsight}"
         </div>
 
@@ -159,7 +174,10 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
             e.stopPropagation();
             setIsModalOpen(true);
           }}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-between group"
+          className={cn(
+            "w-full font-bold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-between group",
+            isGold ? "bg-amber-400 hover:bg-amber-300 text-zinc-950" : "bg-primary hover:bg-primary/90 text-primary-foreground",
+          )}
         >
           <span>Lock It In</span>
           <span className="font-mono text-sm group-hover:scale-105 transition-transform">
