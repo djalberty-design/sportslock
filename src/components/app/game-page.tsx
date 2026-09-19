@@ -77,7 +77,17 @@ export function GamePage({ eventId }: { eventId: string }) {
     setSgpSlip(prev => {
       const exists = prev.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
       if (exists) return prev.filter(p => p !== exists);
-      return [...prev, quote];
+      // Mutual exclusivity: remove any existing leg from the same market
+      // (e.g. clicking Home ML auto-removes Away ML, clicking Over removes Under)
+      const qEvent = quote.eventId || eventId;
+      const qMarket = quote.marketType || quote.row?.marketType;
+      const filtered = prev.filter(p => {
+        const pEvent = p.eventId || eventId;
+        const pMarket = p.marketType || p.row?.marketType;
+        // Keep legs from different events or different market types
+        return pEvent !== qEvent || pMarket !== qMarket;
+      });
+      return [...filtered, quote];
     });
     setSaved(false);
   };
@@ -110,23 +120,44 @@ export function GamePage({ eventId }: { eventId: string }) {
     return 100 / (rawP + 100);
   };
 
+  // Shared helper to normalize any price to American odds
+  const normalizePrice = (p: number): number => {
+    if (!p || p === 0) return -110;
+    if (isDecimal(p)) return toAmerican(p);
+    return p;
+  };
+
+  const priceToProb = (p: number): number => {
+    const am = normalizePrice(p);
+    return am < 0 ? (-am) / (-am + 100) : 100 / (am + 100);
+  };
+
   // Combined SGP math
   const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * getProb(leg), 1) : 0;
   const hitProbPct = Math.round(combinedProb * 100);
 
   const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
-    let p = leg.hardRockPrice || leg.consensusPrice || leg.price || leg.row?.hardRockPrice || -110;
-    let prob = p < 0 ? (-p / (-p + 100)) : (100 / (p + 100));
-    return acc * prob;
+    const raw = leg.hardRockPrice || leg.consensusPrice || leg.price || leg.row?.hardRockPrice || -110;
+    return acc * priceToProb(raw);
   }, 1) : 0;
   const vegasPct = Math.round(vegasImplied * 100);
   const edgeVal = (hitProbPct - vegasPct).toFixed(1);
 
-  let decPayout = 1 / (vegasImplied || 0.5);
-  let americanOdds = decPayout >= 2.0
-    ? `+${Math.round((decPayout - 1) * 100)}`
-    : `-${Math.round(100 / (decPayout - 1))}`;
-  if (sgpSlip.length === 0) americanOdds = "";
+  // For single bets, use the leg's actual price directly (no probability round-trip)
+  // For multi-leg parlays, compute combined American odds from combined probability
+  let americanOdds = "";
+  if (sgpSlip.length === 1) {
+    const raw = sgpSlip[0].hardRockPrice || sgpSlip[0].consensusPrice || sgpSlip[0].price || sgpSlip[0].row?.hardRockPrice || -110;
+    const am = normalizePrice(raw);
+    americanOdds = am > 0 ? `+${am}` : `${am}`;
+  } else if (sgpSlip.length > 1) {
+    const decPayout = 1 / (vegasImplied || 0.5);
+    americanOdds = decPayout >= 2.0
+      ? `+${Math.round((decPayout - 1) * 100)}`
+      : `-${Math.round(100 / (decPayout - 1))}`;
+  }
+
+  const decPayout = vegasImplied > 0 ? 1 / vegasImplied : 2;
 
   // Smart wager: quarter Kelly
   const kellyFraction = combinedProb > 0 && vegasImplied > 0
