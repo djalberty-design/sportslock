@@ -1,118 +1,45 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { BarChart2, TrendingUp, TrendingDown, Clock, Target } from "lucide-react";
-import { getPredictionLogs } from "@/lib/market/server";
+import { useQuery } from "@tanstack/react-query";
+import { BarChart2 } from "lucide-react";
+import { getAutopsySummaryFn, getTapeStatsFn } from "@/lib/market/tape-server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/predictions")({ component: PredictionDashboard });
 
-type PredictionLog = {
-  id: number;
-  event_id: string;
-  selection: string;
-  market_type: string;
-  line?: number;
-  price?: number;
-  model_probability: number;
-  edge: number;
-  status: "PENDING" | "WON" | "LOST" | "PUSH";
-  actual_result?: string;
-  ai_autopsy?: string;
-  created_at: string;
-};
-
 function PredictionDashboard() {
-  const [logs, setLogs] = useState<PredictionLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const tape = useQuery({ queryKey: ["tape-stats"], queryFn: () => getTapeStatsFn() });
+  const autopsy = useQuery({ queryKey: ["tape-autopsy"], queryFn: () => getAutopsySummaryFn() });
 
-  useEffect(() => {
-    getPredictionLogs()
-      .then((data) => setLogs(data as PredictionLog[]))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Stats
-  const isWin = (s: string) => s === "WON" || s === "WIN";
-  const isLoss = (s: string) => s === "LOST" || s === "LOSS";
-  const graded = logs.filter((l) => isWin(l.status) || isLoss(l.status));
-  const won = graded.filter((l) => isWin(l.status)).length;
-  const lost = graded.filter((l) => isLoss(l.status)).length;
-  const pending = logs.filter((l) => l.status === "PENDING").length;
-  const winRate = graded.length > 0 ? ((won / graded.length) * 100).toFixed(1) : "-";
-  const avgEdgeWin = won > 0
-    ? (graded.filter((l) => isWin(l.status)).reduce((s, l) => s + (l.edge || 0), 0) / won * 100).toFixed(1)
-    : "-";
-  const avgEdgeLoss = lost > 0
-    ? (graded.filter((l) => isLoss(l.status)).reduce((s, l) => s + (l.edge || 0), 0) / lost * 100).toFixed(1)
-    : "-";
-
-  const statusColor: Record<string, string> = {
-    WON: "text-emerald-400 bg-emerald-500/10",
-    WIN: "text-emerald-400 bg-emerald-500/10",
-    LOST: "text-red-400 bg-red-500/10",
-    LOSS: "text-red-400 bg-red-500/10",
-    PUSH: "text-amber-400 bg-amber-500/10",
-    PENDING: "text-muted bg-line/50",
-  };
+  const stats = tape.data;
+  const rows = autopsy.data?.recent ?? [];
+  const wins = autopsy.data?.wins ?? stats?.wins ?? 0;
+  const losses = autopsy.data?.losses ?? stats?.losses ?? 0;
+  const pending = stats?.pendingGrades ?? 0;
+  const graded = wins + losses + (autopsy.data?.pushes ?? 0);
+  const winRate = wins + losses > 0 ? ((wins / (wins + losses)) * 100).toFixed(1) : "-";
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2 text-ink">
         <BarChart2 className="size-5 text-primary" />
-        Prediction Tracker
+        Prediction tape
       </h2>
+      <p className="text-sm text-muted">Game markets from `market_tape`. Not the old Lock It In duplicate log.</p>
 
-      {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-mono font-bold text-ink">{logs.length}</div>
-          <div className="text-xs text-muted mt-1">Total Logged</div>
-        </div>
-        <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-mono font-bold text-emerald-400">{won}</div>
-          <div className="text-xs text-muted mt-1">Won</div>
-        </div>
-        <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-mono font-bold text-red-400">{lost}</div>
-          <div className="text-xs text-muted mt-1">Lost</div>
-        </div>
-        <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-mono font-bold text-primary">{winRate}%</div>
-          <div className="text-xs text-muted mt-1">Win Rate</div>
-        </div>
-        <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-mono font-bold text-amber-400">{pending}</div>
-          <div className="text-xs text-muted mt-1">Pending</div>
-        </div>
+        <Tile n={stats?.total ?? 0} label="Snaps" />
+        <Tile n={wins} label="Won" color="text-emerald-400" />
+        <Tile n={losses} label="Lost" color="text-red-400" />
+        <Tile n={`${winRate}%`} label="Win rate" color="text-primary" />
+        <Tile n={pending} label="Pending" color="text-amber-400" />
       </div>
 
-      {/* Edge analysis */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-obsidian rounded-xl border border-line p-4 flex items-center gap-3">
-          <TrendingUp className="size-5 text-emerald-400" />
-          <div>
-            <div className="font-bold text-ink text-sm">Avg Edge (Winners)</div>
-            <div className="text-xs text-emerald-400 font-mono">+{avgEdgeWin}%</div>
-          </div>
-        </div>
-        <div className="bg-obsidian rounded-xl border border-line p-4 flex items-center gap-3">
-          <TrendingDown className="size-5 text-red-400" />
-          <div>
-            <div className="font-bold text-ink text-sm">Avg Edge (Losers)</div>
-            <div className="text-xs text-red-400 font-mono">+{avgEdgeLoss}%</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Prediction log table */}
-      {loading ? (
-        <div className="text-center p-12 text-muted">Loading predictions...</div>
-      ) : logs.length === 0 ? (
+      {tape.isLoading || autopsy.isLoading ? (
+        <div className="text-center p-12 text-muted">Reading tape...</div>
+      ) : rows.length === 0 && !graded ? (
         <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
-          <Target className="size-8 mx-auto mb-3 text-muted" />
-          <p className="font-medium text-ink">No predictions logged yet</p>
-          <p className="text-sm mt-1">Lock in tickets from the Game Ticket page to start tracking.</p>
+          <p className="font-medium text-ink">No graded game markets yet</p>
+          <p className="text-sm mt-1">Open Live Status after finals. Pending snaps wait until the box is official.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -124,27 +51,32 @@ function PredictionDashboard() {
                 <th className="py-3 px-2 text-right">Model %</th>
                 <th className="py-3 px-2 text-right">Edge</th>
                 <th className="py-3 px-2 text-center">Status</th>
-                <th className="py-3 px-2">Date</th>
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
-                <tr key={log.id} className="border-b border-line/50 hover:bg-obsidian/50">
-                  <td className="py-3 px-2 font-medium text-ink max-w-[200px] truncate">{log.selection}</td>
-                  <td className="py-3 px-2 text-muted font-mono text-xs">{log.market_type}</td>
+              {rows.map((log) => (
+                <tr key={log.id} className="border-b border-line/50">
+                  <td className="py-3 px-2 font-medium text-ink max-w-[220px] truncate">
+                    {log.selection}
+                    <div className="text-[10px] text-muted truncate">{log.away} at {log.home}</div>
+                  </td>
+                  <td className="py-3 px-2 text-muted font-mono text-xs">{log.marketType}{log.line != null ? ` ${log.line}` : ""}</td>
                   <td className="py-3 px-2 text-right font-mono text-primary">
-                    {(log.model_probability * 100).toFixed(1)}%
+                    {log.modelProb != null ? `${Math.min(99, Math.max(1, log.modelProb * 100)).toFixed(1)}%` : "—"}
                   </td>
                   <td className="py-3 px-2 text-right font-mono text-emerald-400">
-                    +{(log.edge * 100).toFixed(1)}%
+                    {log.edge != null ? `${log.edge >= 0 ? "+" : ""}${(log.edge * 100).toFixed(1)}%` : "—"}
                   </td>
                   <td className="py-3 px-2 text-center">
-                    <span className={cn("px-2 py-1 rounded-md text-xs font-bold", statusColor[log.status] || "text-muted")}>
+                    <span className={cn(
+                      "px-2 py-1 rounded-md text-xs font-bold",
+                      log.status === "WIN" ? "text-emerald-400 bg-emerald-500/10" :
+                      log.status === "LOSS" ? "text-red-400 bg-red-500/10" :
+                      log.status === "PUSH" ? "text-amber-400 bg-amber-500/10" :
+                      "text-muted bg-line/50",
+                    )}>
                       {log.status}
                     </span>
-                  </td>
-                  <td className="py-3 px-2 text-muted text-xs">
-                    {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </td>
                 </tr>
               ))}
@@ -152,6 +84,15 @@ function PredictionDashboard() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function Tile({ n, label, color }: { n: string | number; label: string; color?: string }) {
+  return (
+    <div className="bg-obsidian rounded-xl border border-line p-4 text-center">
+      <div className={cn("text-2xl font-mono font-bold", color || "text-ink")}>{n}</div>
+      <div className="text-xs text-muted mt-1">{label}</div>
     </div>
   );
 }
