@@ -186,6 +186,7 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
           evidence: ev,
         })) created++;
       }
+    }
     // ─── NEW: Sport-specific bias detection ───
     // Compare win rate per sport. If one sport significantly outperforms or underperforms,
     // suggest adjusting weights.
