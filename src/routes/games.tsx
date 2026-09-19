@@ -9,6 +9,7 @@ import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
+import { sportLabel } from "@/lib/copy";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
@@ -208,7 +209,7 @@ function TheMatrix() {
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{g.sport}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{sportLabel(g.sport)}</span>
                 </div>
                 
                 {/* Market Implied Projection */}
