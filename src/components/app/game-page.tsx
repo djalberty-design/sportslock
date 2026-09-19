@@ -185,6 +185,8 @@ export function GamePage({ eventId }: { eventId: string }) {
       ? wagerNum * (100 / Math.abs(finalOddsNum))
       : 0;
 
+  const placePaper = useDeskStore((s) => s.placePaperTicket);
+
   const handleLockIn = async () => {
     setIsSaving(true);
     try {
@@ -196,6 +198,37 @@ export function GamePage({ eventId }: { eventId: string }) {
         price: parseInt(finalOdds || americanOdds) || q.price || -110,
         fairProb: q.fairProb || 0.5,
       }));
+
+      // Build description from legs
+      const desc = legs.length === 1
+        ? `${legs[0].selection} (${legs[0].marketType})`
+        : `${legs.length}-leg parlay: ${legs.map(l => l.selection).join(" + ")}`;
+
+      // Add to local paper tickets (shows in My Action)
+      const combinedPrice = legs.length === 1
+        ? legs[0].price
+        : legs.reduce((acc, l) => {
+            const dec = l.price > 0 ? (l.price / 100) + 1 : (100 / Math.abs(l.price)) + 1;
+            return acc * dec;
+          }, 1);
+      const americanCombined = legs.length === 1
+        ? legs[0].price
+        : (combinedPrice >= 2 ? Math.round((combinedPrice - 1) * 100) : Math.round(-100 / (combinedPrice - 1)));
+
+      placePaper({
+        kind: legs.length === 1 ? "main" : "parlay",
+        description: desc,
+        stake: wagerNum || 50,
+        price: americanCombined,
+        status: "open",
+        gameIds: [...new Set(legs.map(l => l.eventId))],
+        chance: legs.reduce((acc, l) => acc * l.fairProb, 1),
+        home: firstQuote?.home || "",
+        away: firstQuote?.away || "",
+        fastLog: true,
+      });
+
+      // Also log to server
       await lockPredictionFn({ data: { legs } });
       setSaved(true);
     } catch (e) {

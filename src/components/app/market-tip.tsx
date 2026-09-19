@@ -42,11 +42,11 @@ export function MarketTip({ type, className }: { type?: string | null; className
         <HelpCircle className="size-3" />
       </button>
       {show && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 w-52 rounded-lg bg-obsidian border border-line px-3 py-2 text-[10px] text-ink shadow-xl animate-in fade-in zoom-in-95 duration-150">
+        <span className="absolute bottom-full left-0 mb-1.5 z-50 w-52 rounded-lg bg-obsidian border border-line px-3 py-2 text-[10px] text-ink shadow-xl">
           <span className="font-bold text-primary">{info.label || type}</span>
           <br />
           {info.tip}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-obsidian" />
+          <span className="absolute top-full left-4 -mt-px border-4 border-transparent border-t-obsidian" />
         </span>
       )}
     </span>

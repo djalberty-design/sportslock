@@ -5,7 +5,7 @@ import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
 import { cn, formatKickoff } from "@/lib/utils";
 import { TicketChip } from "./ticket-lock";
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 
 const TABS = [
   { to: "/", label: "SportsLock", icon: Hexagon },
@@ -118,6 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="font-display font-bold tracking-tight">SportsLock AI</span>
           </div>
           <div className="flex items-center gap-3">
+             <ThemeToggleIcon />
              <TicketChip />
              <UserButton />
              {isAdmin && (

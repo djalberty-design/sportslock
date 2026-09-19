@@ -56,3 +56,17 @@ export function ThemeToggle({ className }: { className?: string }) {
     </button>
   );
 }
+
+/** Compact icon-only toggle for mobile header. */
+export function ThemeToggleIcon({ className }: { className?: string }) {
+  const { mode, toggle } = useThemeStore();
+  return (
+    <button
+      onClick={toggle}
+      className={cn("text-muted hover:text-primary transition-colors", className)}
+      title={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
+    >
+      {mode === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+    </button>
+  );
+}
