@@ -7,6 +7,7 @@ import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 import { bookAmerican, impliedFromAmerican } from "@/lib/market/book-price";
+import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
@@ -101,22 +102,37 @@ function TheMatrix() {
     return num >= 2.0 ? `+${Math.round((num - 1) * 100)}` : `-${Math.round(100 / (num - 1))}`;
   };
 
+  function lineHit(g: any, market: string, side: string, price: any): number | null {
+    const row = scan?.rows?.find((r: any) =>
+      r.eventId === g.eventId &&
+      r.marketType === market &&
+      (r.side === side || (side === "home" && (r.selection === g.home || r.selection === g.homeAbbr)) || (side === "away" && (r.selection === g.away || r.selection === g.awayAbbr)) || (side === "over" && /over/i.test(r.selection || "")) || (side === "under" && /under/i.test(r.selection || "")))
+    );
+    return ticketHitPct({ chance: row?.chance, fairProb: row?.fairProb, price });
+  }
+
+  function LineBox({ label, sub, hit }: { label: string; sub?: string; hit: number | null }) {
+    const empty = !label || label === "-";
+    return (
+      <div className="min-h-14 flex flex-col items-center justify-center bg-obsidian rounded border border-line px-1 py-1.5">
+        <span className="text-sm font-bold text-ink leading-none">{empty ? "-" : label}</span>
+        {sub ? <span className="text-[10px] font-bold text-muted mt-0.5">{sub}</span> : null}
+        <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
+          <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
+        </div>
+        <span className="text-[9px] font-mono text-muted mt-0.5">{empty ? "" : hit != null ? `${hit}%` : ""}</span>
+      </div>
+    );
+  }
+
   function matchupLean(g: any): { label: string; pct: number | null } {
-    const mlHome = scan?.rows?.find((r: any) => r.eventId === g.eventId && r.marketType === "ml" && (r.side === "home" || r.selection === g.home || r.selection === g.homeAbbr));
-    const mlAway = scan?.rows?.find((r: any) => r.eventId === g.eventId && r.marketType === "ml" && (r.side === "away" || r.selection === g.away || r.selection === g.awayAbbr));
-    const modelHome = Number(mlHome?.chance ?? mlHome?.fairProb);
-    const modelAway = Number(mlAway?.chance ?? mlAway?.fairProb);
-    const bookHome = impliedFromAmerican(bookAmerican({ price: g.markets?.homeML }));
-    const bookAway = impliedFromAmerican(bookAmerican({ price: g.markets?.awayML }));
-    const homePct = (Number.isFinite(modelHome) && modelHome > 0.08 && modelHome < 0.9) ? modelHome : bookHome;
-    const awayPct = (Number.isFinite(modelAway) && modelAway > 0.08 && modelAway < 0.9) ? modelAway : bookAway;
-    if (homePct != null && awayPct != null) {
-      return homePct >= awayPct
-        ? { label: g.home, pct: Math.round(homePct * 100) }
-        : { label: g.away, pct: Math.round(awayPct * 100) };
+    const away = lineHit(g, "ml", "away", g.markets?.awayML);
+    const home = lineHit(g, "ml", "home", g.markets?.homeML);
+    if (home != null && away != null) {
+      return home >= away ? { label: g.home, pct: home } : { label: g.away, pct: away };
     }
-    if (homePct != null) return { label: g.home, pct: Math.round(homePct * 100) };
-    if (awayPct != null) return { label: g.away, pct: Math.round(awayPct * 100) };
+    if (home != null) return { label: g.home, pct: home };
+    if (away != null) return { label: g.away, pct: away };
     return { label: "", pct: null };
   }
 
@@ -187,10 +203,9 @@ function TheMatrix() {
                     <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
                     <span className="text-primary">{lean.pct != null ? `${lean.label} ${lean.pct}%` : "Looked"}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full relative" style={{ width: `${lean.pct ?? 0}%` }}>
-                      <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
-                    </div>
+                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance this moneyline hits. Not a lock.</p>
+                  <div className="h-1.5 w-full bg-line/40 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${lean.pct != null ? "bg-primary" : "bg-line/70"}`} style={{ width: `${lean.pct ?? 0}%` }} />
                   </div>
                 </div>
               </div>
@@ -216,34 +231,18 @@ function TheMatrix() {
                 <div className="w-full md:w-[60%] flex gap-2 md:pl-4">
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Spread</div>
-                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.awaySpread?.point ? (g.markets.awaySpread.point > 0 ? `+${g.markets.awaySpread.point}` : g.markets.awaySpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : ""}</span>
-                    </button>
-                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.homeSpread?.point ? (g.markets.homeSpread.point > 0 ? `+${g.markets.homeSpread.point}` : g.markets.homeSpread.point) : "-"}</span>
-                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : ""}</span>
-                    </button>
+                    <LineBox label={g.markets?.awaySpread?.point != null ? `${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}` : "-"} sub={g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : undefined} hit={lineHit(g, "spread", "away", g.markets?.awaySpread?.price)} />
+                    <LineBox label={g.markets?.homeSpread?.point != null ? `${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}` : "-"} sub={g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : undefined} hit={lineHit(g, "spread", "home", g.markets?.homeSpread?.price)} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
-                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.over?.point ? `O ${g.markets.over.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.over?.price ? formatAm(g.markets.over.price) : ""}</span>
-                    </button>
-                    <button className="h-12 flex flex-col items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.under?.point ? `U ${g.markets.under.point}` : "-"}</span>
-                      <span className="text-xs font-bold text-muted group-hover:text-primary">{g.markets?.under?.price ? formatAm(g.markets.under.price) : ""}</span>
-                    </button>
+                    <LineBox label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} />
+                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under.price)} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
-                    <button className="h-12 flex items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.awayML ? formatAm(g.markets.awayML) : "-"}</span>
-                    </button>
-                    <button className="h-12 flex items-center justify-center bg-obsidian rounded border border-line hover:border-primary/50 transition-colors group">
-                      <span className="text-sm font-bold text-ink group-hover:text-primary">{g.markets?.homeML ? formatAm(g.markets.homeML) : "-"}</span>
-                    </button>
+                    <LineBox label={g.markets?.awayML ? formatAm(g.markets.awayML) : "-"} hit={lineHit(g, "ml", "away", g.markets?.awayML)} />
+                    <LineBox label={g.markets?.homeML ? formatAm(g.markets.homeML) : "-"} hit={lineHit(g, "ml", "home", g.markets?.homeML)} />
                   </div>
                 </div>
               </div>
