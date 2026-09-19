@@ -7,11 +7,12 @@ import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
   const [activeTab, setActiveTab] = useState("popular");
-  const [sgpSlip, setSgpSlip] = useState<any[]>([]);
+  const { legs: sgpSlip, addLeg, removeLeg } = useParlaySlip();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wager, setWager] = useState("50");
   const [finalOdds, setFinalOdds] = useState("");
@@ -23,8 +24,8 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const SPORT_KEY: Record<string, string> = {
     NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
-    MLB: "baseball_mlb", NBA: "basketball_nba",
-    NHL: "icehockey_nhl", NCAAB: "basketball_ncaab",
+    NBA: "basketball_nba", NCAAB: "basketball_ncaab",
+    MLB: "baseball_mlb", NHL: "icehockey_nhl",
   };
 
   const handleFetchRealProps = async () => {
@@ -73,28 +74,51 @@ export function GamePage({ eventId }: { eventId: string }) {
   const awayLogo = firstQuote?.awayLogo || espnLogoUrl(firstQuote?.sport || "NFL", firstQuoteRef?.awayAbbr);
   const isLive = firstQuote?.inPlay;
 
-  const toggleLeg = (quote: any) => {
-    setSgpSlip(prev => {
-      // Match by selection + marketType. Only use id match when id is actually defined.
-      const matchesQuote = (p: any) =>
-        p.selection === quote.selection && p.marketType === quote.marketType;
-      const exists = prev.find(matchesQuote);
-      // If already selected, deselect it (clear slip)
-      if (exists) return [];
-      // Otherwise, replace the entire slip with just this one selection (straight bet)
-      return [quote];
-    });
-    setSaved(false);
-  };
-
-  const isSelected = (quote: any) => !!sgpSlip.find(p =>
-    p.selection === quote.selection && p.marketType === quote.marketType
-  );
-
   // Odds math — American odds are the canonical format from the API.
   // Safety: detect legacy decimal odds (1.01–19.99) and convert them.
   const toAmerican = (d: number) => d >= 2.0 ? Math.round((d - 1) * 100) : -Math.round(100 / (d - 1));
   const isDecimal = (v: number) => v > 1 && v < 20;
+
+  const getProb = (q: any): number => {
+    if (q.fairProb && Number.isFinite(q.fairProb)) return q.fairProb;
+    if (q.row?.fairProb && Number.isFinite(q.row.fairProb)) return q.row.fairProb;
+    const p = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
+    const am = isDecimal(p) ? toAmerican(p) : p;
+    return am < 0 ? -am / (-am + 100) : 100 / (am + 100);
+  };
+
+  const toggleLeg = (quote: any) => {
+    const sel = quote.selection;
+    const mkt = quote.marketType || quote.row?.marketType || "unknown";
+    // If already selected, remove it
+    if (isLegSelected(sgpSlip, sel, mkt)) {
+      removeLeg(sel, mkt);
+    } else {
+      // Add to global slip with mutual exclusivity on same event+market
+      const rawP = quote.hardRockPrice || quote.consensusPrice || quote.price || quote.row?.hardRockPrice || -110;
+      const am = isDecimal(rawP) ? toAmerican(rawP) : rawP;
+      addLeg({
+        eventId: quote.eventId || eventId,
+        selection: sel,
+        marketType: mkt,
+        side: quote.side,
+        point: quote.point ?? quote.row?.point,
+        price: am,
+        fairProb: getProb(quote),
+        sport: quote.sport || firstQuote?.sport,
+        home: quote.home || firstQuote?.home,
+        away: quote.away || firstQuote?.away,
+        player: quote.player || quote.row?.player,
+      });
+    }
+    setSaved(false);
+  };
+
+  const isSelected = (quote: any) => isLegSelected(
+    sgpSlip,
+    quote.selection,
+    quote.marketType || quote.row?.marketType || "unknown",
+  );
 
   const getAmOdds = (q: any) => {
     let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice;
@@ -129,13 +153,13 @@ export function GamePage({ eventId }: { eventId: string }) {
     return am < 0 ? (-am) / (-am + 100) : 100 / (am + 100);
   };
 
-  // Combined SGP math
-  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * getProb(leg), 1) : 0;
+  // Combined SGP math — legs now have .price (American) and .fairProb directly
+  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || 0.5), 1) : 0;
   const hitProbPct = Math.round(combinedProb * 100);
 
   const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
-    const raw = leg.hardRockPrice || leg.consensusPrice || leg.price || leg.row?.hardRockPrice || -110;
-    return acc * priceToProb(raw);
+    const am = leg.price || -110;
+    return acc * (am < 0 ? (-am) / (-am + 100) : 100 / (am + 100));
   }, 1) : 0;
   const vegasPct = Math.round(vegasImplied * 100);
   const edgeVal = (hitProbPct - vegasPct).toFixed(1);
@@ -144,8 +168,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   // For multi-leg parlays, compute combined American odds from combined probability
   let americanOdds = "";
   if (sgpSlip.length === 1) {
-    const raw = sgpSlip[0].hardRockPrice || sgpSlip[0].consensusPrice || sgpSlip[0].price || sgpSlip[0].row?.hardRockPrice || -110;
-    const am = normalizePrice(raw);
+    const am = sgpSlip[0].price || -110;
     americanOdds = am > 0 ? `+${am}` : `${am}`;
   } else if (sgpSlip.length > 1) {
     const decPayout = 1 / (vegasImplied || 0.5);
@@ -177,10 +200,10 @@ export function GamePage({ eventId }: { eventId: string }) {
       const legs = sgpSlip.map(q => ({
         eventId: q.eventId || eventId,
         selection: q.selection,
-        marketType: q.marketType || q.row?.marketType || "unknown",
-        point: q.point ?? q.row?.point,
-        price: parseInt(finalOdds || americanOdds) || -110,
-        fairProb: getProb(q),
+        marketType: q.marketType || "unknown",
+        point: q.point,
+        price: parseInt(finalOdds || americanOdds) || q.price || -110,
+        fairProb: q.fairProb || 0.5,
       }));
       await lockPredictionFn({ data: { legs } });
       setSaved(true);

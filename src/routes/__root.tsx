@@ -6,6 +6,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { AccessGate } from "@/components/app/access-gate";
 import { useDeskStore } from "@/lib/desk-store";
 import { BRAND } from "@/lib/brand";
+import { ParlayBar } from "@/components/app/parlay-bar";
 import appCss from "../styles.css?url";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -73,6 +74,7 @@ function RootDocument() {
           <QueryClientProvider client={queryClient}>
             <AccessGate>
               <Outlet />
+              <ParlayBar />
             </AccessGate>
           </QueryClientProvider>
         </AuthProvider>
