@@ -7,6 +7,7 @@ import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 import { bookAmerican, impliedFromAmerican } from "@/lib/market/book-price";
+import { formatLivePeriod } from "@/lib/market/live-period";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
@@ -70,6 +71,9 @@ function TheMatrix() {
     g.inPlay = q.inPlay;
     g.homeScore = q.homeScore ?? g.homeScore ?? 0;
     g.awayScore = q.awayScore ?? g.awayScore ?? 0;
+    g.period = q.period ?? g.period;
+    g.clock = q.clock ?? g.clock;
+    g.statusText = q.statusText ?? g.statusText;
     const isHome = q.selection === q.home || q.selection === q.homeAbbr || (g.home && q.selection?.includes(g.home)) || (g.homeAbbr && q.selection?.includes(g.homeAbbr));
     if (q.marketType === "ml") {
       if (isHome) g.markets.homeML = q.price;
@@ -159,6 +163,7 @@ function TheMatrix() {
       <div className="flex flex-col gap-6">
         {games.map(g => {
           const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Upcoming";
+          const livePeriod = formatLivePeriod({ sport: g.sport, period: g.period, clock: g.clock, statusText: g.statusText });
           const lean = matchupLean(g);
           const awayMark = resolveTeamLogo(g.sport, { logo: g.awayLogo, abbr: g.awayAbbr, name: g.away });
           const homeMark = resolveTeamLogo(g.sport, { logo: g.homeLogo, abbr: g.homeAbbr, name: g.home });
@@ -169,7 +174,7 @@ function TheMatrix() {
                   {g.inPlay ? (
                      <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/20 shrink-0">
                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                       <span className="text-[10px] font-bold uppercase tracking-widest">LIVE</span>
+                       <span className="text-[10px] font-bold uppercase tracking-widest">LIVE{livePeriod ? ` · ${livePeriod}` : ""}</span>
                      </div>
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
