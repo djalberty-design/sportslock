@@ -1011,17 +1011,27 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
         g.bookmakers?.find((b: any) => b.key === "draftkings") ||
         g.bookmakers?.find((b: any) => b.key === "fanduel");
 
+      const isHardRock = bookmaker?.key === "hardrock";
+
+      // Extract spread and total for base
+      const spMarket = bookmaker?.markets?.find((m: any) => m.key === "spreads");
+      const totMarket = bookmaker?.markets?.find((m: any) => m.key === "totals");
+      const homeSpreadOutcome = spMarket?.outcomes?.find((o: any) => o.name === g.home_team);
+      const totalOverOutcome = totMarket?.outcomes?.find((o: any) => o.name === "Over");
+
       const base: Omit<QuoteLine, "marketType" | "side" | "selection" | "price"> = {
         eventId, sport, start,
         home: g.home_team, away: g.away_team,
         homeAbbr, awayAbbr, homeLogo, awayLogo,
+        homeSpread: homeSpreadOutcome?.point,
+        total: totalOverOutcome?.point,
         delayed: false, inPlay: false, source: bookmaker?.title || "odds-api",
       };
 
       if (!bookmaker || !bookmaker.markets) {
         // No bookmaker data — still emit schedule-only quotes so the game card appears
-        out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: 0, delayed: true } as QuoteLine);
-        out.push({ ...base, marketType: "ml", side: "away", selection: g.away_team, price: 0, delayed: true } as QuoteLine);
+        out.push({ ...base, marketType: "ml", side: "home", selection: g.home_team, price: -110, scheduleOnly: true } as QuoteLine);
+        out.push({ ...base, marketType: "ml", side: "away", selection: g.away_team, price: -110, scheduleOnly: true } as QuoteLine);
         continue;
       }
 
@@ -1033,12 +1043,15 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
       if (ml?.outcomes) {
         for (const o of ml.outcomes) {
           const isHome = o.name === g.home_team;
+          const price = o.price ?? 0;
           out.push({
             ...base,
             marketType: "ml",
             side: isHome ? "home" : "away",
             selection: o.name,
-            price: o.price ?? 0,
+            price,
+            hardRockPrice: isHardRock ? price : undefined,
+            consensusPrice: price,
           } as QuoteLine);
         }
       }
@@ -1047,12 +1060,15 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
       if (sp?.outcomes) {
         for (const o of sp.outcomes) {
           const isHome = o.name === g.home_team;
+          const price = o.price ?? 0;
           out.push({
             ...base,
             marketType: "spread",
             side: isHome ? "home" : "away",
             selection: o.name,
-            price: o.price ?? 0,
+            price,
+            hardRockPrice: isHardRock ? price : undefined,
+            consensusPrice: price,
             point: o.point,
           } as QuoteLine);
         }
@@ -1062,12 +1078,15 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
       if (tot?.outcomes) {
         for (const o of tot.outcomes) {
           const isOver = o.name === "Over";
+          const price = o.price ?? 0;
           out.push({
             ...base,
             marketType: "total",
             side: isOver ? "over" : "under",
             selection: o.name,
-            price: o.price ?? 0,
+            price,
+            hardRockPrice: isHardRock ? price : undefined,
+            consensusPrice: price,
             point: o.point,
           } as QuoteLine);
         }

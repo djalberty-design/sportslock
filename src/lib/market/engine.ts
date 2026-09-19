@@ -786,38 +786,30 @@ function dynamicBlend(
   ticketPct?: number, 
   handlePct?: number
 ): number {
-  let wSim = 0.5;
-  let wPool = 0.3;
-  let wMarket = 0.2;
+  // Market-first: the consensus line reflects millions in sharp money.
+  // Model sim/pool add edge only where they have real, non-duplicated data.
+  let wSim = 0.10;
+  let wPool = 0.10;
+  let wMarket = 0.80;
   
+  // Near game time: market becomes even more reliable as lines sharpen
   if (startIso) {
     const msUntil = new Date(startIso).getTime() - Date.now();
     if (msUntil > 0 && msUntil < 2 * 3600_000) {
       const urgency = 1 - (msUntil / (2 * 3600_000));
-      wMarket += 0.2 * urgency;
-      wSim -= 0.1 * urgency;
-      wPool -= 0.1 * urgency;
+      wMarket += 0.10 * urgency;
+      wSim -= 0.05 * urgency;
+      wPool -= 0.05 * urgency;
     }
   }
   
-  let sharpMultiplier = 1.0;
+  // Sharp money signal: shift weight toward market, never multiply probability
   if (handlePct != null && ticketPct != null && ticketPct > 0) {
     const diff = handlePct - ticketPct;
-    
-    // Sharp divergence (handle > ticket by 10%+)
     if (diff >= 0.10) {
-      wMarket += 0.2;
-      wPool = Math.max(0, wPool - 0.2);
-      
-      // Extreme divergence (handle > ticket by 20%+)
-      if (diff >= 0.20) {
-        sharpMultiplier = 1.05;
-      }
-    } else {
-      // Legacy ratio fallbacks for non-sharp divergence
-      const ratio = handlePct / ticketPct;
-      if (ratio >= 1.5) wMarket *= 1.25;
-      else if (ratio < 0.7) wMarket *= 0.75;
+      // Sharp divergence → trust market even more
+      wMarket += 0.05;
+      wPool = Math.max(0, wPool - 0.05);
     }
   }
   
@@ -828,9 +820,10 @@ function dynamicBlend(
   
   if (!parts.length) return 0.5;
   const w = parts.reduce((s, p) => s + p.w, 0);
-  let blended = parts.reduce((s, p) => s + (p.w / w) * p.v, 0);
+  const blended = parts.reduce((s, p) => s + (p.w / w) * p.v, 0);
   
-  blended *= sharpMultiplier;
+  // No sharpMultiplier — multiplying a probability violates axioms
+  // (complementary probs would no longer sum to 1.0)
   
   return Math.min(0.99, Math.max(0.01, blended));
 }

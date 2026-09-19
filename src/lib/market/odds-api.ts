@@ -1,6 +1,6 @@
 import { getSql } from "@/lib/db";
 
-export const ODDS_API_KEY = process.env.ODDS_API_KEY || "c5fa171c7620da6c912ff69d843db37d";
+export const ODDS_API_KEY = process.env.ODDS_API_KEY ?? "";
 
 // 26h so a 6 AM ET pull still covers the next morning if cron slips a cycle.
 export const CACHE_TTL = 1000 * 60 * 60 * 26;
@@ -85,7 +85,7 @@ export function getOddsQuota() {
 }
 
 function oddsUrl(path: string, extra: string) {
-  return `https://api.the-odds-api.com/v4/${path}?apiKey=${ODDS_API_KEY}&regions=${ODDS_REGIONS}&${extra}&bookmakers=${ODDS_BOOKS}`;
+  return `https://api.the-odds-api.com/v4/${path}?apiKey=${ODDS_API_KEY}&regions=${ODDS_REGIONS}&oddsFormat=american&${extra}&bookmakers=${ODDS_BOOKS}`;
 }
 
 function noteQuota(res: Response) {

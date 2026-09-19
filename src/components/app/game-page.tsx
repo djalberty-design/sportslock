@@ -84,18 +84,28 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const isSelected = (quote: any) => !!sgpSlip.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
 
-  // Odds math
+  // Odds math — American odds are the canonical format from the API.
+  // Safety: detect legacy decimal odds (1.01–19.99) and convert them.
+  const toAmerican = (d: number) => d >= 2.0 ? Math.round((d - 1) * 100) : -Math.round(100 / (d - 1));
+  const isDecimal = (v: number) => v > 1 && v < 20;
+
   const getAmOdds = (q: any) => {
     let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice;
-    if (rawP && (rawP < -100 || rawP > 100)) return rawP > 0 ? `+${rawP}` : `${rawP}`;
-    const d = q.fairProb ? (1 / q.fairProb) : (q.decimalPayout || 2.0);
-    return d >= 2.0 ? `+${Math.round((d - 1) * 100)}` : `-${Math.round(100 / (d - 1))}`;
+    if (!rawP || rawP === 0) {
+      // No odds available — show dash
+      return "—";
+    }
+    // Safety: convert stale decimal odds to American
+    if (isDecimal(rawP)) rawP = toAmerican(rawP);
+    return rawP > 0 ? `+${rawP}` : `${rawP}`;
   };
 
   const getProb = (q: any) => {
     if (q.fairProb) return q.fairProb;
     if (q.chance) return q.chance;
     let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
+    // Safety: convert stale decimal odds to American
+    if (isDecimal(rawP)) rawP = toAmerican(rawP);
     if (rawP < 0) return (-rawP) / (-rawP + 100);
     return 100 / (rawP + 100);
   };

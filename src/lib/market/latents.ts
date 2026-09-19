@@ -160,8 +160,12 @@ export function buildLatents(input: ChanceInput & { eventId: string; chanceHome?
     1,
     1,
   );
-  latent.muH *= venueMeans.muH * restMeans.muH * avail.muH * processMeans.muH * recencyMeans.muH * splitMeans.muH * matchupMeans.muH * officialMeans.muH * mlbParkMeans.muH * ncaafBlowoutMeans.muH * nhlGoalieMeans.muH;
-  latent.muA *= venueMeans.muA * restMeans.muA * avail.muA * processMeans.muA * recencyMeans.muA * splitMeans.muA * matchupMeans.muA * officialMeans.muA * mlbParkMeans.muA * ncaafBlowoutMeans.muA * nhlGoalieMeans.muA;
+  // NOTE: venueMeans, restMeans, avail, processMeans, recencyMeans, splitMeans,
+  // matchupMeans, officialMeans, mlbParkMeans, ncaafBlowoutMeans, nhlGoalieMeans
+  // are ALREADY incorporated in buildChance() → report.home → latentFromScores().
+  // DO NOT multiply them again — that was double-counting and caused 97-99% predictions.
+  // Sport-specific overrides (hoops, nba/ncaab-variance, nfl-matchup) above are fine
+  // because they use independent data not in buildChance().
   const note = [venueMeans.note, restMeans.note, avail.note, processMeans.empty ? undefined : processMeans.note, recencyMeans.empty ? undefined : recencyMeans.note, splitMeans.empty ? undefined : splitMeans.note, matchupMeans.empty ? undefined : matchupMeans.note, officialMeans.empty ? undefined : officialMeans.note, mlbParkMeans.empty ? undefined : mlbParkMeans.note, ncaafBlowoutMeans.empty ? undefined : ncaafBlowoutMeans.note, nhlGoalieMeans.empty ? undefined : nhlGoalieMeans.note, typeof hoopsMeans !== "undefined" && !hoopsMeans.empty ? hoopsMeans.note : undefined, typeof hoopsVarianceMeans !== "undefined" && !hoopsVarianceMeans.empty ? hoopsVarianceMeans.note : undefined, typeof nbaVarianceMeans !== "undefined" && !nbaVarianceMeans.empty ? nbaVarianceMeans.note : undefined, typeof ncaabVarianceMeans !== "undefined" && !ncaabVarianceMeans.empty ? ncaabVarianceMeans.note : undefined, typeof nflMeans !== "undefined" && !nflMeans.empty ? nflMeans.note : undefined].filter(Boolean).join(" ");
   if (note) latent.note = note;
   const capped = capLatentToClose(latent);

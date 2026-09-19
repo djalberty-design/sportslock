@@ -98,8 +98,12 @@ function TheMatrix() {
     if (val == null || val === 0) return "-";
     const num = Number(val);
     if (!Number.isFinite(num)) return "-";
-    if (num <= -100 || num >= 100) return num > 0 ? `+${num}` : `${num}`;
-    return num >= 2.0 ? `+${Math.round((num - 1) * 100)}` : `-${Math.round(100 / (num - 1))}`;
+    // Safety: convert decimal odds to American
+    if (num > 1 && num < 20) {
+      const am = num >= 2.0 ? Math.round((num - 1) * 100) : -Math.round(100 / (num - 1));
+      return am > 0 ? `+${am}` : `${am}`;
+    }
+    return num > 0 ? `+${num}` : `${num}`;
   };
 
   function lineHit(g: any, market: string, side: string, price: any): number | null {
@@ -173,6 +177,25 @@ function TheMatrix() {
           const lean = matchupLean(g);
           const awayMark = mark(g.sport, g.awayLogo, g.awayAbbr, g.away);
           const homeMark = mark(g.sport, g.homeLogo, g.homeAbbr, g.home);
+          
+          // Derive real implied probability from moneyline odds
+          const homeML = g.markets?.homeML;
+          const awayML = g.markets?.awayML;
+          const impliedProb = (ml: number) => {
+            if (!ml || ml === 0) return null;
+            // Safety: convert decimal odds if somehow still present
+            if (ml > 1 && ml < 20) ml = ml >= 2.0 ? Math.round((ml - 1) * 100) : -Math.round(100 / (ml - 1));
+            return ml < 0 ? (-ml) / (-ml + 100) : 100 / (ml + 100);
+          };
+          const homeProb = impliedProb(homeML);
+          const awayProb = impliedProb(awayML);
+          const hasOdds = homeProb !== null && awayProb !== null;
+          // Remove vig for fairer display: normalize so they sum to 100%
+          const totalProb = hasOdds ? (homeProb! + awayProb!) : 1;
+          const fairHomeProb = hasOdds ? Math.round((homeProb! / totalProb) * 100) : 50;
+          const projFavorite = fairHomeProb >= 50 ? g.home : g.away;
+          const projProb = fairHomeProb >= 50 ? fairHomeProb : (100 - fairHomeProb);
+          
           return (
             <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
               <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -187,16 +210,19 @@ function TheMatrix() {
                   )}
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{g.sport}</span>
                 </div>
+                
+                {/* Market Implied Projection */}
+                {hasOdds && (
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> Ticket hit %</span>
-                    <span className="text-primary">{lean.pct != null ? `${lean.label} ${lean.pct}%` : "Looked"}</span>
+                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> Market Projection</span>
+                    <span className="text-primary">{projFavorite} {projProb}%</span>
                   </div>
-                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance that moneyline hits. Grey boxes fill when the book posts a number. Live games keep updating.</p>
-                  <div className="h-1.5 w-full bg-line/40 overflow-hidden rounded-full">
-                    <div className={`h-full rounded-full ${lean.pct != null ? "bg-primary" : "bg-line/70"}`} style={{ width: `${lean.pct ?? 0}%` }} />
+                  <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${projProb}%` }} />
                   </div>
                 </div>
+                )}
               </div>
               <div className="p-4 flex flex-col md:flex-row">
                 <div className="w-full md:w-[40%] flex flex-col justify-between py-1 pr-4 mb-4 md:mb-0 border-b md:border-b-0 md:border-r border-line">
