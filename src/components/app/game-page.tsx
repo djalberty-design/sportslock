@@ -75,8 +75,10 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const toggleLeg = (quote: any) => {
     setSgpSlip(prev => {
-      // Check if this exact selection is already in the slip
-      const exists = prev.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
+      // Match by selection + marketType. Only use id match when id is actually defined.
+      const matchesQuote = (p: any) =>
+        p.selection === quote.selection && p.marketType === quote.marketType;
+      const exists = prev.find(matchesQuote);
       // If already selected, deselect it (clear slip)
       if (exists) return [];
       // Otherwise, replace the entire slip with just this one selection (straight bet)
@@ -85,7 +87,9 @@ export function GamePage({ eventId }: { eventId: string }) {
     setSaved(false);
   };
 
-  const isSelected = (quote: any) => !!sgpSlip.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
+  const isSelected = (quote: any) => !!sgpSlip.find(p =>
+    p.selection === quote.selection && p.marketType === quote.marketType
+  );
 
   // Odds math — American odds are the canonical format from the API.
   // Safety: detect legacy decimal odds (1.01–19.99) and convert them.
