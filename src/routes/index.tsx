@@ -33,16 +33,12 @@ function SportsLockCommandCenter() {
           <Sparkles className="size-8 text-primary" />
           SportsLock AI Feed
         </h1>
-        <p className="text-muted text-sm">
-          Ranked parlays from the board. Research, not a lock.
-        </p>
+        <p className="text-muted text-sm">Ranked parlays from the board. Research, not a lock.</p>
       </div>
-
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
         <MixFilterBar value={mixFilter} onChange={setMixFilter} />
       </div>
-
       {gold.length === 0 && catalog.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-line rounded-xl">
           <Activity className="size-8 text-muted mb-3" />
@@ -75,7 +71,6 @@ function SportsLockCommandCenter() {
               </div>
             )}
           </section>
-
           <section className="space-y-3 pt-2">
             <div>
               <h2 className="text-lg font-display font-bold text-ink tracking-tight">Catalog</h2>
@@ -84,9 +79,7 @@ function SportsLockCommandCenter() {
               </p>
             </div>
             {catalog.length === 0 ? (
-              <p className="text-sm text-muted border border-dashed border-line rounded-xl px-4 py-6">
-                No catalog parlays on this mix.
-              </p>
+              <p className="text-sm text-muted border border-dashed border-line rounded-xl px-4 py-6">No catalog parlays on this mix.</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {catalog.map((p: any, i: number) => (
