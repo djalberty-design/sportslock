@@ -5,6 +5,20 @@ import { buildLiveSnapshot } from "./live-board";
 import { ESPN_PATH, applyLeaderStats, enrichResearchForm, fetchEspnRoster, fetchEspnTeamLeaders, mergeResearchPlayers, parseEspnSummary, parseInternalEventId, type EventResearch } from "./research";
 import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota, fetchOddsApiProps } from "./odds-api";
 import { resolveVisionKey, VISION_MODELS, VISION_UNAVAILABLE } from "./vision-key";
+import { authMiddleware } from "@/lib/auth/middleware";
+import { isAdminEmail, normalizeEmail } from "@/lib/admin";
+
+/** Verify the current user is an admin. Call AFTER authMiddleware sets context.userId. */
+async function assertAdmin(userId: string) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const rows = await sql<{ email: string }>`SELECT email FROM "user" WHERE id = ${userId} LIMIT 1`;
+  const email = normalizeEmail(rows[0]?.email);
+  if (!isAdminEmail(email)) {
+    const listed = await sql<{ role: string }>`SELECT role FROM desk_allowlist WHERE email = ${email} LIMIT 1`;
+    if (listed[0]?.role !== "admin") throw new Error("Forbidden");
+  }
+}
 
 export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
   try {
@@ -70,6 +84,7 @@ export const getEventResearch = createServerFn({ method: "GET" })
   });
 
 export const parseTicketImage = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((d: { image: string; mime?: string; kind?: "ticket" | "slate" | "contest" | "auto" }) => d)
   .handler(async ({ data }): Promise<
     | { ok: true; kind: "ticket"; fields: ParsedTicket[]; note: string }
@@ -198,8 +213,11 @@ Rules: ticket = Hard Rock / DraftKings odds. slate = player salary list. contest
 
 
 
-export const getPredictionLogs = createServerFn({ method: "GET" }).handler(async () => {
+export const getPredictionLogs = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
   try {
+    await assertAdmin(context.userId);
     const sql = await getSql();
     const logs = await sql`SELECT * FROM prediction_logs ORDER BY created_at DESC LIMIT 200`;
     return logs;
@@ -213,9 +231,11 @@ export const getOddsQuotaFn = createServerFn({ method: "GET" }).handler(async ()
 });
 
 export const fetchRealPropsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((d: { sportKey: string, eventId: string }) => d)
-  .handler(async ({ data }): Promise<{ ok: boolean; data?: any; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; data?: any; error?: string }> => {
     try {
+      await assertAdmin(context.userId);
       const res = await fetchOddsApiProps(data.sportKey, data.eventId);
       if (!res) return { ok: false, error: "Failed to fetch from Odds-API" };
       return { ok: true, data: res };
@@ -225,9 +245,11 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
   });
 
 export const lockPredictionFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((d: { legs: Array<{ eventId: string; selection: string; marketType: string; point?: number; price: number; fairProb: number }> }) => d)
-  .handler(async ({ data }): Promise<{ ok: boolean; count: number }> => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; count: number }> => {
     try {
+      await assertAdmin(context.userId);
       const { logPrediction } = await import("@/lib/market/ledger");
       let count = 0;
       for (const leg of data.legs) {
@@ -245,8 +267,10 @@ export const lockPredictionFn = createServerFn({ method: "POST" })
   });
 
 export const getTuningFn = createServerFn({ method: "GET" })
-  .handler(async (): Promise<{ kelly: number; maxLegs: number; minEdge: number }> => {
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<{ kelly: number; maxLegs: number; minEdge: number }> => {
     try {
+      await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
       const sql = await getSql();
       const rows = await sql`SELECT kelly, max_legs, min_edge FROM desk_tuning_raw WHERE id = 1`;
@@ -260,9 +284,11 @@ export const getTuningFn = createServerFn({ method: "GET" })
   });
 
 export const saveTuningFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((d: { kelly: number; maxLegs: number; minEdge: number }) => d)
-  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean }> => {
     try {
+      await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
       const sql = await getSql();
       await sql`
@@ -303,8 +329,10 @@ export type BrainStats = {
 };
 
 export const getBrainStatsFn = createServerFn({ method: "GET" })
-  .handler(async (): Promise<BrainStats> => {
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<BrainStats> => {
     try {
+      await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
       const sql = await getSql();
 

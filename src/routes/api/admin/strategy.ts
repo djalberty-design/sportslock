@@ -1,17 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { isAdminEmail, normalizeEmail } from "@/lib/admin";
 
 export const Route = createFileRoute("/api/admin/strategy")({
   server: {
     handlers: {
-      GET: async () => handleStrategyReport(),
+      GET: async ({ request }) => handleStrategyReport(request),
     }
   }
 });
 
-async function handleStrategyReport() {
+async function verifyAdmin(request: Request) {
+  const { auth } = await import("@/lib/auth/server");
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user?.email) throw new Error("Unauthorized");
+  const email = normalizeEmail(session.user.email);
+  if (!isAdminEmail(email)) {
+    const sql = await getSql();
+    const listed = await sql<{ role: string }>`SELECT role FROM desk_allowlist WHERE email = ${email} LIMIT 1`;
+    if (listed[0]?.role !== "admin") throw new Error("Forbidden");
+  }
+}
+
+async function handleStrategyReport(request: Request) {
   try {
+    await verifyAdmin(request);
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return new Response(JSON.stringify({ report: "[ERROR] GEMINI_API_KEY environment variable is missing." }), { status: 500 });

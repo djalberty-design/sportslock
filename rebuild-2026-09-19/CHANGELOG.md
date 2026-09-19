@@ -65,3 +65,36 @@
 | `src/routes/games.tsx` | Real market projections replacing fake hash, formatAm decimal safety |
 | `src/lib/market/latents.ts` | Removed double-counting 11-multiplier chain |
 | `src/lib/market/engine.ts` | Market-first weights (80/10/10), removed sharpMultiplier |
+
+---
+
+### Phase 2: Security Hardening
+
+#### 2A. Delete Exposed Debug Endpoints ✅
+**Files deleted:** `src/routes/api/auth-debug.ts`, `src/routes/api/auth-callback-test.ts`
+**Why:** `/api/auth-debug` publicly leaked session cookies, user count, env var presence, config state. Zero authentication required to read it.
+
+#### 2B. Add authMiddleware + Admin Check to All Mutations ✅
+**Files changed:** `src/lib/market/server.ts`
+**Protected endpoints:**
+| Function | Risk Without Auth |
+|----------|------------------|
+| `parseTicketImage` | Burns xAI API quota |
+| `getPredictionLogs` | Leaks all prediction data |
+| `fetchRealPropsFn` | Burns Odds API quota (500/month) |
+| `lockPredictionFn` | Writes fake predictions to DB |
+| `getTuningFn` | Reads proprietary algorithm settings |
+| `saveTuningFn` | **Writes** algorithm settings (most dangerous) |
+| `getBrainStatsFn` | Leaks full brain intelligence data |
+
+All now require: authenticated session (authMiddleware) + verified admin role (assertAdmin).
+
+#### 2C. Protect /api/admin/strategy ✅
+**Files changed:** `src/routes/api/admin/strategy.ts`
+**What:** Added server-side session + admin verification before any Gemini API call.
+**Why:** Anyone could hit this endpoint and trigger unlimited Gemini API calls burning your quota.
+
+#### 2D. Fix Connection Pooling ✅
+**Files changed:** `src/lib/db.ts`, `src/lib/auth/server.ts`
+**What:** Set `max: 2` on both Postgres connection pools.
+**Why:** Default `pg` pool is `max: 10`. Two pools × 10 = 20 connections per cold start. Neon serverless limits are typically 50-100. Multiple concurrent Vercel functions could exhaust the limit, causing "too many connections" errors.
