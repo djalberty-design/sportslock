@@ -131,16 +131,6 @@ export function GamePage({ eventId }: { eventId: string }) {
     return rawP > 0 ? `+${rawP}` : `${rawP}`;
   };
 
-  const getProb = (q: any) => {
-    if (q.fairProb) return q.fairProb;
-    if (q.chance) return q.chance;
-    let rawP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
-    // Safety: convert stale decimal odds to American
-    if (isDecimal(rawP)) rawP = toAmerican(rawP);
-    if (rawP < 0) return (-rawP) / (-rawP + 100);
-    return 100 / (rawP + 100);
-  };
-
   // Shared helper to normalize any price to American odds
   const normalizePrice = (p: number): number => {
     if (!p || p === 0) return -110;
