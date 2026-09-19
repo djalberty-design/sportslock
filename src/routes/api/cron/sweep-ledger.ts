@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sweepLedger } from "@/lib/market/sweeper";
 import { runMarketTape } from "@/lib/market/market-tape";
 import { gradeMarketTape } from "@/lib/market/grade-tape";
+import { runTapeAutopsy } from "@/lib/market/autopsy-tape";
 
 export const Route = createFileRoute("/api/cron/sweep-ledger")({
   server: {
@@ -17,7 +18,8 @@ async function handleSweep() {
     const ledger = await sweepLedger();
     const tape = await runMarketTape();
     const grade = await gradeMarketTape();
-    return new Response(JSON.stringify({ success: true, ledger, tape, grade }), {
+    const autopsy = await runTapeAutopsy();
+    return new Response(JSON.stringify({ success: true, ledger, tape, grade, autopsy }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
