@@ -24,7 +24,7 @@ function SportsLockCommandCenter() {
   const liveSports = snapshotSports(snapshot);
   const filtered = applyMixFilter(applyRibbonSportFilter(feed, sportFilter), mixFilter);
   const gold = filtered.filter((p: any) => p.feedLane === "gold");
-  const catalog = filtered.filter((p: any) => p.feedLane !== "gold").slice(0, 12);
+  const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -33,7 +33,7 @@ function SportsLockCommandCenter() {
           <Sparkles className="size-8 text-primary" />
           SportsLock AI Feed
         </h1>
-        <p className="text-muted text-sm">Ranked parlays from the board. Research, not a lock.</p>
+        <p className="text-muted text-sm">Every ranked 2- and 3-leg on this mix. Gold is the stand-behind lane. Catalog is the rest. Research, not a lock.</p>
       </div>
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
@@ -73,9 +73,9 @@ function SportsLockCommandCenter() {
           </section>
           <section className="space-y-3 pt-2">
             <div>
-              <h2 className="text-lg font-display font-bold text-ink tracking-tight">Catalog</h2>
+              <h2 className="text-lg font-display font-bold text-ink tracking-tight">Catalog{catalog.length ? ` · ${catalog.length}` : ""}</h2>
               <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
-                More 2- and 3-leg tickets the engine already ranked. Weaker floors than gold. Photograph Hard Rock before you fill.
+                Every other ranked 2- and 3-leg on this mix. Weaker floors than gold. Photograph Hard Rock before you fill.
               </p>
             </div>
             {catalog.length === 0 ? (

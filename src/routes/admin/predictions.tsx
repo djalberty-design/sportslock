@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart2 } from "lucide-react";
-import { getAutopsySummaryFn, getTapeStatsFn } from "@/lib/market/tape-server";
+import { getAutopsySummaryFn, getTapeDeskFn, getTapeStatsFn } from "@/lib/market/tape-server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/predictions")({ component: PredictionDashboard });
@@ -9,9 +9,10 @@ export const Route = createFileRoute("/admin/predictions")({ component: Predicti
 function PredictionDashboard() {
   const tape = useQuery({ queryKey: ["tape-stats"], queryFn: () => getTapeStatsFn() });
   const autopsy = useQuery({ queryKey: ["tape-autopsy"], queryFn: () => getAutopsySummaryFn() });
+  const desk = useQuery({ queryKey: ["tape-desk"], queryFn: () => getTapeDeskFn() });
 
   const stats = tape.data;
-  const rows = autopsy.data?.recent ?? [];
+  const rows = (desk.data && desk.data.length ? desk.data : autopsy.data?.recent) ?? [];
   const wins = autopsy.data?.wins ?? stats?.wins ?? 0;
   const losses = autopsy.data?.losses ?? stats?.losses ?? 0;
   const pending = stats?.pendingGrades ?? 0;
@@ -24,7 +25,7 @@ function PredictionDashboard() {
         <BarChart2 className="size-5 text-primary" />
         Prediction tape
       </h2>
-      <p className="text-sm text-muted">Game markets from `market_tape`. Not the old Lock It In duplicate log.</p>
+      <p className="text-sm text-muted">Every snap on `market_tape` — pregame, live, and final. This is the autopsy log, not a hidden gold-only list.</p>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Tile n={stats?.total ?? 0} label="Snaps" />
@@ -34,7 +35,7 @@ function PredictionDashboard() {
         <Tile n={pending} label="Pending" color="text-amber-400" />
       </div>
 
-      {tape.isLoading || autopsy.isLoading ? (
+      {tape.isLoading || autopsy.isLoading || desk.isLoading ? (
         <div className="text-center p-12 text-muted">Reading tape...</div>
       ) : rows.length === 0 && !graded ? (
         <div className="text-center p-12 text-muted border border-dashed border-line rounded-xl">
@@ -50,6 +51,7 @@ function PredictionDashboard() {
                 <th className="py-3 px-2">Type</th>
                 <th className="py-3 px-2 text-right">Model %</th>
                 <th className="py-3 px-2 text-right">Edge</th>
+                <th className="py-3 px-2 text-center">Phase</th>
                 <th className="py-3 px-2 text-center">Status</th>
               </tr>
             </thead>
@@ -67,6 +69,7 @@ function PredictionDashboard() {
                   <td className="py-3 px-2 text-right font-mono text-emerald-400">
                     {log.edge != null ? `${log.edge >= 0 ? "+" : ""}${(log.edge * 100).toFixed(1)}%` : "—"}
                   </td>
+                  <td className="py-3 px-2 text-center text-[10px] uppercase tracking-wider text-muted">{(log as any).phase || "—"}</td>
                   <td className="py-3 px-2 text-center">
                     <span className={cn(
                       "px-2 py-1 rounded-md text-xs font-bold",
