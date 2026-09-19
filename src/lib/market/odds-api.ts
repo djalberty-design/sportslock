@@ -5,7 +5,6 @@ export const ODDS_API_KEY = process.env.ODDS_API_KEY || "c5fa171c7620da6c912ff69
 // 26h so a 6 AM ET pull still covers the next morning if cron slips a cycle.
 export const CACHE_TTL = 1000 * 60 * 60 * 26;
 
-// ── L1: in-memory cache (survives warm Vercel instances) ────────────────────
 const globalCache = (globalThis as any).__oddsApiCache || {
   mains: null as any,
   mainsLastFetch: 0,
@@ -14,7 +13,6 @@ const globalCache = (globalThis as any).__oddsApiCache || {
 };
 (globalThis as any).__oddsApiCache = globalCache;
 
-// ── L2: Postgres-backed cache (survives cold starts) ──────────────────────
 async function readDbCache(key: string): Promise<{ data: any; fetchedAt: Date } | null> {
   try {
     const sql = await getSql();
@@ -56,6 +54,26 @@ export function getActiveSports(): string[] {
   if (month >= 10 || month <= 6) active.push("icehockey_nhl");
   if (month >= 11 || month <= 4) active.push("basketball_ncaab");
   return active;
+}
+
+function normalizeEventBooks(event: any) {
+  if (!event || typeof event !== "object") return event;
+  const books = Array.isArray(event.bookmakers) ? event.bookmakers : [];
+  for (const b of books) {
+    if (b && (b.key === "hardrockbet_fl" || b.key === "hardrockbet")) b.key = "hardrock";
+  }
+  books.sort((a: any, b: any) => {
+    const ra = a?.key === "hardrock" ? 0 : a?.key === "draftkings" ? 1 : 2;
+    const rb = b?.key === "hardrock" ? 0 : b?.key === "draftkings" ? 1 : 2;
+    return ra - rb;
+  });
+  event.bookmakers = books;
+  return event;
+}
+
+function normalizeSportGroup(data: any) {
+  if (Array.isArray(data)) return data.map(normalizeEventBooks);
+  return normalizeEventBooks(data);
 }
 
 export const ODDS_REGIONS = "us,us2";
@@ -105,20 +123,18 @@ export async function fetchOddsApiEvent(sportKey: string, eventId: string) {
     console.error(`[odds-api] Event error for ${eventId}:`, res.status, body);
     return null;
   }
-  const data = await res.json();
+  const data = normalizeEventBooks(await res.json());
   await patchMainsEvent(sportKey, eventId, data);
   await writeOddsApiCache(`event:${eventId}`, data);
   return data;
 }
 
 export async function fetchOddsApiMains(force = false) {
-  // L1: check in-memory cache first (survives warm starts)
   if (!force && globalCache.mains && globalCache.mains.length > 0 && Date.now() - globalCache.mainsLastFetch < CACHE_TTL) {
     console.log("[odds-api] L1 memory cache hit, age:", Math.round((Date.now() - globalCache.mainsLastFetch) / 60000), "min");
     return globalCache.mains;
   }
 
-  // L2: check Postgres cache (survives cold starts)
   if (!force) {
     const cached = await readDbCache("mains");
     if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
@@ -140,15 +156,12 @@ export async function fetchOddsApiMains(force = false) {
     try {
       const url = oddsUrl(`sports/${sport}/odds/`, "markets=h2h,spreads,totals");
       const res = await fetch(url);
-
       noteQuota(res);
-
       if (!res.ok) {
         console.error(`[odds-api] Error for ${sport}:`, res.status, await res.text().catch(() => ""));
         continue;
       }
-
-      const data = await res.json();
+      const data = normalizeSportGroup(await res.json());
       console.log(`[odds-api] ${sport}: ${Array.isArray(data) ? data.length : 0} events`);
       results.push({ sport, data });
     } catch (e) {
@@ -185,17 +198,13 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
   try {
     const markets = "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_home_runs,player_strikeouts,player_hits,player_points,player_rebounds,player_assists";
     const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, `markets=${markets}`);
-
     const res = await fetch(url);
-
     noteQuota(res);
-
     if (!res.ok) {
       console.error(`[odds-api] Props error for ${eventId}:`, res.status);
       return null;
     }
-
-    const data = await res.json();
+    const data = normalizeEventBooks(await res.json());
     globalCache.props[eventId] = data;
     await writeOddsApiCache(cacheKey, data);
     return data;
