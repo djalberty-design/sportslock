@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getTapeStats, type TapeStats } from "./market-tape";
+import { getTapeStats, listTapeDesk, type TapeDeskRow, type TapeStats } from "./market-tape";
 import { gradeMarketTape, getGradeStats } from "./grade-tape";
 import { runTapeAutopsy, getAutopsySummary, type AutopsySummary } from "./autopsy-tape";
 import { buildSuggestions, decideSuggestion, listSuggestions, type BrainSuggestion, type SuggestionStatus } from "./suggestions";
@@ -26,6 +26,10 @@ export const getTapeStatsFn = createServerFn({ method: "GET" }).handler(async ()
     graded: grades.graded,
     pendingGrades: grades.pending,
   };
+});
+
+export const getTapeDeskFn = createServerFn({ method: "GET" }).handler(async (): Promise<TapeDeskRow[]> => {
+  return listTapeDesk(80);
 });
 
 export const getAutopsySummaryFn = createServerFn({ method: "GET" }).handler(async (): Promise<AutopsySummary> => {

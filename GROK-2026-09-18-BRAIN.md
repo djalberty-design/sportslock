@@ -10,5 +10,12 @@ Closed loop as of late 2026-09-18:
 
 Predictions admin now reads this tape, not the old Angels `prediction_logs` rows.
 
+DJ answers 2026-09-18 late:
+
+1. Users see **all** tape predictions. That is the log the autopsy grades.
+2. Live latent `S` keeps running after first pitch. Score / period / clock change the rank fingerprint. Live tape snaps every 5 minutes.
+3. Grey Matchups cells stay empty and say **later**.
+4–5. One ticket hit % everywhere. Gold stays strict. Catalog is the rest.
+
 Still held: Feed props, player boards, auto-apply without Accept, Odds API `/scores`.
 Still broken: Google OAuth. Hard Rock fill is off-site.

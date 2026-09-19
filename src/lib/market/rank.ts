@@ -98,7 +98,7 @@ export async function runRankJob(req: RankRequest): Promise<RankResult> {
 
 export function oddsFingerprint(snapshot: DeskSnapshot): string {
   const quotes = snapshot.quotes
-    .map((q) => `${q.eventId}:${q.marketType}:${q.side}:${q.price}:${q.point ?? ""}:${q.inPlay ? 1 : 0}:${q.source ?? ""}`)
+    .map((q) => `${q.eventId}:${q.marketType}:${q.side}:${q.price}:${q.point ?? ""}:${q.inPlay ? 1 : 0}:${q.homeScore ?? ""}:${q.awayScore ?? ""}:${q.period ?? ""}:${q.clock ?? ""}:${q.source ?? ""}`)
     .sort()
     .join("|");
   return `${DESK_VERSION}|${snapshot.quotes.length}#${quotes}`;

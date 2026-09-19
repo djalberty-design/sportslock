@@ -93,5 +93,5 @@ export function buildFeedParlays(picks: {
       seen.add(String(p.id || ""));
       return { ...p, feedLane: "catalog" as const };
     });
-  return [...gold, ...catalog].slice(0, 12);
+  return [...gold, ...catalog];
 }
