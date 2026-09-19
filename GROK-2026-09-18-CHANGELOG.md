@@ -121,3 +121,19 @@ Still allowed: photo slip, typed line, admin Fetch Props on one game.
 ### Changed
 
 - `src/components/app/shell.tsx` — top bar uses compact `formatKickoff` Eastern stamp (`Desk Fri Sep 18 · 8:59 p.m. ET`). Drops “Live Feed Synced: Just now”, “AI Engine: Optimal”, and `v4.2.0`.
+
+## Phase G verify (evening)
+
+Checked production + ESPN web host. Did **not** invoke `/api/cron/morning-pull` (would force-fetch Odds API mains).
+
+### Found
+
+- Cron path is registered. Stamp write is in code. DB row not inspectable from this session.
+- `fetchLiveScores` no longer reads `morning-pull.espn[].ok`. College/NFL/NBA live do not wait on the 6:05 probe.
+- ESPN `site.web.api` scoreboards returned 200 from the probe box. Two NCAAF games were in play (Miami @ Wake Forest; Houston @ Texas Tech).
+- Production Matchups sourceNote had no `Live scores: N in play` add-on. Those two college games still showed kickoff time, not LIVE.
+- MLB innings already confirmed by DJ (StatsAPI path). NFL/NBA/NCAAB had no live games worth a chip tonight.
+
+### Unchanged
+
+- Feed props stay off. Player-board hold stays. No new fetches added.
