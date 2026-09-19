@@ -102,6 +102,18 @@ export function espnLogoUrl(sport: string, abbr?: string, espnTeamId?: string): 
   if (!league) return null;
   if (league === "ncaa") {
     if (id) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png`;
+    // Try to resolve from the NCAA catalog using abbreviation or team name
+    if (abbr) {
+      const key = abbr.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const hit = NCAA_CATALOG[key];
+      if (hit) return `https://a.espncdn.com/i/teamlogos/ncaa/500/${hit.id}.png`;
+      // Also try common name variations (e.g. "Florida St" → "floridastate")
+      for (const [k, v] of Object.entries(NCAA_CATALOG)) {
+        if (v.name.toLowerCase().replace(/[^a-z0-9]/g, "") === key) {
+          return `https://a.espncdn.com/i/teamlogos/ncaa/500/${v.id}.png`;
+        }
+      }
+    }
     return null;
   }
   if (!abbr) return null;

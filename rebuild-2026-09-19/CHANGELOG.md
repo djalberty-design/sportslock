@@ -144,3 +144,13 @@ All now require: authenticated session (authMiddleware) + verified admin role (a
 #### 4E. Sport-Specific Modules (Kept)
 **Files kept:** `nfl-matchup.ts`, `mlb-park.ts`, `ncaaf-blowout.ts`, `nhl-goalie.ts`, `hoops-variance.ts`, `officials-registry.ts`
 **Why:** All are imported by `latents.ts` and structurally correct — they return `{muH: 1, muA: 1, empty: true}` when no sport-specific data is available (which is always, for now). They'll activate automatically when real data feeds are added. Safe to keep; deleting would break imports.
+
+---
+
+### Bonus: College Team Logos Fix
+
+#### Fix NCAAF/NCAAB Logo Resolution ✅
+**Files changed:** `src/lib/market/logos.ts`
+**What:** `espnLogoUrl()` returned `null` for all college teams because it required an ESPN team ID (numeric) but quotes from Odds API don't include one. Added fallback that looks up the team abbreviation/name in the existing `NCAA_CATALOG` (ncaa-ids.ts) to resolve the correct ESPN team ID.
+**Before:** All college matchups showed broken/missing logo images
+**After:** Logos resolve through the catalog (Alabama → 333, Ohio State → 194, etc.)
