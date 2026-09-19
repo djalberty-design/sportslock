@@ -33,6 +33,27 @@ const getActivityLogFn = createServerFn({ method: "GET" })
       `);
       await sql.query(`create index if not exists activity_log_time_idx on desk_activity_log (created_at desc)`);
 
+      // Seed from existing suggestion decisions if log is empty
+      const countRes = await sql.query<{ n: number }>(`select count(*)::int as n from desk_activity_log`);
+      if (Number(countRes[0]?.n || 0) === 0) {
+        try {
+          await sql.query(`
+            insert into desk_activity_log (type, action, detail, source, created_at)
+            select 'suggestion', 'Suggestion ' || status, title, 'admin', decided_at
+            from brain_suggestions
+            where status in ('accepted', 'rejected', 'revoked', 'auto_applied')
+              and decided_at is not null
+            order by decided_at desc
+            limit 50
+          `);
+          // Also add a system startup entry
+          await sql.query(`
+            insert into desk_activity_log (type, action, detail, source)
+            values ('engine', 'Activity Log initialized', 'Seeded from existing suggestion decisions', 'system')
+          `);
+        } catch {}
+      }
+
       const rows = await sql.query<Record<string, unknown>>(
         `select id, type, action, detail, source, created_at
          from desk_activity_log

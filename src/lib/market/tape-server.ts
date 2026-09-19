@@ -72,5 +72,10 @@ export const decideSuggestionFn = createServerFn({ method: "POST" })
         await clearOverride(autoFp);
       }
     }
+    // Log to activity feed
+    try {
+      const { logActivity } = await import("@/lib/market/activity");
+      void logActivity("suggestion", `Suggestion ${data.status}`, `${current.title} (${sport} ${market})`, "admin");
+    } catch {}
     return res;
   });
