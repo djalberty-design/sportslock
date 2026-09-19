@@ -288,7 +288,7 @@ export function GamePage({ eventId }: { eventId: string }) {
               </div>
               {/* Always-visible AI prediction bar */}
               <div className="mt-2 mx-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-0.5">
                   <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
                     <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
                   </div>
@@ -301,6 +301,9 @@ export function GamePage({ eventId }: { eventId: string }) {
                     </span>
                   )}
                 </div>
+                <p className="text-[9px] text-muted italic ml-0.5">
+                  {probPct >= 70 ? "Strong favorite — wins most of the time" : probPct >= 55 ? "Slight edge — better than a coin flip" : probPct >= 45 ? "Close to a toss-up — could go either way" : probPct >= 30 ? "Underdog — lower chance, bigger payout" : "Long shot — risky but high reward"}
+                </p>
               </div>
 
               {/* Simulation detail — expanded on click */}
@@ -314,18 +317,21 @@ export function GamePage({ eventId }: { eventId: string }) {
                   >
                     <div className="bg-obsidian border border-t-0 border-line rounded-b-lg px-4 py-3 grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <div className="text-xs text-muted mb-1">AI Model</div>
+                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Our AI says</div>
                         <div className="text-lg font-mono font-bold text-primary">{probPct}%</div>
+                        <div className="text-[9px] text-muted">chance to win</div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted mb-1">Vegas Implied</div>
+                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Vegas says</div>
                         <div className="text-lg font-mono font-bold text-ink">{Math.round(vProb * 100)}%</div>
+                        <div className="text-[9px] text-muted">implied odds</div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted mb-1">Edge</div>
+                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Your edge</div>
                         <div className={cn("text-lg font-mono font-bold", parseFloat(edgePct) > 0 ? "text-emerald-400" : "text-red-400")}>
                           {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
                         </div>
+                        <div className="text-[9px] text-muted">{parseFloat(edgePct) > 0 ? "value bet" : "bad value"}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -339,7 +345,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   };
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto animate-in fade-in duration-500 min-h-dvh relative bg-background">
+    <div className="flex-1 w-full max-w-4xl mx-auto animate-in fade-in duration-500 min-h-dvh relative bg-background pb-16">
 
       {/* Header */}
       <div className="sticky top-0 sm:top-7 z-40 bg-background/95 backdrop-blur border-b border-line px-4 pt-4 pb-0">

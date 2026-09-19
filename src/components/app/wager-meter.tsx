@@ -101,15 +101,23 @@ export function WagerMeter({
   const pctClass =
     size === "lg" ? "text-5xl md:text-6xl" : size === "sm" ? "text-3xl" : "text-4xl";
 
+  // Beginner-friendly explanation based on percentage
+  const pctNum = Math.round(pct);
+  const hitExplain = pctNum >= 70 ? "Strong favorite — wins most of the time"
+    : pctNum >= 55 ? "Slight edge — better than a coin flip"
+    : pctNum >= 45 ? "Close to a toss-up — could go either way"
+    : pctNum >= 30 ? "Underdog — lower chance, bigger payout"
+    : "Long shot — risky but high reward";
+
+  // Bar color
+  const barColor = heatTone === "high" ? "bg-neon" : heatTone === "medium" ? "bg-ink" : heatTone === "low" ? "bg-muted" : "bg-neon";
+  const textColor = heatTone === "high" ? "text-neon" : heatTone === "medium" ? "text-ink" : heatTone === "low" ? "text-muted" : "text-neon";
+
   return (
     <div className={cn("rounded-md bg-panel px-3 py-3", className)}>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className={cn(
-            "font-display leading-none tabular-nums", 
-            heatTone === "high" ? "text-neon" : heatTone === "medium" ? "text-ink" : heatTone === "low" ? "text-muted" : "text-neon",
-            pctClass
-          )}>
+          <p className={cn("font-display leading-none tabular-nums", textColor, pctClass)}>
             {pctLabel ?? "—"}
           </p>
           <p className="mt-1 truncate text-xs uppercase tracking-[0.14em] text-muted">{label}</p>
@@ -134,12 +142,12 @@ export function WagerMeter({
         )}
       </div>
       {hasChance ? (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
-          <div className={cn(
-            "h-full rounded-full",
-            heatTone === "high" ? "bg-neon" : heatTone === "medium" ? "bg-ink" : heatTone === "low" ? "bg-muted" : "bg-neon"
-          )} style={{ width: `${pct}%` }} />
-        </div>
+        <>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-line" aria-hidden="true">
+            <div className={cn("h-full rounded-full transition-all duration-500", barColor)} style={{ width: `${pct}%` }} />
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted italic">{hitExplain}</p>
+        </>
       ) : null}
       {price != null && Number.isFinite(price) ? (
         <p className="mt-2 font-mono text-xs text-muted">Hard Rock would show {formatAmerican(price)}</p>
