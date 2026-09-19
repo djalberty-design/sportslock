@@ -146,8 +146,13 @@ export async function getGradeStats(): Promise<GradeStats> {
   try {
     await ensureGradeColumns();
     const sql = await getSql();
+    // Only count recommended picks (our model's actual recommendation per market)
+    // This avoids the 50/50 problem where both sides of every market are tracked
     const rows = await sql.query<{ status: string | null; n: number }>(
-      `select coalesce(status, 'PENDING') as status, count(*)::int as n from market_tape group by 1`,
+      `select coalesce(status, 'PENDING') as status, count(*)::int as n
+       from market_tape
+       where recommended = true
+       group by 1`,
     );
     const by = Object.fromEntries(rows.map((r) => [String(r.status).toUpperCase(), Number(r.n)]));
     return {

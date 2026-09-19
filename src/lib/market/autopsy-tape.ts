@@ -153,26 +153,26 @@ export async function getAutopsySummary(): Promise<AutopsySummary> {
     const buckets = await sql.query<{ bucket: string; status: string; n: number }>(
       `select coalesce(bucket, 'unreviewed') as bucket, status, count(*)::int as n
        from market_tape
-       where status in ('WIN', 'LOSS', 'PUSH')
+       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true
        group by 1, 2`,
     );
     const sports = await sql.query<{ sport: string; status: string; n: number }>(
       `select coalesce(sport, 'UNK') as sport, status, count(*)::int as n
        from market_tape
-       where status in ('WIN', 'LOSS')
+       where status in ('WIN', 'LOSS') and recommended = true
        group by 1, 2`,
     );
     const markets = await sql.query<{ market: string; status: string; n: number }>(
       `select coalesce(market_type, 'unk') as market, status, count(*)::int as n
        from market_tape
-       where status in ('WIN', 'LOSS')
+       where status in ('WIN', 'LOSS') and recommended = true
        group by 1, 2`,
     );
     const recent = await sql.query<Record<string, unknown>>(
       `select id, event_id, sport, home, away, market_type, side, selection, line, price,
               model_probability, edge, phase, status, bucket, autopsy_note, result_home, result_away, snapped_at
        from market_tape
-       where status in ('WIN', 'LOSS', 'PUSH')
+       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true
        order by graded_at desc nulls last, snapped_at desc
        limit 40`,
     );

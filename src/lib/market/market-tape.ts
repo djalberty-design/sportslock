@@ -47,12 +47,17 @@ async function ensureTapeTable() {
       status_text text,
       snapped_at timestamptz not null default now(),
       snapshot jsonb,
-      status text
+      status text,
+      recommended boolean not null default false
     )
   `);
   await sql.query(`alter table market_tape add column if not exists status text`);
+  await sql.query(`alter table market_tape add column if not exists recommended boolean not null default false`);
   await sql.query(
     `create index if not exists market_tape_event_idx on market_tape (event_id, market_type, side, snapped_at desc)`,
+  );
+  await sql.query(
+    `create index if not exists market_tape_rec_idx on market_tape (recommended, status)`,
   );
 }
 
@@ -120,6 +125,33 @@ export async function runMarketTape(): Promise<{
       }
     }
 
+    // Determine which side of each market is recommended (best edge)
+    const marketKey = (r: ScanRow) => `${r.eventId}|${r.marketType}`;
+    const marketGroups = new Map<string, ScanRow[]>();
+    for (const row of rows) {
+      const k = marketKey(row);
+      const arr = marketGroups.get(k) || [];
+      arr.push(row);
+      marketGroups.set(k, arr);
+    }
+
+    // For each market, the row with the highest edge is recommended
+    const recommendedSet = new Set<string>();
+    for (const [, group] of marketGroups) {
+      if (group.length === 0) continue;
+      let best = group[0];
+      for (const r of group) {
+        const rEdge = Number.isFinite(r.fairProb) && Number.isFinite(r.price)
+          ? evPct(r.price, r.fairProb)
+          : -Infinity;
+        const bEdge = Number.isFinite(best.fairProb) && Number.isFinite(best.price)
+          ? evPct(best.price, best.fairProb)
+          : -Infinity;
+        if (rEdge > bEdge) best = r;
+      }
+      recommendedSet.add(tapeKey(best));
+    }
+
     let wrote = 0;
     let skipped = 0;
 
@@ -145,6 +177,8 @@ export async function runMarketTape(): Promise<{
           ? evPct(price, model)
           : null;
 
+      const isRecommended = recommendedSet.has(base);
+
       const compact = {
         asOf: snap.asOf,
         phase,
@@ -166,17 +200,18 @@ export async function runMarketTape(): Promise<{
         period: row.period ?? null,
         clock: row.clock ?? null,
         statusText: row.statusText ?? null,
+        recommended: isRecommended,
       };
 
       await sql.query(
         `insert into market_tape (
           event_id, sport, home, away, start, market_type, side, selection,
           line, price, model_probability, edge, phase, in_play, complete,
-          home_score, away_score, period, clock, status_text, snapshot
+          home_score, away_score, period, clock, status_text, snapshot, recommended
         ) values (
           $1,$2,$3,$4,$5,$6,$7,$8,
           $9,$10,$11,$12,$13,$14,$15,
-          $16,$17,$18,$19,$20,$21::jsonb
+          $16,$17,$18,$19,$20,$21::jsonb,$22
         )`,
         [
           row.eventId,
@@ -200,6 +235,7 @@ export async function runMarketTape(): Promise<{
           row.clock ?? null,
           row.statusText ?? null,
           JSON.stringify(compact),
+          isRecommended,
         ],
       );
       wrote++;
@@ -281,9 +317,10 @@ export async function listTapeDesk(limit = 80): Promise<TapeDeskRow[]> {
     const sql = await getSql();
     const rows = await sql.query<Record<string, unknown>>(
       `select id, event_id, sport, home, away, market_type, side, selection, line, price,
-              model_probability, edge, phase, coalesce(status, 'OPEN') as status, snapped_at
+              model_probability, edge, phase, coalesce(status, 'OPEN') as status, snapped_at,
+              recommended
        from market_tape
-       order by snapped_at desc
+       order by recommended desc, snapped_at desc
        limit $1`,
       [Math.max(1, Math.min(200, limit))],
     );

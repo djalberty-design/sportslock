@@ -116,7 +116,7 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
               count(*) filter (where bucket = 'echoed_book')::int as echoed,
               count(*) filter (where bucket = 'high_variance')::int as variance
        from market_tape
-       where status in ('WIN','LOSS','PUSH')
+       where status in ('WIN','LOSS','PUSH') and recommended = true
        group by 1, 2`,
     );
     const totals = slices.reduce(

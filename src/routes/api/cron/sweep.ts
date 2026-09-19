@@ -50,7 +50,30 @@ async function handleSweep() {
     let loggedCount = 0;
     let skippedCount = 0;
 
+    // Only log the recommended side of each market (highest edge)
+    // This prevents the 50/50 problem where both sides are logged
+    const marketGroups = new Map<string, ScanRow[]>();
     for (const r of upcoming) {
+      const mKey = `${r.eventId}|${r.marketType}`;
+      const arr = marketGroups.get(mKey) || [];
+      arr.push(r);
+      marketGroups.set(mKey, arr);
+    }
+
+    const recommended: ScanRow[] = [];
+    for (const [, group] of marketGroups) {
+      if (group.length === 0) continue;
+      // Pick the side with the highest edge (our model's actual recommendation)
+      let best = group[0];
+      for (const r of group) {
+        const rEdge = Number(r.edge) || 0;
+        const bEdge = Number(best.edge) || 0;
+        if (rEdge > bEdge) best = r;
+      }
+      recommended.push(best);
+    }
+
+    for (const r of recommended) {
       const key = `${r.eventId}|${r.marketType}|${r.selection}`;
       if (loggedKeys.has(key)) {
         skippedCount++;
