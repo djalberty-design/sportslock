@@ -3,6 +3,7 @@ import { sweepLedger } from "@/lib/market/sweeper";
 import { runMarketTape } from "@/lib/market/market-tape";
 import { gradeMarketTape } from "@/lib/market/grade-tape";
 import { runTapeAutopsy } from "@/lib/market/autopsy-tape";
+import { buildSuggestions } from "@/lib/market/suggestions";
 
 export const Route = createFileRoute("/api/cron/sweep-ledger")({
   server: {
@@ -19,7 +20,8 @@ async function handleSweep() {
     const tape = await runMarketTape();
     const grade = await gradeMarketTape();
     const autopsy = await runTapeAutopsy();
-    return new Response(JSON.stringify({ success: true, ledger, tape, grade, autopsy }), {
+    const suggestions = await buildSuggestions();
+    return new Response(JSON.stringify({ success: true, ledger, tape, grade, autopsy, suggestions }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
