@@ -5,6 +5,7 @@ import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
 import { cn, formatKickoff } from "@/lib/utils";
 import { TicketChip } from "./ticket-lock";
+import { ThemeToggle } from "./theme-toggle";
 
 const TABS = [
   { to: "/", label: "SportsLock", icon: Hexagon },
@@ -91,6 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         
         <div className="p-3 border-t border-line/50 flex flex-col gap-2">
+          <ThemeToggle />
           <UserButton />
           {isAdmin && (
             <Link

@@ -10,6 +10,7 @@ import { postMortem } from "@/lib/market/post-mortem";
 import { downloadLedger, paperToLedger } from "@/lib/ledger";
 import { ledgerBrier, pendingLayerHaircuts } from "@/lib/market/ledger-law";
 import { DESK_VERSION } from "@/lib/market/rules";
+import { BankrollTracker } from "./bankroll-tracker";
 
 export function DeskPage() {
   const paperTickets = useDeskStore((s) => s.paperTickets);
@@ -177,6 +178,8 @@ export function DeskPage() {
         This device keeps the log. Signed-in sessions also save to the desk database. Guests never hit those endpoints.
         Download JSON for the Drive backup named sports_lock_ledger.json.
       </p>
+
+      <BankrollTracker />
 
       <section className="flex flex-wrap items-center gap-3">
         <Button

@@ -7,6 +7,7 @@ import { AccessGate } from "@/components/app/access-gate";
 import { useDeskStore } from "@/lib/desk-store";
 import { BRAND } from "@/lib/brand";
 import { ParlayBar } from "@/components/app/parlay-bar";
+import { ThemeSync } from "@/components/app/theme-toggle";
 import appCss from "../styles.css?url";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -70,6 +71,7 @@ function RootDocument() {
       </head>
       <body className="bg-paper text-ink">
         <PreviewHostBridge />
+        <ThemeSync />
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
             <AccessGate>

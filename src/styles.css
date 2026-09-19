@@ -77,3 +77,22 @@
     background: linear-gradient(135deg, var(--color-apex-dark) 0%, var(--color-apex) 100%);
   }
 }
+
+/* Light mode overrides */
+html.light {
+  --color-obsidian: #ffffff;
+  --color-panel: #f4f4f5;
+  --color-panel-border: #e4e4e7;
+  --color-muted: #71717a;
+  --color-ink: #18181b;
+  --color-faint: #a1a1aa;
+  --color-line: #e4e4e7;
+  --color-background: #fafafa;
+  --color-foreground: #18181b;
+  --color-border: #e4e4e7;
+}
+html.light body,
+html.light #app {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}

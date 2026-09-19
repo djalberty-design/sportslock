@@ -17,6 +17,7 @@ import { HitReadout, WagerMeter, getEdgeTone } from "./wager-meter";
 import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
 import { FastLogModal } from "./fast-log-modal";
+import { SharePickButton } from "./share-pick";
 
 export function PickCard({
   pick,
@@ -45,11 +46,21 @@ export function PickCard({
   const pinned = settings.pinnedPickId === pick.id;
   const row = pick.row;
   const isSharp = row?.ticketPct != null && row?.handlePct != null && (row.handlePct - row.ticketPct >= 15);
+  const edgeTone = getEdgeTone(pick.chance, pick.decimalPayout, pick.price);
 
   return (
     <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured || isSelected ? "ring-2 ring-neon" : ""))}>
+      {/* Confidence badge */}
+      <div className={cn("absolute top-3 right-3 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider z-10",
+        edgeTone === "high" ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30" :
+        edgeTone === "medium" ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30" :
+        "bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30"
+      )}>
+        <span className={cn("size-1.5 rounded-full", edgeTone === "high" ? "bg-emerald-400" : edgeTone === "medium" ? "bg-amber-400" : "bg-zinc-400")} />
+        {edgeTone === "high" ? "High Value" : edgeTone === "medium" ? "Value" : "Fair Price"}
+      </div>
       {isSharp && (
-        <div className="absolute top-14 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
+        <div className="absolute top-10 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
           🔥 SHARP
         </div>
       )}
@@ -149,7 +160,16 @@ export function PickCard({
         )}
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
-      <FeeTimingRow pick={pick} />
+      <div className="mt-2 flex items-center justify-between">
+        <FeeTimingRow pick={pick} />
+        <SharePickButton
+          selection={pick.selection}
+          odds={pick.price != null ? (pick.price > 0 ? `+${pick.price}` : `${pick.price}`) : ""}
+          probability={Math.round((pick.chance || 0) * 100)}
+          matchup={pick.home && pick.away ? `${pick.away} @ ${pick.home}` : ""}
+          sport={pick.sport || ""}
+        />
+      </div>
       
       {isAdmin ? (
         <div className="mt-2 flex gap-2">

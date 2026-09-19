@@ -8,6 +8,7 @@ import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
+import { MarketTip } from "./market-tip";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
@@ -272,7 +273,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                     ) : (
                       <span className="font-bold text-ink text-sm truncate">{label} {pointText}</span>
                     )}
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-0.5">{q.marketType || q.row?.marketType}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-0.5 inline-flex items-center gap-1">{q.marketType || q.row?.marketType} <MarketTip type={q.marketType || q.row?.marketType} /></span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
