@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { upsertOverride } from "@/lib/market/overrides";
+import { logActivity } from "@/lib/market/activity";
 
 export const Route = createFileRoute("/api/cron/brain-learn")({
   server: {
@@ -185,6 +186,8 @@ async function handleBrainLearn() {
       }
     }
 
+    void logActivity("brain", "Brain learning completed", `${insightsCreated} insights, ${autoTuned} auto-tuned`, "brain-learn-cron");
+
     return new Response(JSON.stringify({
       success: true,
       insightsCreated,
@@ -194,6 +197,7 @@ async function handleBrainLearn() {
 
   } catch (err) {
     console.error("Brain learn failed:", err);
+    void logActivity("error", "Brain learning failed", String(err), "brain-learn-cron");
     return new Response(JSON.stringify({ success: false, error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

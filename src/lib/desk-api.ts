@@ -421,6 +421,10 @@ export const decideAccessRequest = createServerFn({ method: "POST" })
       await sql`delete from desk_allowlist where email = ${email}`;
       await sql`update desk_access_requests set status = 'denied', updated_at = now() where email = ${email}`;
     }
+    try {
+      const { logActivity } = await import("@/lib/market/activity");
+      void logActivity("access", data.approve ? "User approved" : "User denied", `${email} (by ${actor})`, "admin");
+    } catch {}
     return fetchAccessRequests();
   });
 

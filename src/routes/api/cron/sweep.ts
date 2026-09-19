@@ -4,6 +4,7 @@ import { snapshotWithLiveScores } from "@/lib/market/with-live-scores";
 import { buildScan } from "@/lib/market/engine";
 import { logPrediction } from "@/lib/market/ledger";
 import { rowToPick } from "@/lib/market/research";
+import { logActivity } from "@/lib/market/activity";
 import type { ScanRow } from "@/lib/market/engine";
 
 export const Route = createFileRoute("/api/cron/sweep")({
@@ -87,6 +88,8 @@ async function handleSweep() {
 
     await Promise.all(insertPromises);
 
+    void logActivity("cron", "Sweep completed", `Logged ${loggedCount} picks from ${eventIds.length} events (${skippedCount} skipped dupes)`, "sweep-cron");
+
     return new Response(JSON.stringify({ 
       success: true, 
       loggedCount, 
@@ -99,6 +102,7 @@ async function handleSweep() {
 
   } catch (err) {
     console.error("Sweeper failed:", err);
+    void logActivity("error", "Sweep failed", String(err), "sweep-cron");
     return new Response(JSON.stringify({ success: false, error: String(err) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

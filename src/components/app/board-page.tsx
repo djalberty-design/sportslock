@@ -474,12 +474,22 @@ function GameCard({
             {g.phase === "preseason" ? " · Preseason" : g.phase === "playoff" ? " · Playoff" : ""}
           </p>
           </div>
-          {(homeLogo || awayLogo) ? (
-            <span className="flex -space-x-2">
-              {awayLogo ? <img src={awayLogo} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-              {homeLogo ? <img src={homeLogo} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-            </span>
-          ) : null}
+          {(() => {
+            const awayInit = (g.away || "A").charAt(0).toUpperCase();
+            const homeInit = (g.home || "H").charAt(0).toUpperCase();
+            return (
+              <span className="flex -space-x-2">
+                <span className="relative size-8 shrink-0">
+                  <span className="absolute inset-0 rounded-full bg-line flex items-center justify-center text-[11px] font-bold text-muted">{awayInit}</span>
+                  {awayLogo ? <img src={awayLogo} alt="" className="relative size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+                </span>
+                <span className="relative size-8 shrink-0">
+                  <span className="absolute inset-0 rounded-full bg-line flex items-center justify-center text-[11px] font-bold text-muted">{homeInit}</span>
+                  {homeLogo ? <img src={homeLogo} alt="" className="relative size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+                </span>
+              </span>
+            );
+          })()}
         </div>
         <LiveStamp row={g} className="mt-1 block" />
         <h3 className={cn("font-display mt-2 text-ink", isCore ? "text-2xl md:text-3xl" : "text-lg")}>
