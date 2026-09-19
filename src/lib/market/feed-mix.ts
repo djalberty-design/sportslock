@@ -57,13 +57,11 @@ export function classifyMix(pick: any): {
 }
 
 export function applyRibbonSportFilter<T>(rows: T[], sportFilter: string | undefined): T[] {
-  if (!sportFilter || sportFilter !== "ALL" && sportFilter) {
-    return rows.filter((pick: any) => {
-      if (pick?.sport === sportFilter) return true;
-      return ribbonLegs(pick).some((l) => l?.sport === sportFilter);
-    });
-  }
-  return rows;
+  if (!sportFilter || sportFilter === "ALL") return rows;
+  return rows.filter((pick: any) => {
+    if (pick?.sport === sportFilter) return true;
+    return ribbonLegs(pick).some((l) => l?.sport === sportFilter);
+  });
 }
 
 function snapshotGames(snapshot: any): SlateGame[] {
