@@ -81,3 +81,21 @@ Odds API quotes hard-coded `inPlay: false` and never carried a score. Matchups a
 - No ESPN fetch when the morning probe is missing or 403.
 - Official NBA CDN returned 403; NBA/NFL/college wait on ESPN-if-up.
 - Feed player props stay off.
+
+## Code — Phase E follow-up: ESPN web host + inning/quarter on tickets (evening)
+
+`site.api.espn.com` scoreboard is Akamai 403. Same path on `site.web.api.espn.com` returned 200. MLB StatsAPI already had Top/Bottom/Middle/End; the game ticket never printed it.
+
+### Changed
+
+- `src/lib/market/live-period.ts` — client-safe **Top 6th / Bot 6th / Mid 6th** / Q / P formatter.
+- `src/lib/market/live-scores.ts` — ESPN live overlay uses `site.web.api.espn.com`. MLB/NHL fetches no longer die when ESPN or cache write fails.
+- `src/lib/market/morning-pull.ts` — morning ESPN probe uses the web host.
+- `src/components/app/game-page.tsx` — live header shows score + period.
+- `src/routes/games.tsx` — Matchups LIVE chip includes period; copies period/clock/statusText off the quote.
+- `src/components/app/sportslock-parlay-card.tsx` — Feed LIVE chip includes period.
+
+### Unchanged on purpose
+
+- Feed player props stay off. This is scoreboard only. No Odds API `/event` props. Admin Fetch Props on a matchup is still one Odds API request.
+- No Odds API `/scores`.
