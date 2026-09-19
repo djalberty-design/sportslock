@@ -14,9 +14,15 @@ import { analyzeScores, blendRate } from "./form.ts";
 import { allowedForStat, processFromLooks, underlyingOffense, type TeamLooks } from "./looks.ts";
 import { americanToImplied, twoWayNoVig } from "./engine.ts";
 import { isCollegeSport } from "./universe.ts";
-import { applyNarrativeToProps } from "./narrative.ts";
+// narrative.ts and syndicate.ts were deleted (dead code — inputs never provided).
+// Inline no-op stubs so call sites don't need rewriting.
+const applyNarrativeToProps = (..._: any[]) => null;
 import { applyRefereeGrudgeToProps, type OfficialPosting } from "./officials.ts";
-import { applyTrenchMismatch, applyPitchArsenalSynergy, applyDefensiveSchemeSplit, applyKickerRedZoneStall, applyHostileFreshmanPenalty } from "./syndicate.ts";
+const applyTrenchMismatch = (..._: any[]) => null;
+const applyPitchArsenalSynergy = (..._: any[]) => null;
+const applyDefensiveSchemeSplit = (..._: any[]) => null;
+const applyKickerRedZoneStall = (..._: any[]) => null;
+const applyHostileFreshmanPenalty = (..._: any[]) => null;
 
 export type PropStat =
   | "pass_yds"
