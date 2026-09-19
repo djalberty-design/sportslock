@@ -128,7 +128,7 @@ function TheMatrix() {
         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
           <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
         </div>
-        <span className="text-[9px] font-mono text-muted mt-0.5">{empty ? "" : hit != null ? `${hit}%` : ""}</span>
+        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "later" : `${hit}%`}</span>
       </div>
     );
   }
@@ -189,11 +189,11 @@ function TheMatrix() {
                 </div>
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Matchup Projection</span>
+                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> Ticket hit %</span>
                     <span className="text-primary">{lean.pct != null ? `${lean.label} ${lean.pct}%` : "Looked"}</span>
                   </div>
-                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance the moneyline favorite hits. Each box below is that ticket. Not a lock.</p>
-                  <div className="h-1.5 w-full bg-line/40 rounded-full overflow-hidden">
+                  <p className="text-[10px] text-muted mb-1 leading-tight">Chance that moneyline hits. Grey boxes fill when the book posts a number. Live games keep updating.</p>
+                  <div className="h-1.5 w-full bg-line/40 overflow-hidden rounded-full">
                     <div className={`h-full rounded-full ${lean.pct != null ? "bg-primary" : "bg-line/70"}`} style={{ width: `${lean.pct ?? 0}%` }} />
                   </div>
                 </div>
