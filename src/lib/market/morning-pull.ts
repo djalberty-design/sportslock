@@ -30,9 +30,9 @@ const ESPN_SCOREBOARD: { sport: string; path: string }[] = [
 export async function probeEspnMorning(): Promise<EspnProbe[]> {
   const out: EspnProbe[] = [];
   for (const row of ESPN_SCOREBOARD) {
-    const url = `https://site.api.espn.com/apis/site/v2/sports/${row.path}/scoreboard`;
+    const url = `https://site.web.api.espn.com/apis/site/v2/sports/${row.path}/scoreboard`;
     try {
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const res = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; SportsLock/1.0; +https://x.ai)" } });
       let events: number | undefined;
       if (res.ok) {
         const json = await res.json().catch(() => null);

@@ -1,5 +1,7 @@
 import type { QuoteLine } from "./types";
 import { readOddsApiCache, writeOddsApiCache } from "./odds-api";
+import { mlbHalf, mlbInningLabel } from "./live-period";
+export { formatLivePeriod } from "./live-period";
 
 export type LiveScore = {
   sport: string;
@@ -24,6 +26,9 @@ const mem = (globalThis as any).__liveScoreCache || {
   at: 0,
 };
 (globalThis as any).__liveScoreCache = mem;
+
+const ESPN_WEB = "https://site.web.api.espn.com/apis/site/v2/sports";
+const ESPN_UA = "Mozilla/5.0 (compatible; SportsLock/1.0; +https://x.ai)";
 
 const ESPN_SCOREBOARD: { sport: string; path: string }[] = [
   { sport: "NFL", path: "football/nfl" },
@@ -76,37 +81,10 @@ export function applyLiveScores(quotes: QuoteLine[], scores: LiveScore[]): Quote
   });
 }
 
-export function formatLivePeriod(opts: {
-  sport?: string | null;
-  period?: string | number | null;
-  clock?: string | null;
-  statusText?: string | null;
-}): string {
-  const sport = String(opts.sport || "").toUpperCase();
-  const status = String(opts.statusText || "").trim();
-  const period = opts.period != null && String(opts.period).trim() ? String(opts.period).trim() : "";
-  const clock = String(opts.clock || "").trim();
-  if (sport === "MLB") {
-    if (status) return status;
-    if (clock && period && /top|bot|mid|end/i.test(clock)) return `${clock} ${period}`;
-    if (period) return `Inning ${period}`;
-    return clock;
-  }
-  if (sport === "NFL" || sport === "NCAAF" || sport === "NBA" || sport === "NCAAB") {
-    const q = period ? (/^q/i.test(period) ? period : `Q${period}`) : "";
-    return [q, clock && !/^q/i.test(clock) ? clock : ""].filter(Boolean).join(" ");
-  }
-  if (sport === "NHL") {
-    const per = period ? (/^p/i.test(period) ? period : `P${period}`) : "";
-    return [per, clock].filter(Boolean).join(" ");
-  }
-  return status || [period, clock].filter(Boolean).join(" ");
-}
-
 async function fetchJson(url: string): Promise<any | null> {
   try {
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", "User-Agent": ESPN_UA },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
@@ -145,7 +123,7 @@ function fromMlb(json: any): LiveScore[] {
         period: inning != null ? String(inning) : undefined,
         clock: half || undefined,
         statusText: inPlay
-          ? [half, inning != null ? `${inning}` : null].filter(Boolean).join(" ")
+          ? [mlbHalf(half), mlbInningLabel(ls.currentInningOrdinal || inning)].filter(Boolean).join(" ")
           : g.status?.detailedState,
         source: "mlb-statsapi",
       });
@@ -228,24 +206,22 @@ function fromEspnBoard(json: any, sport: string): LiveScore[] {
   return out;
 }
 
-async function espnAllowed(sport: string): Promise<boolean> {
-  const row = await readOddsApiCache("morning-pull");
-  const list = row?.data?.espn;
-  if (!Array.isArray(list)) return false;
-  return list.some((e: any) => e.sport === sport && e.ok === true);
-}
-
 async function pullFresh(): Promise<LiveScore[]> {
   const bags: LiveScore[][] = [];
-  const mlb = await fetchJson("https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=linescore,team");
-  if (mlb) bags.push(fromMlb(mlb));
-  const nhl = await fetchJson("https://api-web.nhle.com/v1/score/now");
-  if (nhl) bags.push(fromNhl(nhl));
+  try {
+    const mlb = await fetchJson("https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=linescore,team");
+    if (mlb) bags.push(fromMlb(mlb));
+  } catch {}
+  try {
+    const nhl = await fetchJson("https://api-web.nhle.com/v1/score/now");
+    if (nhl) bags.push(fromNhl(nhl));
+  } catch {}
 
   for (const row of ESPN_SCOREBOARD) {
-    if (!(await espnAllowed(row.sport))) continue;
-    const board = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${row.path}/scoreboard`);
-    if (board) bags.push(fromEspnBoard(board, row.sport));
+    try {
+      const board = await fetchJson(`${ESPN_WEB}/${row.path}/scoreboard`);
+      if (board) bags.push(fromEspnBoard(board, row.sport));
+    } catch {}
   }
   return bags.flat();
 }
@@ -264,6 +240,8 @@ export async function fetchLiveScores(): Promise<LiveScore[]> {
   const scores = await pullFresh();
   mem.scores = scores;
   mem.at = Date.now();
-  await writeOddsApiCache("live-scores", { source: "live-scores", scores });
+  try {
+    await writeOddsApiCache("live-scores", { source: "live-scores", scores });
+  } catch {}
   return scores;
 }
