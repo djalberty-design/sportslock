@@ -8,6 +8,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import {
   applyMixFilter,
   applyRibbonSportFilter,
+  applySlateDayFilter,
   buildFeedParlays,
   snapshotSports,
   type MixFilter,
@@ -22,7 +23,10 @@ function SportsLockCommandCenter() {
 
   const feed = buildFeedParlays(picks);
   const liveSports = snapshotSports(snapshot);
-  const filtered = applyMixFilter(applyRibbonSportFilter(feed, sportFilter), mixFilter);
+  const filtered = applyMixFilter(
+    applyRibbonSportFilter(applySlateDayFilter(feed, snapshot), sportFilter),
+    mixFilter,
+  );
   const gold = filtered.filter((p: any) => p.feedLane === "gold");
   const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
 
