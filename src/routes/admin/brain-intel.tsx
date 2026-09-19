@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getBrainStatsFn, type BrainStats } from "@/lib/market/server";
+import { getBrainStatsFn, getBrainInsightsFn, type BrainStats, type BrainInsight } from "@/lib/market/server";
 import { cn } from "@/lib/utils";
 import { Brain, TrendingUp, TrendingDown, Activity, Target, AlertTriangle, Zap, BarChart2, Flame, Eye } from "lucide-react";
 
@@ -162,6 +162,116 @@ function BrainIntel() {
           </table>
         </div>
       </div>
+      {/* Brain Learning Insights */}
+      <BrainInsightsSection />
+    </div>
+  );
+}
+
+function BrainInsightsSection() {
+  const { data: insights } = useQuery({
+    queryKey: ["brain-insights"],
+    queryFn: () => getBrainInsightsFn(),
+    refetchInterval: 120_000,
+  });
+
+  if (!insights || insights.length === 0) {
+    return (
+      <div className="bg-panel border border-line rounded-xl p-5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-1.5">
+          <Brain className="size-3.5 text-primary" /> Brain Learning
+        </h3>
+        <p className="text-sm text-muted">No insights yet. The brain-learn cron runs nightly at 2 AM ET.</p>
+      </div>
+    );
+  }
+
+  const brier = insights.filter((i) => i.type === "brier");
+  const brierGlobal = brier.find((i) => i.scope === "global");
+  const brierSports = brier.filter((i) => i.scope === "sport");
+  const sharp = insights.filter((i) => i.type === "sharpness");
+  const perf = insights.find((i) => i.type === "performance" && i.period === "7d");
+  const autoTunes = insights.filter((i) => i.type === "auto_tune");
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Brier Score */}
+      <div className="bg-panel border border-line rounded-xl p-5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-1.5">
+          <Target className="size-3.5 text-primary" /> Calibration (Brier Score)
+        </h3>
+        <p className="text-[10px] text-muted mb-3">Lower = better. Perfect: 0.00, Random: 0.25, Useless: 0.50</p>
+        {brierGlobal && (
+          <div className="mb-3">
+            <div className="text-2xl font-mono font-black text-primary">{brierGlobal.metricValue.toFixed(4)}</div>
+            <div className="text-[10px] text-muted">Global (n={(brierGlobal.details as any)?.n})</div>
+          </div>
+        )}
+        <div className="space-y-2">
+          {brierSports.map((b) => (
+            <div key={b.sport} className="flex justify-between text-xs">
+              <span className="text-muted">{b.sport}</span>
+              <span className={cn("font-mono font-bold", b.metricValue < 0.2 ? "text-emerald-400" : b.metricValue < 0.25 ? "text-amber-400" : "text-red-400")}>
+                {b.metricValue.toFixed(4)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sharpness */}
+      <div className="bg-panel border border-line rounded-xl p-5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-1.5">
+          <Zap className="size-3.5 text-amber-500" /> Sharpness
+        </h3>
+        <p className="text-[10px] text-muted mb-3">Does higher confidence predict better? It should.</p>
+        <div className="space-y-3">
+          {sharp.map((s) => {
+            const d = s.details as any;
+            return (
+              <div key={s.scope}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-muted capitalize">{s.scope} confidence</span>
+                  <span className={cn("font-mono font-bold", (d?.winRate || 0) >= 55 ? "text-emerald-400" : (d?.winRate || 0) >= 50 ? "text-amber-400" : "text-red-400")}>
+                    {d?.winRate || 0}% (n={d?.n || 0})
+                  </span>
+                </div>
+                <div className="h-1.5 bg-line/30 rounded-full overflow-hidden">
+                  <div className={cn("h-full rounded-full", (d?.winRate || 0) >= 55 ? "bg-emerald-500" : (d?.winRate || 0) >= 50 ? "bg-amber-500" : "bg-red-500")}
+                    style={{ width: `${d?.winRate || 0}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {perf && (
+          <div className="mt-4 pt-3 border-t border-line">
+            <div className="text-[10px] text-muted mb-1">Rolling 7-day</div>
+            <div className="text-lg font-mono font-bold text-primary">
+              {Math.round(perf.metricValue * 100)}%
+              <span className="text-xs text-muted ml-2">({(perf.details as any)?.wins}W-{(perf.details as any)?.losses}L)</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Auto-Tunes */}
+      {autoTunes.length > 0 && (
+        <div className="bg-panel border border-amber-500/20 rounded-xl p-5 md:col-span-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3">🤖 Auto-Tunes Applied</h3>
+          <div className="space-y-2">
+            {autoTunes.map((t, i) => {
+              const d = t.details as any;
+              return (
+                <div key={i} className="text-xs flex justify-between items-center">
+                  <span className="text-ink">{t.sport}: {d?.haircut}% haircut (gap: {d?.gap}%, n={d?.n})</span>
+                  <span className="text-muted font-mono">{new Date(t.computedAt).toLocaleDateString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

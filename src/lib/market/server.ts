@@ -480,3 +480,49 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
       };
     }
   });
+
+export type BrainInsight = {
+  type: string;
+  scope: string;
+  sport: string | null;
+  marketType: string | null;
+  metricName: string;
+  metricValue: number;
+  details: Record<string, unknown>;
+  period: string;
+  computedAt: string;
+};
+
+export const getBrainInsightsFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<BrainInsight[]> => {
+    try {
+      await assertAdmin(context.userId);
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      // Check if table exists
+      const exists = await sql`
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'desk_brain_insights' LIMIT 1
+      `;
+      if (!exists.length) return [];
+      const rows = await sql`
+        SELECT insight_type, scope, sport, market_type, metric_name, metric_value, details, period, computed_at
+        FROM desk_brain_insights
+        ORDER BY computed_at DESC
+        LIMIT 50
+      `;
+      return rows.map((r: any) => ({
+        type: r.insight_type,
+        scope: r.scope,
+        sport: r.sport || null,
+        marketType: r.market_type || null,
+        metricName: r.metric_name,
+        metricValue: Number(r.metric_value),
+        details: r.details || {},
+        period: r.period,
+        computedAt: String(r.computed_at),
+      }));
+    } catch {
+      return [];
+    }
+  });
