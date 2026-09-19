@@ -12,6 +12,9 @@ export type TapeStats = {
   live: number;
   final: number;
   events: number;
+  lastWrote?: number;
+  lastSkipped?: number;
+  lastError?: string;
 };
 
 const PREGAME_MIN_MS = 6 * 60 * 60 * 1000;
@@ -61,6 +64,7 @@ function phaseOf(row: ScanRow, now: number): TapePhase {
   const start = row.start ? new Date(row.start).getTime() : NaN;
   const hasScore = row.homeScore != null && row.awayScore != null;
   if (hasScore && Number.isFinite(start) && start < now - 5 * 60 * 1000) return "final";
+  if ((row as { complete?: boolean }).complete) return "final";
   return "pregame";
 }
 
@@ -208,13 +212,21 @@ export async function runMarketTape(): Promise<{
   }
 }
 
-export async function getTapeStats(): Promise<TapeStats> {
+export async function getTapeStats(write = false): Promise<TapeStats> {
+  let lastWrote = 0;
+  let lastSkipped = 0;
+  let lastError: string | undefined;
+  if (write) {
+    const run = await runMarketTape();
+    lastWrote = run.wrote;
+    lastSkipped = run.skipped;
+    lastError = run.error;
+  }
   try {
     await ensureTapeTable();
     const sql = await getSql();
-    const rows = await sql.query<{ phase: string; n: number; events: number }>(
-      `select phase, count(*)::int as n, count(distinct event_id)::int as events
-       from market_tape group by phase`,
+    const rows = await sql.query<{ phase: string; n: number }>(
+      `select phase, count(*)::int as n from market_tape group by phase`,
     );
     const by = Object.fromEntries(rows.map((r) => [r.phase, r]));
     const total = rows.reduce((s, r) => s + Number(r.n || 0), 0);
@@ -225,8 +237,20 @@ export async function getTapeStats(): Promise<TapeStats> {
       live: Number(by.live?.n || 0),
       final: Number(by.final?.n || 0),
       events: Number(events[0]?.n || 0),
+      lastWrote,
+      lastSkipped,
+      lastError,
     };
-  } catch {
-    return { total: 0, pregame: 0, live: 0, final: 0, events: 0 };
+  } catch (err) {
+    return {
+      total: 0,
+      pregame: 0,
+      live: 0,
+      final: 0,
+      events: 0,
+      lastWrote,
+      lastSkipped,
+      lastError: lastError || String(err),
+    };
   }
 }
