@@ -262,13 +262,15 @@ export async function getTapeStats(write = false): Promise<TapeStats> {
   }
   try {
     await ensureTapeTable();
+    // Run backfill if needed (one-time, idempotent)
+    await backfillRecommended();
     const sql = await getSql();
     const rows = await sql.query<{ phase: string; n: number }>(
-      `select phase, count(*)::int as n from market_tape group by phase`,
+      `select phase, count(*)::int as n from market_tape where recommended = true group by phase`,
     );
     const by = Object.fromEntries(rows.map((r) => [r.phase, r]));
     const total = rows.reduce((s, r) => s + Number(r.n || 0), 0);
-    const events = await sql.query<{ n: number }>(`select count(distinct event_id)::int as n from market_tape`);
+    const events = await sql.query<{ n: number }>(`select count(distinct event_id)::int as n from market_tape where recommended = true`);
     return {
       total,
       pregame: Number(by.pregame?.n || 0),
@@ -290,6 +292,40 @@ export async function getTapeStats(write = false): Promise<TapeStats> {
       lastSkipped,
       lastError: lastError || String(err),
     };
+  }
+}
+
+/**
+ * One-time backfill: mark the best-edge side of each event_id + market_type
+ * as recommended = true for all existing rows that have recommended = false.
+ * Idempotent — does nothing if rows already have recommended = true.
+ */
+let backfillRan = false;
+async function backfillRecommended() {
+  if (backfillRan) return;
+  backfillRan = true;
+  try {
+    const sql = await getSql();
+    // Check if any recommended rows exist
+    const check = await sql.query<{ n: number }>(`select count(*)::int as n from market_tape where recommended = true limit 1`);
+    if (Number(check[0]?.n) > 0) return; // Already backfilled
+
+    // For each event_id + market_type group, mark the side with the highest edge as recommended
+    await sql.query(`
+      with ranked as (
+        select id, 
+               row_number() over (partition by event_id, market_type order by edge desc nulls last, model_probability desc nulls last) as rn
+        from market_tape
+      )
+      update market_tape
+      set recommended = true
+      from ranked
+      where market_tape.id = ranked.id and ranked.rn = 1
+    `);
+    console.log("backfillRecommended: completed");
+  } catch (err) {
+    console.error("backfillRecommended failed:", err);
+    backfillRan = false; // Allow retry
   }
 }
 

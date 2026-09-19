@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { ShieldAlert, Cpu, BarChart2, Brain, Activity, Lightbulb } from "lucide-react";
+import { ShieldAlert, Cpu, BarChart2, Brain, Activity, Lightbulb, UserCheck, Settings, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccess } from "@/lib/use-access";
 
@@ -11,6 +11,8 @@ const TABS = [
   { to: "/admin/predictions", label: "Predictions", icon: BarChart2 },
   { to: "/admin/autopsy", label: "AI Autopsy", icon: Brain },
   { to: "/admin/suggestions", label: "Suggestions", icon: Lightbulb },
+  { to: "/admin/brain-intel", label: "Brain Intel", icon: Target },
+  { to: "/admin/approvals", label: "Approvals", icon: UserCheck },
 ];
 
 function AdminOverseer() {

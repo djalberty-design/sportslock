@@ -75,19 +75,12 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const toggleLeg = (quote: any) => {
     setSgpSlip(prev => {
+      // Check if this exact selection is already in the slip
       const exists = prev.find(p => p.selection === quote.selection && (p.marketType === quote.marketType || p.id === quote.id));
-      if (exists) return prev.filter(p => p !== exists);
-      // Mutual exclusivity: remove any existing leg from the same market
-      // (e.g. clicking Home ML auto-removes Away ML, clicking Over removes Under)
-      const qEvent = quote.eventId || eventId;
-      const qMarket = quote.marketType || quote.row?.marketType;
-      const filtered = prev.filter(p => {
-        const pEvent = p.eventId || eventId;
-        const pMarket = p.marketType || p.row?.marketType;
-        // Keep legs from different events or different market types
-        return pEvent !== qEvent || pMarket !== qMarket;
-      });
-      return [...filtered, quote];
+      // If already selected, deselect it (clear slip)
+      if (exists) return [];
+      // Otherwise, replace the entire slip with just this one selection (straight bet)
+      return [quote];
     });
     setSaved(false);
   };

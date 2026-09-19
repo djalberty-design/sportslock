@@ -130,13 +130,21 @@ function feedValueFilter(pick: any): boolean {
   // Filter out picks where ANY leg is an extreme favorite
   for (const leg of legs) {
     const price = leg?.price ?? leg?.hardRockPrice ?? 0;
-    if (price < -500) return false; // -500 or heavier = no value
+    if (price < -400) return false; // -400 or heavier per leg = no value
   }
+  // Check COMBINED parlay odds — individual legs at -300 can combine to -2500
+  const combinedDec = pick?.decimalPayout ?? pick?.parlay?.decimalPayout ?? 0;
+  if (combinedDec > 0 && combinedDec < 1.25) return false; // Worse than -400 combined = terrible value
+  // Also check by combined price directly
+  const combinedPrice = pick?.price ?? 0;
+  if (combinedPrice < -400) return false;
   // Require minimum edge
   const edge = pick?.edge ?? pick?.parlay?.edge ?? 0;
   const chance = pick?.chance ?? pick?.parlay?.combinedFair ?? 0;
   // Don't show coin-flip garbage (< 35% combined probability)
   if (chance < 0.35 && !pick?.parlay) return false;
+  // Don't show anything above 85% probability (heavy favorites, no value)
+  if (chance > 0.85) return false;
   return true;
 }
 
