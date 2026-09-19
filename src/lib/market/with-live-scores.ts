@@ -5,7 +5,14 @@ import type { DeskSnapshot, QuoteLine } from "./types";
 function isFinishedQuote(q: QuoteLine): boolean {
   if ((q as { complete?: boolean }).complete) return true;
   const st = String(q.statusText || "").toLowerCase();
-  return st.includes("final") || st.includes("official");
+  if (/(final|official|game over|completed|closed)/.test(st)) return true;
+  if (q.inPlay) return false;
+  const start = Date.parse(String(q.start || ""));
+  if (!Number.isFinite(start)) return false;
+  const ageH = (Date.now() - start) / 3_600_000;
+  const sport = String(q.sport || "");
+  const limit = sport === "NCAAF" || sport === "NFL" ? 4.25 : 3.25;
+  return ageH >= limit;
 }
 
 export function dropFinishedGames(snap: DeskSnapshot): DeskSnapshot {
