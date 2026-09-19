@@ -1,33 +1,27 @@
 # Brain tape + suggestions — plan (locked 2026-09-18 evening)
 
-Goal: closed tape of game markets, then human-approved suggestions. No LLM edit of `engine.ts`. No Feed props.
+Closed tape of game markets. Human Accept before anything changes the scan. No LLM edit of `engine.ts`. No Feed props.
 
-## H1 — Market tape (shipped, confirmed 10:35 ET)
+## H1 tape — shipped / confirmed 10:35 ET
+## H2 grade — shipped
+## H3 autopsy buckets — shipped
+## H4 suggestion queue — shipped
 
-1245 snaps / 134 events. Finals off Matchups. Live Status open writes the tape.
+Suggestions tab. Accept / Reject / Later store `brain_suggestions` only until H5.
 
-## H2 — Grade the tape (shipped)
+## H5 — Engine reads accepted overrides (shipping now)
 
-WIN / LOSS / PUSH off StatsAPI / NHL / ESPN web. Team-name match. Live stays pending.
+Accept of a sport/market card writes `brain_overrides`.
 
-## H3 — Autopsy buckets (shipped)
+- `chanceHaircut` — subtract from `fairProb` on that sport + market, clip 1–99%, recompute EV
+- `action: sit` — stand down that slice unless the line is photographed / Hard Rock
+- `hold-kelly` / sample-too-small / global echo — **no override** (notes only)
+- Reject or Later deletes that fingerprint override
 
-model_miss / echoed_book / high_variance / settled. Autopsy page reads `market_tape`.
+`rankDesk` applies overrides after Florida law, before ribbon picks. Kelly sliders stay manual in Engine Bay.
 
-## H4 — Suggestion queue (shipping now)
-
-New Overseer tab **Suggestions**. Built from graded counts.
-
-- Slice needs 8+ decided snaps (WIN+LOSS) to propose a sport/market note
-- Below that: one honest card, sample too small, do not move Kelly / EV floor
-- Accept / Reject / Later write `brain_suggestions` only
-- Rejected fingerprints stay quiet 14 days; Later 2 days
-- **Does not change the engine**
-
-## H5 — Engine reads accepted overrides (next)
-
-Only after an Accept. Haircuts / sit flags / tuning writes wait for that slice.
+Loop is closed: tape → grade → buckets → suggestion → your Accept → scan change.
 
 ## Out of scope
 
-Feed props, player boards, auto-apply, Odds API `/scores`.
+Feed props, player boards, auto-apply without Accept, Odds API `/scores`.

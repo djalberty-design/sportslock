@@ -3,6 +3,7 @@ import { getTapeStats, type TapeStats } from "./market-tape";
 import { gradeMarketTape, getGradeStats } from "./grade-tape";
 import { runTapeAutopsy, getAutopsySummary, type AutopsySummary } from "./autopsy-tape";
 import { buildSuggestions, decideSuggestion, listSuggestions, type BrainSuggestion, type SuggestionStatus } from "./suggestions";
+import { clearOverride, upsertOverride } from "./overrides";
 
 export const getTapeStatsFn = createServerFn({ method: "GET" }).handler(async (): Promise<TapeStats & {
   wins: number;
@@ -43,5 +44,24 @@ export const getSuggestionsFn = createServerFn({ method: "GET" }).handler(async 
 export const decideSuggestionFn = createServerFn({ method: "POST" })
   .validator((d: { id: string; status: SuggestionStatus }) => d)
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
-    return decideSuggestion(data.id, data.status);
+    const current = (await listSuggestions()).find((s) => s.id === data.id);
+    const res = await decideSuggestion(data.id, data.status);
+    if (!res.ok || !current) return res;
+    const proposed = current.proposed || {};
+    const sport = String(proposed.sport || "");
+    const market = String(proposed.market || "");
+    if (data.status === "accepted" && sport && market && (proposed.chanceHaircut || proposed.action === "sit")) {
+      await upsertOverride({
+        fingerprint: current.fingerprint,
+        sport,
+        market,
+        chanceHaircut: Number(proposed.chanceHaircut || 0),
+        sit: proposed.action === "sit",
+        note: current.title,
+      });
+    }
+    if (data.status === "rejected" || data.status === "later") {
+      await clearOverride(current.fingerprint);
+    }
+    return res;
   });
