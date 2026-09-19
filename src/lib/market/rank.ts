@@ -1,4 +1,3 @@
-/** One ranking pass. Worker and main-thread fallback both call this. */
 import type { DeskSnapshot, ScanBundle, ScanRow } from "./types.ts";
 import { buildScan } from "./engine.ts";
 import { buildDeskPicks, type DeskPicks, type DeskPick } from "./picks.ts";
@@ -6,6 +5,7 @@ import type { RankSettings } from "../desk-settings.ts";
 import { DESK_VERSION } from "./rules.ts";
 import { floridaBlockReason, isFloridaBlocked } from "./florida.ts";
 import { comboHasBlockedLeg, keepLegalCombos } from "./combo-law.ts";
+import { applyAcceptedOverrides, listOverrides } from "./overrides.ts";
 
 export type RankRequest = {
   id: number;
@@ -82,7 +82,10 @@ export async function rankDesk(
   halt: boolean,
   settings?: RankSettings,
 ): Promise<{ scan: ScanBundle; picks: DeskPicks }> {
-  const scan = applyFloridaLaw(await buildScan(snapshot, halt, settings));
+  const raw = applyFloridaLaw(await buildScan(snapshot, halt, settings));
+  const overrides = await listOverrides();
+  const rows = applyAcceptedOverrides(raw.rows, overrides);
+  const scan = { ...raw, rows };
   const picks = scrubPicks(buildDeskPicks(scan, snapshot));
   return { scan, picks };
 }
@@ -93,7 +96,6 @@ export async function runRankJob(req: RankRequest): Promise<RankResult> {
   return { id: req.id, scan, picks, ms: Date.now() - t0 };
 }
 
-/** Fingerprint of posted prices so ranking ignores clock-only refreshes. Includes desk version so a rule bump reranks. */
 export function oddsFingerprint(snapshot: DeskSnapshot): string {
   const quotes = snapshot.quotes
     .map((q) => `${q.eventId}:${q.marketType}:${q.side}:${q.price}:${q.point ?? ""}:${q.inPlay ? 1 : 0}:${q.source ?? ""}`)
