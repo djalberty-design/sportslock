@@ -58,12 +58,61 @@ export function getActiveSports(): string[] {
   return active;
 }
 
+export const ODDS_REGIONS = "us,us2";
+/** Florida Hard Rock first. `hardrock` is not a valid Odds API key. */
+export const ODDS_BOOKS = "hardrockbet_fl,hardrockbet,draftkings,fanduel";
+
 export function getOddsQuota() {
   return globalCache.quotaRemaining;
 }
 
+function oddsUrl(path: string, extra: string) {
+  return `https://api.the-odds-api.com/v4/${path}?apiKey=${ODDS_API_KEY}&regions=${ODDS_REGIONS}&${extra}&bookmakers=${ODDS_BOOKS}`;
+}
+
+function noteQuota(res: Response) {
+  const remaining = res.headers.get("x-requests-remaining");
+  if (remaining) globalCache.quotaRemaining = parseInt(remaining, 10);
+}
+
+async function patchMainsEvent(sportKey: string, eventId: string, event: any) {
+  let mains = globalCache.mains;
+  if (!mains || !Array.isArray(mains)) {
+    const cached = await readDbCache("mains");
+    mains = cached?.data && Array.isArray(cached.data) ? cached.data : [];
+  }
+  let group = mains.find((g: any) => g?.sport === sportKey);
+  if (!group) {
+    group = { sport: sportKey, data: [] };
+    mains.push(group);
+  }
+  if (!Array.isArray(group.data)) group.data = [];
+  const i = group.data.findIndex((e: any) => e?.id === eventId);
+  if (i >= 0) group.data[i] = { ...group.data[i], ...event };
+  else group.data.push(event);
+  globalCache.mains = mains;
+  globalCache.mainsLastFetch = Date.now();
+  await writeOddsApiCache("mains", mains);
+}
+
+/** One-event mains pull. Admin ticket button. 1 Odds API request. */
+export async function fetchOddsApiEvent(sportKey: string, eventId: string) {
+  const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, "markets=h2h,spreads,totals");
+  const res = await fetch(url);
+  noteQuota(res);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[odds-api] Event error for ${eventId}:`, res.status, body);
+    return null;
+  }
+  const data = await res.json();
+  await patchMainsEvent(sportKey, eventId, data);
+  await writeOddsApiCache(`event:${eventId}`, data);
+  return data;
+}
+
 export async function fetchOddsApiMains(force = false) {
-  // L1: check in-memory cache first (fastest, survives warm starts)
+  // L1: check in-memory cache first (survives warm starts)
   if (!force && globalCache.mains && globalCache.mains.length > 0 && Date.now() - globalCache.mainsLastFetch < CACHE_TTL) {
     console.log("[odds-api] L1 memory cache hit, age:", Math.round((Date.now() - globalCache.mainsLastFetch) / 60000), "min");
     return globalCache.mains;
@@ -89,11 +138,10 @@ export async function fetchOddsApiMains(force = false) {
 
   for (const sport of sports) {
     try {
-      const url = `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&bookmakers=hardrock,draftkings,fanduel`;
+      const url = oddsUrl(`sports/${sport}/odds/`, "markets=h2h,spreads,totals");
       const res = await fetch(url);
 
-      const remaining = res.headers.get("x-requests-remaining");
-      if (remaining) globalCache.quotaRemaining = parseInt(remaining, 10);
+      noteQuota(res);
 
       if (!res.ok) {
         console.error(`[odds-api] Error for ${sport}:`, res.status, await res.text().catch(() => ""));
@@ -120,12 +168,12 @@ export async function fetchOddsApiMains(force = false) {
   return results;
 }
 
-export async function fetchOddsApiProps(sportKey: string, eventId: string) {
-  if (globalCache.props[eventId]) {
+export async function fetchOddsApiProps(sportKey: string, eventId: string, force = false) {
+  if (!force && globalCache.props[eventId]) {
     return globalCache.props[eventId];
   }
   const cacheKey = `props:${eventId}`;
-  const cached = await readDbCache(cacheKey);
+  const cached = force ? null : await readDbCache(cacheKey);
   if (cached && cached.data) {
     const age = Date.now() - cached.fetchedAt.getTime();
     if (age < CACHE_TTL) {
@@ -136,12 +184,11 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string) {
 
   try {
     const markets = "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_home_runs,player_strikeouts,player_hits,player_points,player_rebounds,player_assists";
-    const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/events/${eventId}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=${markets}&bookmakers=hardrock,draftkings,fanduel`;
+    const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, `markets=${markets}`);
 
     const res = await fetch(url);
 
-    const remaining = res.headers.get("x-requests-remaining");
-    if (remaining) globalCache.quotaRemaining = parseInt(remaining, 10);
+    noteQuota(res);
 
     if (!res.ok) {
       console.error(`[odds-api] Props error for ${eventId}:`, res.status);

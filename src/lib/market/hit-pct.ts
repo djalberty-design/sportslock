@@ -1,7 +1,7 @@
 /** Single ticket hit %. Clip 1–99. Prefer model when it is sane; else the book. */
 
-/** Hard Rock Florida almost never posts past this. Do not invent -5000 from a fairProb. */
-export const HARD_ROCK_ODDS_CAP = 2000;
+/** Reject invented monster prices. Real posted Hard Rock Americans stay. */
+export const HARD_ROCK_ODDS_CAP = 10000;
 
 export function bookAmerican(raw?: number | null): number | null {
   const p = Number(raw);
