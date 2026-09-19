@@ -76,6 +76,33 @@ export function applyLiveScores(quotes: QuoteLine[], scores: LiveScore[]): Quote
   });
 }
 
+export function formatLivePeriod(opts: {
+  sport?: string | null;
+  period?: string | number | null;
+  clock?: string | null;
+  statusText?: string | null;
+}): string {
+  const sport = String(opts.sport || "").toUpperCase();
+  const status = String(opts.statusText || "").trim();
+  const period = opts.period != null && String(opts.period).trim() ? String(opts.period).trim() : "";
+  const clock = String(opts.clock || "").trim();
+  if (sport === "MLB") {
+    if (status) return status;
+    if (clock && period && /top|bot|mid|end/i.test(clock)) return `${clock} ${period}`;
+    if (period) return `Inning ${period}`;
+    return clock;
+  }
+  if (sport === "NFL" || sport === "NCAAF" || sport === "NBA" || sport === "NCAAB") {
+    const q = period ? (/^q/i.test(period) ? period : `Q${period}`) : "";
+    return [q, clock && !/^q/i.test(clock) ? clock : ""].filter(Boolean).join(" ");
+  }
+  if (sport === "NHL") {
+    const per = period ? (/^p/i.test(period) ? period : `P${period}`) : "";
+    return [per, clock].filter(Boolean).join(" ");
+  }
+  return status || [period, clock].filter(Boolean).join(" ");
+}
+
 async function fetchJson(url: string): Promise<any | null> {
   try {
     const res = await fetch(url, {
