@@ -18,7 +18,7 @@ export type TapeStats = {
 };
 
 const PREGAME_MIN_MS = 6 * 60 * 60 * 1000;
-const LIVE_MIN_MS = 20 * 60 * 1000;
+const LIVE_MIN_MS = 5 * 60 * 1000;
 
 async function ensureTapeTable() {
   const sql = await getSql();
@@ -46,9 +46,11 @@ async function ensureTapeTable() {
       clock text,
       status_text text,
       snapped_at timestamptz not null default now(),
-      snapshot jsonb
+      snapshot jsonb,
+      status text
     )
   `);
+  await sql.query(`alter table market_tape add column if not exists status text`);
   await sql.query(
     `create index if not exists market_tape_event_idx on market_tape (event_id, market_type, side, snapped_at desc)`,
   );
@@ -252,5 +254,57 @@ export async function getTapeStats(write = false): Promise<TapeStats> {
       lastSkipped,
       lastError: lastError || String(err),
     };
+  }
+}
+
+export type TapeDeskRow = {
+  id: string;
+  eventId: string;
+  sport: string;
+  home: string;
+  away: string;
+  marketType: string;
+  side: string;
+  selection: string;
+  line: number | null;
+  price: number | null;
+  modelProb: number | null;
+  edge: number | null;
+  phase: string;
+  status: string;
+  snappedAt: string;
+};
+
+export async function listTapeDesk(limit = 80): Promise<TapeDeskRow[]> {
+  try {
+    await ensureTapeTable();
+    const sql = await getSql();
+    const rows = await sql.query<Record<string, unknown>>(
+      `select id, event_id, sport, home, away, market_type, side, selection, line, price,
+              model_probability, edge, phase, coalesce(status, 'OPEN') as status, snapped_at
+       from market_tape
+       order by snapped_at desc
+       limit $1`,
+      [Math.max(1, Math.min(200, limit))],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      eventId: String(r.event_id || ""),
+      sport: String(r.sport || ""),
+      home: String(r.home || ""),
+      away: String(r.away || ""),
+      marketType: String(r.market_type || ""),
+      side: String(r.side || ""),
+      selection: String(r.selection || ""),
+      line: r.line == null ? null : Number(r.line),
+      price: r.price == null ? null : Number(r.price),
+      modelProb: r.model_probability == null ? null : Number(r.model_probability),
+      edge: r.edge == null ? null : Number(r.edge),
+      phase: String(r.phase || ""),
+      status: String(r.status || "OPEN"),
+      snappedAt: String(r.snapped_at || ""),
+    }));
+  } catch {
+    return [];
   }
 }
