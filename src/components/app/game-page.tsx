@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
 import { MarketTip } from "./market-tip";
+import { ProjectedScore, PublicSharpMeter, StreakBadge } from "./competitive-widgets";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
@@ -421,6 +422,36 @@ export function GamePage({ eventId }: { eventId: string }) {
             </div>
           </div>
         )}
+
+        {/* Projected Score */}
+        <ProjectedScore
+          homeAbbr={firstQuoteRef?.homeAbbr}
+          awayAbbr={firstQuoteRef?.awayAbbr}
+          homePf={gameBrief?.homePf}
+          homePa={gameBrief?.homePa}
+          awayPf={gameBrief?.awayPf}
+          awayPa={gameBrief?.awayPa}
+          total={gameBrief?.total}
+          homeSpread={gameBrief?.homeSpread}
+          className="mb-3"
+        />
+
+        {/* Streak badges */}
+        {gameBrief?.form && (
+          <div className="flex items-center gap-2 mb-3">
+            <StreakBadge form={gameBrief.form} teamName={firstQuoteRef?.awayAbbr || firstQuote?.away} />
+            <StreakBadge form={gameBrief.form} teamName={firstQuoteRef?.homeAbbr || firstQuote?.home} />
+          </div>
+        )}
+
+        {/* Public vs Sharp Money */}
+        <PublicSharpMeter
+          ticketPct={gameBrief?.ticketHome}
+          handlePct={gameBrief?.handleHome}
+          home={firstQuoteRef?.homeAbbr || firstQuote?.home || "Home"}
+          away={firstQuoteRef?.awayAbbr || firstQuote?.away || "Away"}
+          className="mb-3"
+        />
 
         {/* Tabs */}
         <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-line/0">
