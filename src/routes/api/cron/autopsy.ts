@@ -50,7 +50,7 @@ async function handleAutopsy() {
   const unexplainedLosses = await sql`
     SELECT * FROM prediction_logs 
     WHERE status = 'LOSS' AND ai_autopsy IS NULL 
-    LIMIT 5
+    LIMIT 20
   `;
 
   let autopsyCount = 0;

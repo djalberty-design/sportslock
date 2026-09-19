@@ -119,3 +119,28 @@ All now require: authenticated session (authMiddleware) + verified admin role (a
 - **Sweep**: Was `0 3 * * *` (once at 11pm EDT). Now `30 16,18,20,22,0,2 * * *` (6 runs across game windows: noon, 2pm, 4pm, 6pm, 8pm, 10pm EDT)
 - **Grade**: Was `0 10 * * *` (once at 6am EDT). Now `0 1,3,5,7,9,13 * * *` (6 runs spread through the day: 9pm, 11pm, 1am, 3am, 5am, 9am EDT)
 **Why:** Previous schedule ran sweep once/day at 11pm and grade once/day at 6am, missing 95%+ of game completions
+
+---
+
+### Phase 4: Dead Code Cleanup
+
+#### 4A. Delete markov.ts ✅
+**Files deleted:** `src/lib/market/markov.ts` (65 lines)
+**Why:** 0 imports anywhere in the codebase. Used football terms ("Run", "Pass", "Foul") in an NBA transition matrix. `runMonteCarlo()` function returned string "End". 100% dead code.
+
+#### 4B. Delete narrative.ts ✅
+**Files deleted:** `src/lib/market/narrative.ts`
+**Why:** 0 imports. `applyNarrativeToMeans` and `applyNarrativeToProps` were never called. Guarded by `narrativeTags` parameter that no data feed provides.
+
+#### 4C. Delete syndicate.ts ✅
+**Files deleted:** `src/lib/market/syndicate.ts`
+**Why:** 0 imports. All 7 functions guarded on params (`syndicateAction`, `syndicateMoney`, `reverseLine`) that no data feed provides → all returned null.
+
+#### 4D. Increase Autopsy Batch Size ✅
+**Files changed:** `src/routes/api/cron/autopsy.ts`
+**What:** `LIMIT 5` → `LIMIT 20`
+**Why:** With grading pipeline now functional, losses will start accumulating. 5 per cron run would create a growing backlog.
+
+#### 4E. Sport-Specific Modules (Kept)
+**Files kept:** `nfl-matchup.ts`, `mlb-park.ts`, `ncaaf-blowout.ts`, `nhl-goalie.ts`, `hoops-variance.ts`, `officials-registry.ts`
+**Why:** All are imported by `latents.ts` and structurally correct — they return `{muH: 1, muA: 1, empty: true}` when no sport-specific data is available (which is always, for now). They'll activate automatically when real data feeds are added. Safe to keep; deleting would break imports.
