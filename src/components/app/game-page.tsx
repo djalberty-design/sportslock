@@ -31,14 +31,23 @@ export function GamePage({ eventId }: { eventId: string }) {
     MLB: "baseball_mlb", NHL: "icehockey_nhl",
   };
 
+  const [fetchedProps, setFetchedProps] = useState<any[]>([]);
+  const [propsFetched, setPropsFetched] = useState(false);
+
   const handleFetchRealProps = async () => {
     if (!firstQuoteRef?.sport) return;
     const sportKey = SPORT_KEY[firstQuoteRef.sport] || firstQuoteRef.sport;
     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
     setIsFetchingProps(true);
     try {
-      await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
-      window.location.reload();
+      const result = await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
+      if (result.ok && result.props?.length) {
+        setFetchedProps(result.props);
+        setPropsFetched(true);
+        setActiveTab("props");
+      } else {
+        alert(result.error || "No props found for this game");
+      }
     } catch (e) {
       console.error(e);
     }
@@ -52,7 +61,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     const allProps = picks?.allProps || picks?.props || [];
     const fromPicks = allProps.filter((p: any) => p.eventId === eventId || p.row?.eventId === eventId);
     const fromQuotes = snapshot?.quotes?.filter((q: any) => q.eventId === eventId && (q.isProp || !["ml", "spread", "total"].includes(q.marketType))) || [];
-    const combined = [...fromQuotes, ...fromPicks];
+    const combined = [...fetchedProps, ...fromQuotes, ...fromPicks];
     const unique: any[] = [];
     const seen = new Set();
     for (const p of combined) {
@@ -63,7 +72,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       }
     }
     return unique;
-  }, [picks, snapshot, eventId]);
+  }, [picks, snapshot, eventId, fetchedProps]);
 
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   const gamePred = useMemo(() => snapshot?.predictions?.find((p: any) => p.eventId === eventId), [snapshot, eventId]);
@@ -255,23 +264,9 @@ export function GamePage({ eventId }: { eventId: string }) {
 
     return (
       <div className="flex flex-col gap-3 pb-24">
-        {isAdmin && type === "props" && (
-          <div className="bg-paper p-3 rounded-xl border border-line flex items-center justify-between shadow-sm">
-             <span className="text-xs text-muted font-mono uppercase tracking-wider flex items-center gap-2">
-               <ShieldCheck className="w-4 h-4 text-green-500" /> Admin Sniper
-             </span>
-             <button
-               onClick={handleFetchRealProps}
-               disabled={isFetchingProps}
-               className="px-4 py-1.5 bg-green-500/10 text-green-500 text-xs font-bold uppercase tracking-wider rounded border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
-             >
-               {isFetchingProps ? "Pulling..." : "Fetch Real Props (1 Req)"}
-             </button>
-          </div>
-        )}
         {items.length === 0 && (
           <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
-            {type === "props" ? (isAdmin ? "No props yet. Click the button above." : "Player props pending release.") : "No markets available."}
+            {type === "props" ? (isAdmin ? "No props yet. Use the green 'Pull Props' button above." : "Player props pending release.") : "No markets available."}
           </div>
         )}
         {items.map((q, i) => {
@@ -427,6 +422,28 @@ export function GamePage({ eventId }: { eventId: string }) {
                 {gamePred.pick || `${firstQuoteRef?.homeAbbr} ${gamePred.homeWinPct ? `${Math.round(gamePred.homeWinPct * 100)}%` : ""}`}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Admin: Pull Player Props button — always visible at top */}
+        {isAdmin && (
+          <div className="flex items-center gap-3 mb-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2.5">
+            <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
+            <div className="flex-1 text-xs">
+              <span className="font-bold text-ink">Admin:</span>{" "}
+              <span className="text-muted">
+                {propsFetched
+                  ? `✅ ${fetchedProps.length} player props loaded`
+                  : "Pull player props from Odds API (uses 1 request)"}
+              </span>
+            </div>
+            <button
+              onClick={handleFetchRealProps}
+              disabled={isFetchingProps}
+              className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-xs font-bold uppercase tracking-wider rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              {isFetchingProps ? "Pulling..." : propsFetched ? "Refresh Props" : "Pull Props (1 Req)"}
+            </button>
           </div>
         )}
 

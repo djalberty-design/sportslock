@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { BRAND } from "@/lib/brand";
 import { buildLiveSnapshot } from "./live-board";
 import { ESPN_PATH, applyLeaderStats, enrichResearchForm, fetchEspnRoster, fetchEspnTeamLeaders, mergeResearchPlayers, parseEspnSummary, parseInternalEventId, type EventResearch } from "./research";
-import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota, fetchOddsApiProps } from "./odds-api";
+import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota } from "./odds-api";
 import { resolveVisionKey, VISION_MODELS, VISION_UNAVAILABLE } from "./vision-key";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { isAdminEmail, normalizeEmail } from "@/lib/admin";
@@ -236,12 +236,55 @@ export const getOddsQuotaFn = createServerFn({ method: "GET" })
 export const fetchRealPropsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { sportKey: string, eventId: string }) => d)
-  .handler(async ({ data, context }): Promise<{ ok: boolean; data?: any; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; props?: any[]; error?: string }> => {
     try {
       await assertAdmin(context.userId);
-      const res = await fetchOddsApiProps(data.sportKey, data.eventId);
+      const { fetchOddsApiProps } = await import("@/lib/market/odds-api");
+      const res = await fetchOddsApiProps(data.sportKey, data.eventId, true);
       if (!res) return { ok: false, error: "Failed to fetch from Odds-API" };
-      return { ok: true, data: res };
+
+      // Normalize raw Odds API response into QuoteLine-compatible props
+      const props: any[] = [];
+      const event = res;
+      const home = event.home_team || event.homeTeam || "";
+      const away = event.away_team || event.awayTeam || "";
+      const sport = data.sportKey.includes("nfl") ? "NFL"
+        : data.sportKey.includes("ncaaf") ? "NCAAF"
+        : data.sportKey.includes("nba") ? "NBA"
+        : data.sportKey.includes("ncaab") ? "NCAAB"
+        : data.sportKey.includes("mlb") ? "MLB"
+        : data.sportKey.includes("nhl") ? "NHL"
+        : data.sportKey.toUpperCase();
+
+      const bookmakers = event.bookmakers || [];
+      for (const bk of bookmakers) {
+        for (const mkt of bk.markets || []) {
+          for (const outcome of mkt.outcomes || []) {
+            const price = outcome.price || -110;
+            const implied = price < 0
+              ? Math.abs(price) / (Math.abs(price) + 100)
+              : 100 / (price + 100);
+            props.push({
+              eventId: `oddsapi-${sport}-${data.eventId}`,
+              sport,
+              home,
+              away,
+              selection: outcome.description
+                ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
+                : `${outcome.name} ${outcome.point ?? ""}`,
+              player: outcome.description || undefined,
+              marketType: mkt.key || "prop",
+              point: outcome.point,
+              price,
+              fairProb: implied,
+              isProp: true,
+              source: bk.key || "odds-api",
+            });
+          }
+        }
+      }
+
+      return { ok: true, props };
     } catch (e: any) {
       return { ok: false, error: String(e) };
     }
