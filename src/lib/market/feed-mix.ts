@@ -1,4 +1,5 @@
 import { ALL_SPORTS } from "./universe";
+import { etDayKey, filterSlateGames, nextEtDayKey, nowEtDayKey, type SlateGame } from "./slate-day";
 
 export type MixFilter = "ALL" | "SGP" | "SAME_SPORT" | "CROSS" | "LEG2" | "LEG3";
 
@@ -56,10 +57,54 @@ export function classifyMix(pick: any): {
 }
 
 export function applyRibbonSportFilter<T>(rows: T[], sportFilter: string | undefined): T[] {
-  if (!sportFilter || sportFilter === "ALL") return rows;
+  if (!sportFilter || sportFilter !== "ALL" && sportFilter) {
+    return rows.filter((pick: any) => {
+      if (pick?.sport === sportFilter) return true;
+      return ribbonLegs(pick).some((l) => l?.sport === sportFilter);
+    });
+  }
+  return rows;
+}
+
+function snapshotGames(snapshot: any): SlateGame[] {
+  const map = new Map<string, SlateGame>();
+  for (const row of [...(snapshot?.quotes ?? []), ...(snapshot?.briefs ?? [])]) {
+    const eventId = String(row?.eventId || "");
+    if (!eventId) continue;
+    const prev = map.get(eventId) || { eventId };
+    map.set(eventId, {
+      ...prev,
+      eventId,
+      sport: row.sport || prev.sport,
+      start: row.start || prev.start,
+      inPlay: Boolean(row.inPlay || prev.inPlay),
+      complete: Boolean(row.complete || prev.complete),
+      statusText: row.statusText || prev.statusText,
+      home: row.home || prev.home,
+      away: row.away || prev.away,
+    });
+  }
+  return [...map.values()];
+}
+
+export function applySlateDayFilter<T>(rows: T[], snapshot: any): T[] {
+  const games = filterSlateGames(snapshotGames(snapshot));
+  const allowed = new Set(games.map((g) => g.eventId));
+  const today = nowEtDayKey();
+  const tomorrow = nextEtDayKey(today);
+  const allowTomorrow = !games.some((g) => etDayKey(g.start) === today || g.inPlay);
   return rows.filter((pick: any) => {
-    if (pick?.sport === sportFilter) return true;
-    return ribbonLegs(pick).some((l) => l?.sport === sportFilter);
+    const legs = ribbonLegs(pick);
+    const ids = legs.map((l) => l?.eventId).filter(Boolean);
+    if (!ids.length) {
+      const start = pick?.row?.start || pick?.start;
+      const day = etDayKey(start);
+      if (!day) return false;
+      if (day === today) return true;
+      if (day === tomorrow) return allowTomorrow;
+      return false;
+    }
+    return ids.every((id) => allowed.has(id));
   });
 }
 
