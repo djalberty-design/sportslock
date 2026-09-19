@@ -13,13 +13,14 @@ function SuggestionsDesk() {
     queryFn: () => getSuggestionsFn(),
   });
   const decide = useMutation({
-    mutationFn: (opts: { id: string; status: "accepted" | "rejected" | "later" }) => decideSuggestionFn({ data: opts }),
+    mutationFn: (opts: { id: string; status: "accepted" | "rejected" | "later" | "revoked" }) => decideSuggestionFn({ data: opts }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["brain-suggestions"] }),
   });
 
   const rows = data ?? [];
   const pending = rows.filter((r) => r.status === "pending" || r.status === "later");
-  const closed = rows.filter((r) => r.status === "accepted" || r.status === "rejected");
+  const autoApplied = rows.filter((r) => r.status === "auto_applied" || (r.proposed as any)?.autoApplied);
+  const closed = rows.filter((r) => r.status === "accepted" || r.status === "rejected" || r.status === "revoked");
 
   return (
     <div className="space-y-6">
@@ -78,6 +79,30 @@ function SuggestionsDesk() {
             ))}
           </div>
 
+          {autoApplied.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">🤖 Auto-applied by Brain</h3>
+              <p className="text-[11px] text-muted">The brain automatically applied these adjustments based on high-confidence data. You can revoke any you disagree with.</p>
+              {autoApplied.map((row) => (
+                <article key={row.id} className="bg-amber-500/5 rounded-xl border border-amber-500/20 p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-bold text-ink text-sm">{row.title}</h3>
+                    <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold">auto-applied</span>
+                  </div>
+                  <p className="text-sm text-muted leading-relaxed">{row.body}</p>
+                  <button
+                    type="button"
+                    disabled={decide.isPending}
+                    onClick={() => decide.mutate({ id: row.id, status: "revoked" })}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+                  >
+                    ⚡ Revoke
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+
           {closed.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Decided</h3>
@@ -87,7 +112,10 @@ function SuggestionsDesk() {
                     <div className="font-medium text-ink">{row.title}</div>
                     <div className="text-xs text-muted mt-0.5">{row.body}</div>
                   </div>
-                  <span className={cn("text-[10px] uppercase font-bold", row.status === "accepted" ? "text-emerald-400" : "text-red-400")}>
+                  <span className={cn("text-[10px] uppercase font-bold",
+                    row.status === "accepted" ? "text-emerald-400" :
+                    row.status === "revoked" ? "text-amber-400" : "text-red-400"
+                  )}>
                     {row.status}
                   </span>
                 </div>

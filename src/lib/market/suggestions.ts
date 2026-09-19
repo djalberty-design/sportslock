@@ -1,6 +1,6 @@
 import { getSql } from "@/lib/db";
 
-export type SuggestionStatus = "pending" | "accepted" | "rejected" | "later";
+export type SuggestionStatus = "pending" | "accepted" | "rejected" | "later" | "auto_applied" | "revoked";
 
 export type BrainSuggestion = {
   id: string;
@@ -59,7 +59,7 @@ export async function listSuggestions(): Promise<BrainSuggestion[]> {
 }
 
 export async function decideSuggestion(id: string, status: SuggestionStatus): Promise<{ ok: boolean }> {
-  if (!["accepted", "rejected", "later", "pending"].includes(status)) return { ok: false };
+  if (!["accepted", "rejected", "later", "pending", "revoked", "auto_applied"].includes(status)) return { ok: false };
   await ensureSuggestionsTable();
   const sql = await getSql();
   await sql.query(
@@ -186,17 +186,99 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
           evidence: ev,
         })) created++;
       }
+    // ─── NEW: Sport-specific bias detection ───
+    // Compare win rate per sport. If one sport significantly outperforms or underperforms,
+    // suggest adjusting weights.
+    const sportTotals = new Map<string, { wins: number; decided: number }>();
+    for (const s of slices) {
+      const prev = sportTotals.get(s.sport) || { wins: 0, decided: 0 };
+      prev.wins += Number(s.wins || 0);
+      prev.decided += Number(s.decided || 0);
+      sportTotals.set(s.sport, prev);
+    }
+    const globalWr = totals.decided > 0 ? totals.wins / totals.decided : 0.5;
+
+    for (const [sport, st] of sportTotals) {
+      if (st.decided < 10) continue; // need sample size
+      const wr = st.wins / st.decided;
+      const deviation = wr - globalWr;
+
+      // Hot sport: significantly better than average
+      if (deviation > 0.12 && st.decided >= 12) {
+        if (await insertSuggestion({
+          fingerprint: `hot-sport|${sport}`,
+          title: `${sport}: outperforming (+${Math.round(deviation * 100)}%)`,
+          body: `${sport} is hitting ${Math.round(wr * 100)}% (${st.wins}/${st.decided}) vs ${Math.round(globalWr * 100)}% overall. Model has an edge on this sport. Consider increasing confidence or bet size on ${sport} picks.`,
+          knob: "kelly",
+          proposed: { sport, action: "boost-kelly", multiplier: 1.15 },
+          evidence: { sport, winRate: Math.round(wr * 100), decided: st.decided, globalWr: Math.round(globalWr * 100) },
+        })) created++;
+      }
+
+      // Cold sport: significantly worse than average
+      if (deviation < -0.12 && st.decided >= 12) {
+        const haircut = Math.min(0.08, Math.abs(deviation) * 0.6);
+        if (await insertSuggestion({
+          fingerprint: `cold-sport|${sport}`,
+          title: `${sport}: underperforming (${Math.round(deviation * 100)}%)`,
+          body: `${sport} is hitting ${Math.round(wr * 100)}% (${st.wins}/${st.decided}) vs ${Math.round(globalWr * 100)}% overall. Model is miscalibrated on this sport. Recommend ${Math.round(haircut * 100)}% chance haircut.`,
+          knob: "chance",
+          proposed: { sport, market: "all", chanceHaircut: haircut },
+          evidence: { sport, winRate: Math.round(wr * 100), decided: st.decided, globalWr: Math.round(globalWr * 100) },
+        })) created++;
+
+        // Auto-apply for high-confidence small adjustments (>30 samples, >15% deviation)
+        if (st.decided >= 30 && Math.abs(deviation) >= 0.15 && haircut <= 0.03) {
+          const { upsertOverride } = await import("./overrides");
+          await upsertOverride({
+            fingerprint: `auto|cold-sport|${sport}`,
+            sport,
+            market: "all",
+            chanceHaircut: haircut,
+            sit: false,
+            note: `Auto-applied: ${sport} ${Math.round(wr * 100)}% vs ${Math.round(globalWr * 100)}% global (n=${st.decided})`,
+          });
+          // Mark as auto-applied
+          await insertSuggestion({
+            fingerprint: `auto-applied|cold-sport|${sport}`,
+            title: `🤖 Auto-applied: ${sport} haircut ${Math.round(haircut * 100)}%`,
+            body: `Automatically applied a ${Math.round(haircut * 100)}% chance haircut on ${sport} (n=${st.decided}, hit ${Math.round(wr * 100)}%). High confidence threshold met. You can revoke this from the suggestions page.`,
+            knob: "auto",
+            proposed: { sport, market: "all", chanceHaircut: haircut, autoApplied: true },
+            evidence: { sport, winRate: Math.round(wr * 100), decided: st.decided },
+          });
+          created++;
+        }
+      }
     }
 
-    if (totals.echoed / Math.max(totals.decided, 1) >= 0.6) {
-      if (await insertSuggestion({
-        fingerprint: "global-echo",
-        title: "Desk is mostly the market",
-        body: `${totals.echoed} of ${totals.decided} graded snaps echoed the book. Keep min EV where it is. Do not add narrative alpha on top of the same number.`,
-        knob: "none",
-        proposed: null,
-        evidence: totals,
-      })) created++;
+    // ─── NEW: Edge calibration check ───
+    // Compare claimed edge vs actual hit rate. If model says +5% edge but actual is 48%, 
+    // the model is overestimating its edge.
+    const edgeCal = await sql.query<{ avg_edge: number; avg_model: number; actual_wr: number; n: number }>(
+      `select 
+         avg(edge)::numeric(10,4) as avg_edge,
+         avg(model_probability)::numeric(10,4) as avg_model,
+         (count(*) filter (where status = 'WIN'))::numeric / nullif(count(*) filter (where status in ('WIN','LOSS')), 0) as actual_wr,
+         count(*) filter (where status in ('WIN','LOSS'))::int as n
+       from market_tape
+       where recommended = true and status in ('WIN','LOSS')`,
+    );
+    if (edgeCal[0] && edgeCal[0].n >= 20) {
+      const { avg_model, actual_wr, n } = edgeCal[0];
+      const modelAvg = Number(avg_model) || 0.5;
+      const actualWr = Number(actual_wr) || 0.5;
+      const calibrationGap = modelAvg - actualWr; // positive = overconfident
+      if (calibrationGap > 0.05 && n >= 20) {
+        if (await insertSuggestion({
+          fingerprint: `edge-cal|global`,
+          title: `Model overconfident by ${Math.round(calibrationGap * 100)}%`,
+          body: `Average model probability: ${Math.round(modelAvg * 100)}%. Actual win rate: ${Math.round(actualWr * 100)}% (n=${n}). Model is ${Math.round(calibrationGap * 100)}% too optimistic. Consider a global ${Math.round(Math.min(calibrationGap * 0.6, 0.05) * 100)}% haircut.`,
+          knob: "chance",
+          proposed: { chanceHaircut: Math.min(calibrationGap * 0.6, 0.05) },
+          evidence: { avgModel: Math.round(modelAvg * 100), actualWr: Math.round(actualWr * 100), n },
+        })) created++;
+      }
     }
 
     return { ok: true, created };

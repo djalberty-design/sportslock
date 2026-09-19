@@ -64,8 +64,13 @@ export const decideSuggestionFn = createServerFn({ method: "POST" })
         note: current.title,
       });
     }
-    if (data.status === "rejected" || data.status === "later") {
+    if (data.status === "rejected" || data.status === "later" || data.status === "revoked") {
       await clearOverride(current.fingerprint);
+      // Also clear auto-applied overrides
+      if (data.status === "revoked" && current.proposed) {
+        const autoFp = `auto|cold-sport|${current.proposed.sport || ""}`;
+        await clearOverride(autoFp);
+      }
     }
     return res;
   });
