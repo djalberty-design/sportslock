@@ -14,6 +14,7 @@
 
 import { getSql } from "@/lib/db";
 import { brierScore } from "./brier";
+import { reliabilityTable, setReliabilityTable } from "./calibrate";
 
 export type AnalysisResult = {
   ok: boolean;
@@ -68,7 +69,11 @@ export async function runPostGradeAnalysis(): Promise<AnalysisResult> {
     // 3. Edge profitability
     const edgeProfitability = await computeEdgeProfitability(sql);
 
-    // 4. Store analysis results for the dashboard
+    // 4. Update reliability table from graded data → feeds back into calibratedChance()
+    // This is the key self-correction: future predictions use actual hit rates, not just model estimates
+    await updateReliabilityFromTape(sql);
+
+    // 5. Store analysis results for the dashboard
     await storeAnalysisSnapshot(sql, { segmentBrier, calibrationDrift, edgeProfitability });
 
     return {
@@ -241,5 +246,41 @@ async function storeAnalysisSnapshot(sql: any, data: {
   // Keep only last 100 entries
   await sql.query(
     `DELETE FROM brain_analysis_log WHERE id NOT IN (SELECT id FROM brain_analysis_log ORDER BY created_at DESC LIMIT 100)`,
+  );
+}
+
+/**
+ * Update the in-memory reliability table from graded market_tape data.
+ *
+ * This is the KEY self-correction mechanism:
+ * - Pull all graded predictions (model_probability + WIN/LOSS)
+ * - Build a reliability table: for each probability bucket, what's the ACTUAL hit rate?
+ * - Set it as the active table so calibratedChance() uses empirical data
+ * - Future predictions are adjusted based on where the model over/under-predicts
+ *
+ * Example: If the model predicts 70% and those picks actually hit 62%,
+ * the reliability table maps 70% → 62%, making future 70% predictions
+ * display as ~62% (more honest) and reducing recommended edge.
+ */
+async function updateReliabilityFromTape(sql: any): Promise<void> {
+  const rows = await sql.query<{ model_probability: string; status: string }>(
+    `SELECT model_probability, status FROM market_tape
+     WHERE recommended = true AND status IN ('WIN','LOSS') AND model_probability IS NOT NULL
+     ORDER BY snapped_at DESC LIMIT 500`,
+  );
+
+  if (rows.length < 30) return; // Not enough data to build reliable table
+
+  const forecasts = rows.map((r: any) => ({
+    p: Number(r.model_probability),
+    hit: r.status === "WIN",
+  }));
+
+  const table = reliabilityTable(forecasts);
+  setReliabilityTable(table);
+
+  console.log(
+    `[post-grade] Updated reliability table from ${rows.length} graded predictions`,
+    table.map((b) => `${Math.round(b.lo * 100)}-${Math.round(b.hi * 100)}%: ${b.n} samples, model ${Math.round(b.meanP * 100)}% → actual ${Math.round(b.hitRate * 100)}%`),
   );
 }

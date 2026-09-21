@@ -1,7 +1,17 @@
 # SportsLock AI — Overseer Overhaul Changelog
 ## September 21, 2026
 
-### Commit (Phase 2) — Post-Grade Analysis Pipeline + Self-Improvement Loop
+### Commit (Phase 2b) — Reliability Table Self-Correction
+
+**The brain now corrects its own probability estimates based on actual results.**
+
+- `post-grade-analysis.ts` now runs `updateReliabilityFromTape()` after every grading sweep
+- Pulls last 500 graded predictions, builds a reliability table mapping predicted probability → actual hit rate per bucket
+- Sets the active reliability table so `calibratedChance()` (used by ALL future predictions) uses empirical data instead of just model estimates
+- Example: If the model predicts 70% but those picks only hit 62%, future 70% predictions get adjusted to ~62% (more honest probabilities)
+- This is the Platt scaling / isotonic regression concept from the plan — implemented using the existing `calibrate.ts` infrastructure that was already built but NEVER FED with real data
+
+---
 
 **The closed feedback loop is now wired end-to-end.**
 
