@@ -438,7 +438,12 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       const enrichedKey = `enriched-props:${rawId}`;
       const enriched = await readOddsApiCache(enrichedKey);
       if (enriched?.data && Array.isArray(enriched.data) && enriched.data.length > 0) {
-        return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
+        // Check if enriched cache has AI scores — if not, it's from pre-fix version, re-enrich
+        const hasAi = enriched.data.some((p: any) => p.aiProb != null);
+        if (hasAi) {
+          return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
+        }
+        // Stale enriched cache (no AI) — fall through to re-enrich
       }
 
       // Fallback to raw cache — enrich it (one-time, no Odds API call)
