@@ -569,3 +569,253 @@ export const getBrainInsightsFn = createServerFn({ method: "GET" })
       return [];
     }
   });
+
+// ═══════════════════════════════════════════════════════════════
+// OVERSEER v2: Batch Grade, Analysis Workbench, Suggestion Apply
+// ═══════════════════════════════════════════════════════════════
+
+/** Admin: Trigger manual batch grading of all pending predictions */
+export const batchGradeFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { gradeMarketTape } = await import("@/lib/market/grade-tape");
+      const result = await gradeMarketTape();
+      return result;
+    } catch (e: any) {
+      return { ok: false, graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) };
+    }
+  });
+
+/** Admin: Apply a brain suggestion (actually change the engine) */
+export const applySuggestionFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { id: string; status: string }) => d)
+  .handler(async ({ data, context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { decideSuggestion, listSuggestions } = await import("@/lib/market/suggestions");
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+
+      // Update the suggestion status
+      await decideSuggestion(data.id, data.status as any);
+
+      // If accepted, apply the proposed changes
+      if (data.status === "accepted") {
+        const allSuggestions = await listSuggestions();
+        const suggestion = allSuggestions.find(s => s.id === data.id);
+        if (suggestion?.proposed) {
+          // Log the application
+          await sql.query(
+            `INSERT INTO brain_suggestions (fingerprint, title, body, knob, proposed, evidence, status)
+             VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, 'auto_applied')`,
+            [
+              `applied:${data.id}`,
+              `Applied: ${suggestion.title}`,
+              `Admin accepted and applied: ${JSON.stringify(suggestion.proposed)}`,
+              suggestion.knob || "none",
+              JSON.stringify(suggestion.proposed),
+              JSON.stringify({ appliedFrom: data.id, appliedAt: new Date().toISOString() }),
+            ],
+          );
+
+          // Apply specific proposed changes
+          const proposed = suggestion.proposed as Record<string, any>;
+
+          if (proposed.chanceHaircut != null) {
+            // Apply a chance haircut to desk_tuning
+            const haircut = Number(proposed.chanceHaircut);
+            await sql.query(
+              `INSERT INTO desk_tuning_raw (id, kelly, max_legs, min_edge, chance_haircut)
+               VALUES (1, 0.25, 3, 2.5, $1)
+               ON CONFLICT (id) DO UPDATE SET chance_haircut = COALESCE(desk_tuning_raw.chance_haircut, 0) + $1`,
+              [haircut],
+            );
+          }
+
+          if (proposed.minEdge != null) {
+            await sql.query(
+              `UPDATE desk_tuning_raw SET min_edge = $1 WHERE id = 1`,
+              [Number(proposed.minEdge)],
+            );
+          }
+
+          if (proposed.kelly != null) {
+            await sql.query(
+              `UPDATE desk_tuning_raw SET kelly = $1 WHERE id = 1`,
+              [Number(proposed.kelly)],
+            );
+          }
+        }
+      }
+
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: String(e) };
+    }
+  });
+
+/** Analysis Workbench: Get filtered prediction tape with aggregates */
+export const getAnalysisDataFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: {
+    sport?: string;
+    marketType?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    edgeTier?: string;
+    page?: number;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+
+      const conditions: string[] = ["recommended = true"];
+      const params: any[] = [];
+      let pIdx = 1;
+
+      if (data.sport) {
+        conditions.push(`sport = $${pIdx++}`);
+        params.push(data.sport);
+      }
+      if (data.marketType) {
+        conditions.push(`market_type = $${pIdx++}`);
+        params.push(data.marketType);
+      }
+      if (data.status) {
+        if (data.status === "PENDING") {
+          conditions.push(`(status IS NULL OR status = 'PENDING')`);
+        } else {
+          conditions.push(`status = $${pIdx++}`);
+          params.push(data.status);
+        }
+      }
+      if (data.dateFrom) {
+        conditions.push(`snapped_at >= $${pIdx++}::timestamptz`);
+        params.push(data.dateFrom);
+      }
+      if (data.dateTo) {
+        conditions.push(`snapped_at <= $${pIdx++}::timestamptz`);
+        params.push(data.dateTo);
+      }
+      if (data.edgeTier === "HIGH") {
+        conditions.push(`ABS(edge) >= 5`);
+      } else if (data.edgeTier === "LOW") {
+        conditions.push(`ABS(edge) >= 2 AND ABS(edge) < 5`);
+      } else if (data.edgeTier === "MICRO") {
+        conditions.push(`ABS(edge) < 2`);
+      }
+
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      const offset = ((data.page || 1) - 1) * 50;
+
+      // Get aggregates
+      const aggQuery = `
+        SELECT
+          count(*)::int AS total,
+          count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+          count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+          count(*) FILTER (WHERE status = 'PUSH')::int AS pushes,
+          count(*) FILTER (WHERE status IS NULL OR status = 'PENDING')::int AS pending,
+          count(*) FILTER (WHERE status = 'EXPIRED')::int AS expired,
+          CASE WHEN count(*) FILTER (WHERE status IN ('WIN','LOSS')) > 0
+            THEN round(count(*) FILTER (WHERE status = 'WIN')::numeric /
+                   count(*) FILTER (WHERE status IN ('WIN','LOSS'))::numeric * 100, 1)
+            ELSE 0 END AS win_rate,
+          CASE WHEN count(*) FILTER (WHERE status IN ('WIN','LOSS')) > 0
+            THEN round(avg(CASE WHEN status IN ('WIN','LOSS') THEN
+                   (model_probability - (CASE WHEN status = 'WIN' THEN 1 ELSE 0 END))^2
+                 END)::numeric, 4)
+            ELSE NULL END AS brier
+        FROM market_tape
+        ${where}
+      `;
+      const agg = await sql.query(aggQuery, params);
+
+      // Get calibration buckets (predicted prob vs actual hit rate)
+      const calQuery = `
+        SELECT
+          floor(model_probability * 10)::int AS bucket,
+          count(*)::int AS n,
+          count(*) FILTER (WHERE status = 'WIN')::int AS hits,
+          round(avg(model_probability)::numeric, 3) AS avg_prob,
+          CASE WHEN count(*) > 0
+            THEN round(count(*) FILTER (WHERE status = 'WIN')::numeric / count(*)::numeric, 3)
+            ELSE 0 END AS actual_rate
+        FROM market_tape
+        ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+        GROUP BY 1
+        ORDER BY 1
+      `;
+      const calBuckets = await sql.query(calQuery, params);
+
+      // Get rows for the table
+      const rowsQuery = `
+        SELECT id, selection, sport, home, away, market_type, side, line,
+               price, model_probability, edge, status, result_home, result_away,
+               graded_at, snapped_at, start
+        FROM market_tape
+        ${where}
+        ORDER BY snapped_at DESC
+        LIMIT 50 OFFSET $${pIdx}
+      `;
+      const rows = await sql.query(rowsQuery, [...params, offset]);
+
+      // Get breakdown by sport
+      const sportBreakdown = await sql.query(`
+        SELECT sport,
+          count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+          count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+          count(*)::int AS total
+        FROM market_tape
+        ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+        GROUP BY sport ORDER BY total DESC
+      `, params);
+
+      // Get breakdown by market type
+      const marketBreakdown = await sql.query(`
+        SELECT market_type,
+          count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+          count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+          count(*)::int AS total
+        FROM market_tape
+        ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+        GROUP BY market_type ORDER BY total DESC
+      `, params);
+
+      return {
+        ok: true,
+        aggregates: agg[0] || {},
+        calibration: calBuckets,
+        sportBreakdown,
+        marketBreakdown,
+        rows: rows.map((r: any) => ({
+          id: r.id,
+          selection: r.selection,
+          sport: r.sport,
+          home: r.home,
+          away: r.away,
+          marketType: r.market_type,
+          side: r.side,
+          line: r.line != null ? Number(r.line) : null,
+          price: r.price,
+          modelProb: r.model_probability != null ? Number(r.model_probability) : null,
+          edge: r.edge != null ? Number(r.edge) : null,
+          status: r.status || "PENDING",
+          resultHome: r.result_home,
+          resultAway: r.result_away,
+          gradedAt: r.graded_at ? String(r.graded_at) : null,
+          snappedAt: String(r.snapped_at),
+          start: r.start ? String(r.start) : null,
+        })),
+      };
+    } catch (e: any) {
+      return { ok: false, aggregates: {}, calibration: [], sportBreakdown: [], marketBreakdown: [], rows: [], error: String(e) };
+    }
+  });
+

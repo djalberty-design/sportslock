@@ -1,5 +1,6 @@
 import { getSql } from "@/lib/db";
 import { fetchLiveScores, teamsMatch, type LiveScore } from "./live-scores";
+import { fetchAllHistoricalForGrading } from "./historical-scores";
 
 export type TapeGrade = "WIN" | "LOSS" | "PUSH";
 
@@ -10,6 +11,7 @@ export type GradeStats = {
   wins: number;
   losses: number;
   pushes: number;
+  expired: number;
   error?: string;
 };
 
@@ -79,66 +81,142 @@ export function gradeMarket(opts: {
   return null;
 }
 
-export async function gradeMarketTape(): Promise<{ ok: boolean; graded: number; unmatched: number; error?: string }> {
+/**
+ * Grade pending predictions using live ESPN scores (today's games).
+ * This is the original function that only handles today.
+ */
+async function gradeLiveOnly(): Promise<{ graded: number; unmatched: number }> {
+  const sql = await getSql();
+  const scores = await fetchLiveScores().catch(() => []);
+  const finals = scores.filter((s) => s.complete);
+  if (!finals.length) return { graded: 0, unmatched: 0 };
+
+  return gradeWithScores(sql, finals, false);
+}
+
+/**
+ * Grade pending predictions using historical ESPN scores (past dates).
+ * This catches everything that live grading missed.
+ */
+async function gradeHistorical(): Promise<{ graded: number; unmatched: number }> {
+  const sql = await getSql();
+  const historicalScores = await fetchAllHistoricalForGrading();
+  if (!historicalScores.length) return { graded: 0, unmatched: 0 };
+
+  return gradeWithScores(sql, historicalScores, true);
+}
+
+/**
+ * Core grading logic — shared between live and historical.
+ */
+async function gradeWithScores(
+  sql: any,
+  scores: LiveScore[],
+  isHistorical: boolean,
+): Promise<{ graded: number; unmatched: number }> {
+  const minAge = isHistorical ? "interval '6 hours'" : "interval '0 seconds'";
+  const pending = await sql.query<{
+    id: string;
+    sport: string | null;
+    home: string | null;
+    away: string | null;
+    market_type: string;
+    side: string | null;
+    selection: string;
+    line: string | number | null;
+  }>(
+    `select id, sport, home, away, market_type, side, selection, line
+     from market_tape
+     where (status is null or status = 'PENDING')
+       and coalesce(start, snapped_at) < now() - ${minAge}
+     limit 4000`,
+  );
+
+  let graded = 0;
+  let unmatched = 0;
+
+  for (const row of pending) {
+    const hit = findScore(row, scores);
+    if (!hit) {
+      unmatched++;
+      continue;
+    }
+    const outcome = gradeMarket({
+      marketType: row.market_type,
+      side: row.side,
+      selection: row.selection,
+      line: row.line == null ? null : Number(row.line),
+      home: row.home || hit.home,
+      away: row.away || hit.away,
+      homeScore: hit.homeScore,
+      awayScore: hit.awayScore,
+    });
+    if (!outcome) {
+      unmatched++;
+      continue;
+    }
+    await sql.query(
+      `update market_tape
+       set status = $1, result_home = $2, result_away = $3, graded_at = now(), complete = true
+       where id = $4`,
+      [outcome, hit.homeScore, hit.awayScore, row.id],
+    );
+    graded++;
+  }
+
+  return { graded, unmatched };
+}
+
+/**
+ * Mark very old ungraded predictions as EXPIRED.
+ * Predictions older than 14 days that still can't be matched get cleaned up.
+ */
+async function markExpired(): Promise<number> {
+  const sql = await getSql();
+  const result = await sql.query(
+    `update market_tape
+     set status = 'EXPIRED', graded_at = now()
+     where (status is null or status = 'PENDING')
+       and coalesce(start, snapped_at) < now() - interval '14 days'
+     returning id`,
+  );
+  return result.length;
+}
+
+/**
+ * Full grading pipeline: live + historical + expire old.
+ * Called by the sweep cron and by the admin batch-grade button.
+ */
+export async function gradeMarketTape(): Promise<{
+  ok: boolean;
+  graded: number;
+  unmatched: number;
+  historical: number;
+  expired: number;
+  error?: string;
+}> {
   try {
     await ensureGradeColumns();
-    const sql = await getSql();
-    const scores = await fetchLiveScores().catch(() => []);
-    const finals = scores.filter((s) => s.complete);
-    if (!finals.length) return { ok: true, graded: 0, unmatched: 0 };
 
-    const pending = await sql.query<{
-      id: string;
-      sport: string | null;
-      home: string | null;
-      away: string | null;
-      market_type: string;
-      side: string | null;
-      selection: string;
-      line: string | number | null;
-    }>(
-      `select id, sport, home, away, market_type, side, selection, line
-       from market_tape
-       where status is null or status = 'PENDING'
-       limit 4000`,
-    );
+    // Step 1: Grade with today's live scores
+    const live = await gradeLiveOnly();
 
-    let graded = 0;
-    let unmatched = 0;
+    // Step 2: Grade with historical scores (past dates)
+    const hist = await gradeHistorical();
 
-    for (const row of pending) {
-      const hit = findScore(row, finals);
-      if (!hit) {
-        unmatched++;
-        continue;
-      }
-      const outcome = gradeMarket({
-        marketType: row.market_type,
-        side: row.side,
-        selection: row.selection,
-        line: row.line == null ? null : Number(row.line),
-        home: row.home || hit.home,
-        away: row.away || hit.away,
-        homeScore: hit.homeScore,
-        awayScore: hit.awayScore,
-      });
-      if (!outcome) {
-        unmatched++;
-        continue;
-      }
-      await sql.query(
-        `update market_tape
-         set status = $1, result_home = $2, result_away = $3, graded_at = now(), complete = true
-         where id = $4`,
-        [outcome, hit.homeScore, hit.awayScore, row.id],
-      );
-      graded++;
-    }
+    // Step 3: Mark very old predictions as expired
+    const expired = await markExpired();
 
-    return { ok: true, graded, unmatched };
+    return {
+      ok: true,
+      graded: live.graded + hist.graded,
+      unmatched: live.unmatched + hist.unmatched,
+      historical: hist.graded,
+      expired,
+    };
   } catch (err) {
     console.error("grade tape failed:", err);
-    return { ok: false, graded: 0, unmatched: 0, error: String(err) };
+    return { ok: false, graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(err) };
   }
 }
 
@@ -162,8 +240,9 @@ export async function getGradeStats(): Promise<GradeStats> {
       wins: by.WIN || 0,
       losses: by.LOSS || 0,
       pushes: by.PUSH || 0,
+      expired: by.EXPIRED || 0,
     };
   } catch (err) {
-    return { ok: false, graded: 0, pending: 0, wins: 0, losses: 0, pushes: 0, error: String(err) };
+    return { ok: false, graded: 0, pending: 0, wins: 0, losses: 0, pushes: 0, expired: 0, error: String(err) };
   }
 }
