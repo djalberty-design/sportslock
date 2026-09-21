@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { fetchRealPropsFn, lockPredictionFn } from "@/lib/market/server";
+import { fetchRealPropsFn, getCachedPropsFn, lockPredictionFn } from "@/lib/market/server";
 import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check } from "lucide-react";
@@ -34,6 +34,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const [fetchedProps, setFetchedProps] = useState<any[]>([]);
   const [propsFetched, setPropsFetched] = useState(false);
+  const [propsCacheTime, setPropsCacheTime] = useState<string | null>(null);
 
   const handleFetchRealProps = async () => {
     if (!firstQuoteRef?.sport) return;
@@ -45,6 +46,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       if (result.ok && result.props?.length) {
         setFetchedProps(result.props);
         setPropsFetched(true);
+        setPropsCacheTime(new Date().toISOString());
         setActiveTab("props");
       } else {
         alert(result.error || "No props found for this game");
@@ -55,6 +57,21 @@ export function GamePage({ eventId }: { eventId: string }) {
     }
     setIsFetchingProps(false);
   };
+
+  // Auto-load cached props on mount (free, no API call)
+  useEffect(() => {
+    if (propsFetched || !firstQuoteRef?.sport) return;
+    const sportKey = SPORT_KEY[firstQuoteRef.sport] || firstQuoteRef.sport;
+    getCachedPropsFn({ data: { sportKey, eventId } })
+      .then((res) => {
+        if (res.ok && res.props?.length) {
+          setFetchedProps(res.props);
+          setPropsFetched(true);
+          if (res.fetchedAt) setPropsCacheTime(res.fetchedAt);
+        }
+      })
+      .catch(() => {});
+  }, [firstQuoteRef?.sport, eventId, propsFetched]);
 
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
@@ -78,6 +95,21 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const gameBrief = useMemo(() => snapshot?.briefs?.find((b: any) => b.eventId === eventId), [snapshot, eventId]);
   const gamePred = useMemo(() => snapshot?.predictions?.find((p: any) => p.eventId === eventId), [snapshot, eventId]);
+
+  // Build a name → headshot lookup from ESPN brief players
+  const headshotMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const players = gameBrief?.players || [];
+    for (const p of players) {
+      if (p.headshot && p.name) {
+        map.set(p.name.toLowerCase(), p.headshot);
+        // Also store last name only for fuzzy matching
+        const parts = p.name.split(" ");
+        if (parts.length > 1) map.set(parts[parts.length - 1].toLowerCase(), p.headshot);
+      }
+    }
+    return map;
+  }, [gameBrief]);
 
   if (gameQuotes.length === 0 && gameProps.length === 0) {
     return <div className="p-8 text-center text-muted">Game not found or loading...</div>;
@@ -297,7 +329,9 @@ export function GamePage({ eventId }: { eventId: string }) {
           const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
           const playerName = q.player || q.row?.player;
           const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
-          const headshotUrl = (q.row as any)?.headshot;
+          const headshotUrl = (q.row as any)?.headshot
+            || (playerName ? headshotMap.get(playerName.toLowerCase()) : undefined)
+            || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
           const rowKey = `${q.selection}-${q.marketType || ""}`;
           const isExp = expandedRow === rowKey;
 
@@ -454,17 +488,27 @@ export function GamePage({ eventId }: { eventId: string }) {
               <span className="font-bold text-ink">Admin:</span>{" "}
               <span className="text-muted">
                 {propsFetched
-                  ? `✅ ${fetchedProps.length} player props loaded`
+                  ? `✅ ${fetchedProps.length} player props loaded${propsCacheTime ? ` · ${(() => { const mins = Math.round((Date.now() - new Date(propsCacheTime).getTime()) / 60000); return mins < 1 ? "just now" : mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`; })()}` : ""}`
                   : "Pull player props from Odds API (uses 1 request)"}
               </span>
             </div>
-            <button
-              onClick={handleFetchRealProps}
-              disabled={isFetchingProps}
-              className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-xs font-bold uppercase tracking-wider rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {isFetchingProps ? "Pulling..." : propsFetched ? "Refresh Props" : "Pull Props (1 Req)"}
-            </button>
+            {propsFetched ? (
+              <button
+                onClick={() => { if (confirm("This uses 1 API request. Refresh props?")) handleFetchRealProps(); }}
+                disabled={isFetchingProps}
+                className="px-4 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-bold uppercase tracking-wider rounded border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {isFetchingProps ? "Pulling..." : "Refresh (1 Req)"}
+              </button>
+            ) : (
+              <button
+                onClick={handleFetchRealProps}
+                disabled={isFetchingProps}
+                className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-xs font-bold uppercase tracking-wider rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {isFetchingProps ? "Pulling..." : "Pull Props (1 Req)"}
+              </button>
+            )}
           </div>
         )}
 

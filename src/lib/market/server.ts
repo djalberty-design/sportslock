@@ -291,6 +291,65 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
     }
   });
 
+/** Load cached props for a game (no API call, free) */
+export const getCachedPropsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { sportKey: string; eventId: string }) => d)
+  .handler(async ({ data }): Promise<{ ok: boolean; props?: any[]; fetchedAt?: string }> => {
+    try {
+      const { readOddsApiCache } = await import("@/lib/market/odds-api");
+      const rawId = data.eventId.replace(/^oddsapi-[A-Z]+-/, "");
+      const cacheKey = `props:${rawId}`;
+      const cached = await readOddsApiCache(cacheKey);
+      if (!cached?.data) return { ok: false };
+
+      // Normalize just like fetchRealPropsFn does
+      const event = cached.data;
+      const home = event.home_team || event.homeTeam || "";
+      const away = event.away_team || event.awayTeam || "";
+      const sport = data.sportKey.includes("nfl") ? "NFL"
+        : data.sportKey.includes("ncaaf") ? "NCAAF"
+        : data.sportKey.includes("nba") ? "NBA"
+        : data.sportKey.includes("ncaab") ? "NCAAB"
+        : data.sportKey.includes("mlb") ? "MLB"
+        : data.sportKey.includes("nhl") ? "NHL"
+        : data.sportKey.toUpperCase();
+
+      const props: any[] = [];
+      const bookmakers = event.bookmakers || [];
+      for (const bk of bookmakers) {
+        for (const mkt of bk.markets || []) {
+          for (const outcome of mkt.outcomes || []) {
+            const price = outcome.price || -110;
+            const implied = price < 0
+              ? Math.abs(price) / (Math.abs(price) + 100)
+              : 100 / (price + 100);
+            props.push({
+              eventId: data.eventId,
+              sport,
+              home,
+              away,
+              selection: outcome.description
+                ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
+                : `${outcome.name} ${outcome.point ?? ""}`,
+              player: outcome.description || undefined,
+              marketType: mkt.key || "prop",
+              point: outcome.point,
+              price,
+              fairProb: implied,
+              isProp: true,
+              source: bk.key || "odds-api",
+            });
+          }
+        }
+      }
+
+      return { ok: true, props, fetchedAt: cached.fetchedAt.toISOString() };
+    } catch (e) {
+      return { ok: false };
+    }
+  });
+
 export const lockPredictionFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { legs: Array<{ eventId: string; selection: string; marketType: string; point?: number; price: number; fairProb: number }> }) => d)
