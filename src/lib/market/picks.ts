@@ -1119,7 +1119,7 @@ export function buildDeskPicks(scan: ScanBundle, snapshot: DeskSnapshot): DeskPi
 
   const popular = rankRows(popularRows, "popular", popularWhy, 24);
   const PROPS_ENABLED = true; // Admin-injected props flow through AI picks
-  const props = PROPS_ENABLED ? rankRows(propRows, "prop", propWhy, 8) : [];
+  const props = PROPS_ENABLED ? rankRows(propRows, "prop", propWhy, 50) : [];
   const periods = rankRows(periodRows, "period", periodWhy, 6);
 
   const sgpGame = (scan.topSgp ?? []).slice(0, 4).map((p) => fromParlay(p, "sgp"));
