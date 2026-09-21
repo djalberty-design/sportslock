@@ -417,7 +417,7 @@ export async function writePropTape(props: any[]): Promise<{ wrote: number }> {
           p.home ?? null,
           p.away ?? null,
           p.marketType || "prop",
-          p.selection?.includes("Over") ? "over" : p.selection?.includes("Under") ? "under" : p.selection?.includes("Yes") ? "yes" : "over",
+          p.aiLean || (/over/i.test(p.selection || "") ? "over" : /under/i.test(p.selection || "") ? "under" : /yes/i.test(p.selection || "") ? "yes" : "over"),
           p.selection,
           p.point ?? null,
           price,
