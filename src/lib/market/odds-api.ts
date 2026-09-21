@@ -201,16 +201,18 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
     const res = await fetch(url);
     noteQuota(res);
     if (!res.ok) {
-      console.error(`[odds-api] Props error for ${eventId}:`, res.status);
-      return null;
+      const body = await res.text().catch(() => "");
+      const detail = `[odds-api] Props error for ${eventId}: HTTP ${res.status} — ${body.slice(0, 200)}`;
+      console.error(detail);
+      return { __error: true, status: res.status, message: body.slice(0, 200) } as any;
     }
     const data = normalizeEventBooks(await res.json());
     globalCache.props[eventId] = data;
     await writeOddsApiCache(cacheKey, data);
     return data;
-  } catch (e) {
+  } catch (e: any) {
     console.error(`[odds-api] Props fetch error:`, e);
-    return null;
+    return { __error: true, status: 0, message: String(e).slice(0, 200) } as any;
   }
 }
 

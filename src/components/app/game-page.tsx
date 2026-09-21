@@ -49,8 +49,9 @@ export function GamePage({ eventId }: { eventId: string }) {
       } else {
         alert(result.error || "No props found for this game");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(e?.message || "Failed to fetch props — check Vercel logs");
     }
     setIsFetchingProps(false);
   };

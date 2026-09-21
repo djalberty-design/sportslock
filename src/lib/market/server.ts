@@ -241,7 +241,8 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       await assertAdmin(context.userId);
       const { fetchOddsApiProps } = await import("@/lib/market/odds-api");
       const res = await fetchOddsApiProps(data.sportKey, data.eventId, true);
-      if (!res) return { ok: false, error: "Failed to fetch from Odds-API" };
+      if (!res) return { ok: false, error: "Odds API returned empty response" };
+      if (res.__error) return { ok: false, error: `Odds API HTTP ${res.status}: ${res.message || "Unknown error"}` };
 
       // Normalize raw Odds API response into QuoteLine-compatible props
       const props: any[] = [];
