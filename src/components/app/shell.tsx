@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Beaker, Hexagon, Ticket, Settings } from "lucide-react";
+import { Activity, Beaker, Hexagon, Ticket, Settings, History } from "lucide-react";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
@@ -13,6 +13,7 @@ const TABS = [
   { to: "/picks", label: "The Lab", icon: Beaker },
   { to: "/games", label: "Matchups", icon: Activity },
   { to: "/ticket", label: "My Action", icon: Ticket },
+  { to: "/results", label: "Track Record", icon: History },
 ] as const;
 
 function isActive(pathname: string, to: string) {
