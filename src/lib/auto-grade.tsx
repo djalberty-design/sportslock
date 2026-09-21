@@ -36,12 +36,24 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
   const home = (ticket.home || "").toLowerCase();
   const away = (ticket.away || "").toLowerCase();
 
-  // Try to figure out if user bet on home or away
+  // --- TOTALS: Over/Under ---
+  if (desc.includes("total") || desc.includes("over") || desc.includes("under")) {
+    const line = (ticket as any).point ?? (ticket as any).line;
+    if (line == null) return "void"; // No line stored — can't grade
+    const totalScore = hs + as;
+    if (totalScore === Number(line)) return "void"; // push
+    const isOver = /\bover\b/i.test(desc);
+    const isUnder = /\bunder\b/i.test(desc);
+    if (!isOver && !isUnder) return "void";
+    if (isOver) return totalScore > Number(line) ? "win" : "loss";
+    return totalScore < Number(line) ? "win" : "loss";
+  }
+
+  // --- Figure out which team the user bet on ---
   let pickedHome = false;
   if (home && desc.includes(home)) pickedHome = true;
   else if (away && desc.includes(away)) pickedHome = false;
   else {
-    // If can't determine, check if the pick name matches home/away from the quote
     const qHome = (q.home || "").toLowerCase();
     const qAway = (q.away || "").toLowerCase();
     if (desc.includes(qHome)) pickedHome = true;
@@ -49,19 +61,17 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
     else return "void"; // Can't determine side — skip
   }
 
-  // Check market type from description
+  // --- SPREADS ---
   if (desc.includes("spread")) {
-    // For spreads, we can't easily determine the result without knowing the spread number
-    // Leave for manual grading
-    return "void";
+    const line = (ticket as any).point ?? (ticket as any).line;
+    if (line == null) return "void"; // No line stored — can't grade
+    const margin = pickedHome ? (hs - as) : (as - hs);
+    const covered = margin + Number(line);
+    if (covered === 0) return "void"; // push
+    return covered > 0 ? "win" : "loss";
   }
 
-  if (desc.includes("total") || desc.includes("over") || desc.includes("under")) {
-    // For totals, we can't easily determine without the number
-    return "void";
-  }
-
-  // Moneyline: did the picked team win?
+  // --- MONEYLINE ---
   if (hs === as) return "void"; // Tie / push
 
   if (pickedHome) {

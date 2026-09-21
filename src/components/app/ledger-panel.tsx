@@ -26,8 +26,8 @@ export function LedgerPanel() {
 
   const totalTickets = tickets.length;
   const totalStake = tickets.reduce((acc, t) => acc + Number(t.stake || 0), 0);
-  const hits = tickets.filter(t => t.result === 'hit').length;
-  const misses = tickets.filter(t => t.result === 'miss').length;
+  const hits = tickets.filter(t => t.result === 'hit' || t.result === 'win').length;
+  const misses = tickets.filter(t => t.result === 'miss' || t.result === 'loss').length;
   const settled = hits + misses;
   const hitRate = settled > 0 ? ((hits / settled) * 100).toFixed(1) + '%' : '--';
 

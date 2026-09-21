@@ -31,23 +31,49 @@ export async function sweepLedger() {
       let hasLoss = false;
       let hasPush = false;
 
+      // Track which game other legs on this ticket matched to (for totals fallback)
+      let ticketGame: typeof finals[number] | null = null;
+
       for (const leg of legs) {
         const selection = leg.selection || "";
         const marketType = leg.marketType || leg.market_type || "ml";
         const sport = leg.sport || null;
         
         // Find completed game by team matching
-        const hit = finals.find(
+        let hit = finals.find(
           (s) =>
             (!sport || !s.sport || s.sport === sport) &&
             (teamsMatch(selection, s.home, s.homeAbbr) || 
              teamsMatch(selection, s.away, s.awayAbbr))
-        );
+        ) || null;
+        
+        // Fallback for totals/props: selection is "Over 224.5" etc, no team name
+        // Try matching via home/away fields stored on the leg itself
+        if (!hit && (leg.home || leg.away)) {
+          hit = finals.find(
+            (s) =>
+              (!sport || !s.sport || s.sport === sport) &&
+              ((leg.home && teamsMatch(leg.home, s.home, s.homeAbbr)) ||
+               (leg.away && teamsMatch(leg.away, s.away, s.awayAbbr)))
+          ) || null;
+        }
+        
+        // Final fallback: if another leg on this ticket already matched a game,
+        // and this is a total/prop for the same sport, use that game
+        if (!hit && ticketGame) {
+          const isTotalOrProp = /total|over|under/i.test(marketType) || /\b(over|under)\b/i.test(selection);
+          if (isTotalOrProp && (!sport || !ticketGame.sport || ticketGame.sport === sport)) {
+            hit = ticketGame;
+          }
+        }
         
         if (!hit) {
           allSettled = false;
           break;
         }
+        
+        // Remember the matched game for sibling legs
+        if (!ticketGame) ticketGame = hit;
 
         const outcome = gradeMarket({
           marketType,
