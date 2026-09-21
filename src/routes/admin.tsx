@@ -6,15 +6,21 @@ import { useAccess } from "@/lib/use-access";
 export const Route = createFileRoute("/admin")({ component: AdminOverseer });
 
 const TABS = [
-  { to: "/admin/brain", label: "Engine Bay", icon: Cpu },
+  { to: "/admin/dashboard", label: "🧠 Dashboard", icon: Brain },
+  { to: "/admin/analysis", label: "📊 Analysis", icon: BarChart2 },
+  { to: "/admin/engine", label: "⚙️ Engine", icon: Settings },
+  { to: "/admin/approvals", label: "🔐 Approvals", icon: UserCheck },
+  { to: "/admin/activity", label: "📋 Activity", icon: Clock },
+];
+
+const LEGACY_TABS = [
   { to: "/admin/terminal", label: "Live Status", icon: Activity },
   { to: "/admin/predictions", label: "Predictions", icon: BarChart2 },
-  { to: "/admin/autopsy", label: "AI Autopsy", icon: Brain },
+  { to: "/admin/autopsy", label: "Autopsy", icon: Brain },
   { to: "/admin/suggestions", label: "Suggestions", icon: Lightbulb },
   { to: "/admin/brain-intel", label: "Brain Intel", icon: Target },
+  { to: "/admin/brain", label: "Engine Bay", icon: Cpu },
   { to: "/admin/overrides", label: "Overrides", icon: Sliders },
-  { to: "/admin/approvals", label: "Approvals", icon: UserCheck },
-  { to: "/admin/activity", label: "Activity", icon: Clock },
 ];
 
 function AdminOverseer() {
@@ -41,7 +47,7 @@ function AdminOverseer() {
           The Overseer
         </h1>
         <p className="text-muted text-sm">
-          Research desk controls. Suggestions do not change the engine until you accept them and H5 is on.
+          Self-improving prediction engine — every prediction tracked, graded, analyzed, and used to get smarter.
         </p>
       </div>
 
@@ -64,9 +70,35 @@ function AdminOverseer() {
         })}
       </nav>
 
+      {/* Legacy tabs — smaller, secondary access to old views */}
+      <details className="text-xs">
+        <summary className="text-muted cursor-pointer hover:text-ink transition-colors">
+          Legacy views ▸
+        </summary>
+        <nav className="flex flex-wrap gap-1.5 mt-2">
+          {LEGACY_TABS.map((tab) => {
+            const active = pathname === tab.to;
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                className={cn(
+                  "flex items-center gap-1.5 rounded px-2.5 py-1 transition-all text-xs",
+                  active ? "bg-line text-ink" : "text-muted hover:text-ink hover:bg-line/30"
+                )}
+              >
+                <tab.icon className="size-3" />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </details>
+
       <div className="rounded-2xl border border-line bg-panel p-6 shadow-sm min-h-[50vh]">
         <Outlet />
       </div>
     </div>
   );
 }
+
