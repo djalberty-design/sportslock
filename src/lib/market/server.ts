@@ -376,7 +376,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
                     playerTeam: rosterHit?.team,
                     gameTotal: brief.total,
                     homeSpread: brief.homeSpread,
-                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : brief.chanceHome ? (1 - brief.chanceHome) : undefined,
+                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : rosterHit?.homeAway === "away" ? (brief.chanceHome ? (1 - brief.chanceHome) : undefined) : undefined,
                     weatherTemp: brief.weatherTemp,
                     weatherWind: brief.weatherWind,
                     weatherPrecip: brief.weatherPrecip,
@@ -559,7 +559,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
                     sport, selection: prop.selection, price, player: playerName,
                     side: parsed.side, point: outcome.point, home, away,
                     playerTeam: rosterHit?.team, gameTotal: brief.total, homeSpread: brief.homeSpread,
-                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : brief.chanceHome ? (1 - brief.chanceHome) : undefined,
+                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : rosterHit?.homeAway === "away" ? (brief.chanceHome ? (1 - brief.chanceHome) : undefined) : undefined,
                     weatherTemp: brief.weatherTemp, weatherWind: brief.weatherWind, weatherPrecip: brief.weatherPrecip,
                     venue: brief.venue, injuries: brief.injuries, ...ctx,
                   });
