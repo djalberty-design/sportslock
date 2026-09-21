@@ -819,3 +819,39 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
     }
   });
 
+/** Get the latest post-grade analysis results for the Dashboard */
+export const getLatestAnalysisFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      const rows = await sql.query(
+        `SELECT data, created_at FROM brain_analysis_log
+         WHERE analysis_type = 'post_grade'
+         ORDER BY created_at DESC LIMIT 1`,
+      );
+      if (rows.length === 0) return { ok: true, data: null, lastRun: null };
+      return {
+        ok: true,
+        data: rows[0].data,
+        lastRun: String(rows[0].created_at),
+      };
+    } catch {
+      return { ok: true, data: null, lastRun: null };
+    }
+  });
+
+/** Admin: Trigger post-grade analysis manually */
+export const runAnalysisFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { runPostGradeAnalysis } = await import("@/lib/market/post-grade-analysis");
+      return runPostGradeAnalysis();
+    } catch (e: any) {
+      return { ok: false, segmentBrier: [], calibrationDrift: null, edgeProfitability: [], timestamp: "", error: String(e) };
+    }
+  });

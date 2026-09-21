@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBrainStatsFn, batchGradeFn } from "@/lib/market/server";
+import { getBrainStatsFn, batchGradeFn, getLatestAnalysisFn, runAnalysisFn } from "@/lib/market/server";
 import { cn } from "@/lib/utils";
 import {
   Brain, Activity, Target, TrendingUp, TrendingDown, Eye, Zap,
@@ -22,9 +22,23 @@ function Dashboard() {
     mutationFn: () => batchGradeFn(),
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["brain-stats"] });
+      qc.invalidateQueries({ queryKey: ["latest-analysis"] });
       alert(`Graded ${result.graded} predictions (${result.historical || 0} historical). ${result.expired || 0} marked expired.`);
     },
   });
+
+  const { data: analysisData } = useQuery({
+    queryKey: ["latest-analysis"],
+    queryFn: () => getLatestAnalysisFn(),
+    refetchInterval: 120_000,
+  });
+
+  const analysisMut = useMutation({
+    mutationFn: () => runAnalysisFn(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["latest-analysis"] }),
+  });
+
+  const analysis = analysisData?.data as any;
 
   if (isLoading || !stats) {
     return (
@@ -132,6 +146,79 @@ function Dashboard() {
           </div>
         </section>
       </div>
+
+      {/* Self-Improvement Status */}
+      <section className="bg-panel border border-line rounded-xl p-4">
+        <SectionHeader icon={<Zap />} title="Self-Improvement Loop"
+          description="After every grading sweep, the brain analyzes its own performance. Calibration drift tells you if the model is getting better or worse. Edge profitability tells you if the model's 'edges' actually make money." />
+        
+        <div className="mt-4 flex items-center gap-3 mb-4">
+          <button onClick={() => analysisMut.mutate()} disabled={analysisMut.isPending}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50">
+            <RefreshCw className={cn("size-3", analysisMut.isPending && "animate-spin")} />
+            {analysisMut.isPending ? "Analyzing..." : "Run Analysis Now"}
+          </button>
+          {analysisData?.lastRun && (
+            <span className="text-[10px] text-muted">Last run: {new Date(analysisData.lastRun).toLocaleString()}</span>
+          )}
+        </div>
+
+        {analysis ? (
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Calibration Drift */}
+            <div className="bg-obsidian border border-line rounded-lg p-3">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Calibration Drift</div>
+              {analysis.calibrationDrift ? (
+                <>
+                  <div className={cn("text-lg font-display font-bold",
+                    analysis.calibrationDrift.direction === "improving" ? "text-emerald-400" :
+                    analysis.calibrationDrift.direction === "worsening" ? "text-red-400" : "text-amber-400"
+                  )}>
+                    {analysis.calibrationDrift.direction === "improving" ? "📈 Improving" :
+                     analysis.calibrationDrift.direction === "worsening" ? "📉 Drifting" : "➡️ Stable"}
+                  </div>
+                  <p className="text-[10px] text-muted mt-1">
+                    Recent Brier: {Number(analysis.calibrationDrift.recentBrier).toFixed(4)} vs Overall: {Number(analysis.calibrationDrift.overallBrier).toFixed(4)}
+                  </p>
+                </>
+              ) : <p className="text-xs text-muted italic">Need more graded data</p>}
+            </div>
+
+            {/* Edge Profitability */}
+            <div className="bg-obsidian border border-line rounded-lg p-3">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Edge Profitability</div>
+              {(analysis.edgeProfitability || []).length > 0 ? (
+                <div className="space-y-1">
+                  {(analysis.edgeProfitability || []).map((e: any) => (
+                    <div key={e.tier} className="flex items-center justify-between text-xs">
+                      <span className="text-ink">{e.tier}</span>
+                      <span className={cn("font-bold", e.profitable ? "text-emerald-400" : "text-red-400")}>
+                        {e.winRate}% ({e.wins}/{e.n})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-xs text-muted italic">Need more graded data</p>}
+            </div>
+
+            {/* Top Segments */}
+            <div className="bg-obsidian border border-line rounded-lg p-3">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Best Segments</div>
+              {(analysis.segmentBrier || []).slice(0, 4).map((s: any) => (
+                <div key={`${s.sport}-${s.marketType}`} className="flex items-center justify-between text-xs py-0.5">
+                  <span className="text-ink">{s.sport} {s.marketType?.toUpperCase()}</span>
+                  <span className={cn("font-bold", s.beatBaseline ? "text-emerald-400" : "text-red-400")}>
+                    {s.beatBaseline ? "✓ Beating book" : "✗ Book wins"}
+                  </span>
+                </div>
+              ))}
+              {!(analysis.segmentBrier || []).length && <p className="text-xs text-muted italic">Need more graded data</p>}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted italic">No analysis data yet. Click "Run Analysis Now" or wait for the next grading sweep.</p>
+        )}
+      </section>
 
       {/* What Each Tab Does */}
       <section className="bg-panel border border-line rounded-xl p-4">
