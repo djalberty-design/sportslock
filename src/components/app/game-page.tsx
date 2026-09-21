@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { fetchRealPropsFn, lockPredictionFn } from "@/lib/market/server";
-import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
+import { useDeskStore } from "@/lib/desk-store";
+import { useAccess } from "@/lib/use-access";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
@@ -22,7 +23,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const isAdmin = useDeskStore(selectIsAdmin);
+  const { isAdmin } = useAccess();
   const [isFetchingProps, setIsFetchingProps] = useState(false);
 
   const SPORT_KEY: Record<string, string> = {
