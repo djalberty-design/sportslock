@@ -59,7 +59,7 @@ export function gradeMarket(opts: {
     return null;
   }
 
-  if (market === "spread") {
+  if (market === "spread" || market === "spreads") {
     if (!Number.isFinite(line)) return null;
     const homeSide = side === "home" || (!side && teamsMatch(sel, opts.home));
     const margin = homeSide ? opts.homeScore - opts.awayScore : opts.awayScore - opts.homeScore;
@@ -69,7 +69,7 @@ export function gradeMarket(opts: {
     return "LOSS";
   }
 
-  if (market === "total") {
+  if (market === "total" || market === "totals" || market === "over_under") {
     if (!Number.isFinite(line)) return null;
     const total = opts.homeScore + opts.awayScore;
     const isOver = side === "over" || /\bover\b/i.test(sel);

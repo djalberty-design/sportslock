@@ -5,7 +5,8 @@ import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } fro
 import { resolveTeamLogo } from "@/lib/market/logos";
 import { leagueOfficialName, stripWrongCollegeLogo } from "@/lib/market/logo-guard";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
-import { useDeskStore, selectIsAdmin } from "@/lib/desk-store";
+import { useDeskStore } from "@/lib/desk-store";
+import { useAccess } from "@/lib/use-access";
 import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
   const { snapshot, query, scan } = useDeskDecision();
-  const isAdmin = useDeskStore(selectIsAdmin);
+  const { isAdmin } = useAccess();
   const [quota, setQuota] = useState<number | null>(null);
   const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
 

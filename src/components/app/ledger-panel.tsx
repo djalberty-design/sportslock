@@ -100,9 +100,23 @@ export function LedgerPanel() {
                 </div>
                 <div className="col-span-2 text-right text-zinc-300">{t.combined_odds > 0 ? '+' : ''}{t.combined_odds}</div>
                 <div className="col-span-2 flex justify-center">
-                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${t.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-zinc-800 text-zinc-400'}`}>
-                    {t.status}
-                  </span>
+                  {t.status === 'pending' ? (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      Pending
+                    </span>
+                  ) : (t.result === 'win' || t.result === 'hit') ? (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Win
+                    </span>
+                  ) : (t.result === 'loss' || t.result === 'miss') ? (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+                      Loss
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400">
+                      {t.result || t.status}
+                    </span>
+                  )}
                 </div>
                 <div className="col-span-1 text-right text-zinc-300">${Number(t.stake).toFixed(0)}</div>
               </div>

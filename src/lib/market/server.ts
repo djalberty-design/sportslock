@@ -675,6 +675,10 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
       const { getSql } = await import("@/lib/db");
       const sql = await getSql();
 
+      // Ensure autopsy columns exist (they're normally created by autopsy-tape.ts)
+      await sql.query(`ALTER TABLE market_tape ADD COLUMN IF NOT EXISTS bucket text`);
+      await sql.query(`ALTER TABLE market_tape ADD COLUMN IF NOT EXISTS autopsy_note text`);
+
       const conditions: string[] = ["recommended = true"];
       const params: any[] = [];
       let pIdx = 1;

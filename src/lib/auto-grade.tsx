@@ -36,17 +36,19 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
   const home = (ticket.home || "").toLowerCase();
   const away = (ticket.away || "").toLowerCase();
 
+  // Resolve the line: prefer ticket.point, then try the quote's point/line
+  const ticketLine = ticket.point ?? (q as any).point ?? (q as any).line;
+
   // --- TOTALS: Over/Under ---
   if (desc.includes("total") || desc.includes("over") || desc.includes("under")) {
-    const line = (ticket as any).point ?? (ticket as any).line;
-    if (line == null) return "void"; // No line stored — can't grade
+    if (ticketLine == null) return "void"; // No line stored — can't grade
     const totalScore = hs + as;
-    if (totalScore === Number(line)) return "void"; // push
+    if (totalScore === Number(ticketLine)) return "void"; // push
     const isOver = /\bover\b/i.test(desc);
     const isUnder = /\bunder\b/i.test(desc);
     if (!isOver && !isUnder) return "void";
-    if (isOver) return totalScore > Number(line) ? "win" : "loss";
-    return totalScore < Number(line) ? "win" : "loss";
+    if (isOver) return totalScore > Number(ticketLine) ? "win" : "loss";
+    return totalScore < Number(ticketLine) ? "win" : "loss";
   }
 
   // --- Figure out which team the user bet on ---
@@ -63,10 +65,9 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
 
   // --- SPREADS ---
   if (desc.includes("spread")) {
-    const line = (ticket as any).point ?? (ticket as any).line;
-    if (line == null) return "void"; // No line stored — can't grade
+    if (ticketLine == null) return "void"; // No line stored — can't grade
     const margin = pickedHome ? (hs - as) : (as - hs);
-    const covered = margin + Number(line);
+    const covered = margin + Number(ticketLine);
     if (covered === 0) return "void"; // push
     return covered > 0 ? "win" : "loss";
   }

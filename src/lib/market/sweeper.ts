@@ -48,8 +48,28 @@ async function sweepDeskLedger(sql: any, finals: any[]): Promise<number> {
       let hasLoss = false;
       let hasPush = false;
 
-      // Track which game other legs on this ticket matched to (for totals fallback)
+      // Pre-scan: find a game match from ANY leg with a team name
+      // so totals legs can always resolve even if they're first
       let ticketGame: typeof finals[number] | null = null;
+      for (const leg of legs) {
+        const sel = leg.selection || "";
+        const sp = leg.sport || null;
+        const matched = finals.find(
+          (s) =>
+            (!sp || !s.sport || s.sport === sp) &&
+            (teamsMatch(sel, s.home, s.homeAbbr) || teamsMatch(sel, s.away, s.awayAbbr))
+        ) || null;
+        if (!matched && (leg.home || leg.away)) {
+          const byFields = finals.find(
+            (s) =>
+              (!sp || !s.sport || s.sport === sp) &&
+              ((leg.home && teamsMatch(leg.home, s.home, s.homeAbbr)) ||
+               (leg.away && teamsMatch(leg.away, s.away, s.awayAbbr)))
+          ) || null;
+          if (byFields) { ticketGame = byFields; break; }
+        }
+        if (matched) { ticketGame = matched; break; }
+      }
 
       for (const leg of legs) {
         const selection = leg.selection || "";

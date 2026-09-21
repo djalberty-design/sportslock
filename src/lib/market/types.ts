@@ -421,6 +421,10 @@ export type PaperTicket = {
   away?: string;
   fairAtLock?: number;
   tapeSource?: TapeStamp;
+  /** Spread/total line (e.g. -3.5, 224.5). Used by auto-grader. */
+  point?: number;
+  /** Market type (ml, spread, total). Used by auto-grader. */
+  marketType?: string;
 };
 
 export type ContestOffer = {

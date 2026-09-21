@@ -266,8 +266,22 @@ export function GamePage({ eventId }: { eventId: string }) {
     return (
       <div className="flex flex-col gap-3 pb-24">
         {items.length === 0 && (
-          <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
-            {type === "props" ? (isAdmin ? "No props yet. Use the green 'Pull Props' button above." : "Player props pending release.") : "No markets available."}
+          <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl flex flex-col items-center gap-3">
+            <p>
+              {type === "props"
+                ? (isAdmin ? "No player props loaded for this game yet." : "Player props pending release.")
+                : "No markets available."}
+            </p>
+            {type === "props" && isAdmin && (
+              <button
+                onClick={handleFetchRealProps}
+                disabled={isFetchingProps}
+                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <ShieldCheck className="size-4" />
+                {isFetchingProps ? "Pulling Props..." : propsFetched ? "Refresh Props" : "Pull Props (1 Req)"}
+              </button>
+            )}
           </div>
         )}
         {items.map((q, i) => {
