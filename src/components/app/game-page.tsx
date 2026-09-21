@@ -499,19 +499,13 @@ export function GamePage({ eventId }: { eventId: string }) {
         if (!map.has(cat)) map.set(cat, []);
         map.get(cat)!.push(q);
       }
-      // Sort players within each category by prominence
+      // Sort players within each category by AI prediction (highest hit probability first)
       for (const [, arr] of map) {
         arr.sort((a: any, b: any) => {
-          // For Yes/No markets (anytime TD), lower positive odds = more prominent
-          // For O/U markets, higher point = more prominent (QB has 265.5 yds, WR3 has 25.5)
-          const aPoint = a.point ?? 0;
-          const bPoint = b.point ?? 0;
-          if (aPoint !== bPoint) return bPoint - aPoint; // Higher line first
-          // Then by lower price (favorites first)
-          const aPrice = a.price || 999;
-          const bPrice = b.price || 999;
-          if (aPrice !== bPrice) return aPrice - bPrice;
-          return (b.aiEdge || 0) - (a.aiEdge || 0);
+          const aProb = a.aiProb ?? a.fairProb ?? 0;
+          const bProb = b.aiProb ?? b.fairProb ?? 0;
+          if (bProb !== aProb) return bProb - aProb; // Highest prediction first
+          return (b.aiEdge || 0) - (a.aiEdge || 0); // Then by edge
         });
       }
       return [...map.entries()].sort(([a], [b]) => {
