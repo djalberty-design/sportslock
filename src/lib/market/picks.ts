@@ -1140,9 +1140,12 @@ export function buildDeskPicks(scan: ScanBundle, snapshot: DeskSnapshot): DeskPi
     .filter((p): p is DeskPick => Boolean(p))
     .map(stamp);
 
-  const realPropEventIds = new Set(propRows.filter(r => r.source === "odds-api").map(r => r.eventId));
+  // Real sportsbook props have source = bookmaker key (draftkings, fanduel, etc.), not "research" or "sheet"
+  const internalSources = new Set(["research", "sheet", "scan"]);
+  const realPropEventIds = new Set(propRows.filter(r => !internalSources.has(r.source)).map(r => r.eventId));
   const finalPropRows = propRows.filter(r => {
-    if (r.source !== "odds-api" && realPropEventIds.has(r.eventId)) return false;
+    // If we have real sportsbook props for this event, drop internal props for that event
+    if (internalSources.has(r.source) && realPropEventIds.has(r.eventId)) return false;
     return true;
   });
   const allProps = finalPropRows.filter(legalRow).filter(onHorizon).map(r => fromRow(r, "prop", propWhy(r)));

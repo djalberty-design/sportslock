@@ -67,14 +67,15 @@ function TheLab() {
   const mergedProps = useMemo(() => {
     const seen = new Set<string>();
     const result: any[] = [];
+    const dedupKey = (p: any) => `${p.eventId || ""}|${p.player || ""}|${p.marketType || ""}|${p.selection || ""}`;
     for (const p of cachedProps) {
-      const key = p.selection;
+      const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
       result.push(p);
     }
     for (const p of scanProps) {
-      const key = p.selection;
+      const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
       result.push(p);

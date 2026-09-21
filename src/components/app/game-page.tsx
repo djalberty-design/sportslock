@@ -39,6 +39,16 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Reset props state when navigating between games
+  useEffect(() => {
+    setPropsFetched(false);
+    setFetchedProps([]);
+    setPropsCacheTime(null);
+    setPropFilter("all");
+    setTeamFilter("all");
+    setSearchQuery("");
+  }, [eventId]);
+
   // Must be defined before handleFetchRealProps and useEffect that reference it
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
   const firstQuoteRef = gameQuotes[0];
@@ -374,7 +384,7 @@ export function GamePage({ eventId }: { eventId: string }) {
               {playerName ? (
                 <>
                   <span className="font-bold text-ink text-sm truncate">{playerName}</span>
-                  <span className="text-muted text-xs truncate">{label} {pointText}</span>
+                  <span className="text-muted text-xs truncate">{label}</span>
                   {teamPos && <span className="text-[10px] text-muted/50 uppercase tracking-wider">{teamPos}</span>}
                 </>
               ) : (

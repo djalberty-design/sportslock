@@ -294,7 +294,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       // Map Odds API market keys to stat labels that detectStat() recognizes
       const MKT_TO_STAT: Record<string, string> = {
         player_pass_yds: "passing yards", player_rush_yds: "rushing yards",
-        player_rec_yds: "receiving yards", player_receptions: "receptions",
+        player_rec_yds: "receiving yards", player_reception_yds: "receiving yards", player_receptions: "receptions",
         player_pass_tds: "passing touchdowns", player_pass_td: "passing touchdowns",
         player_rush_attempts: "rushing attempts", player_rush_att: "rushing attempts",
         player_anytime_td: "anytime touchdown", player_1st_td: "anytime touchdown",
@@ -303,8 +303,11 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
         player_threes: "threes made", player_pra: "points + rebounds + assists",
         player_steals: "steals", player_blocks: "blocks",
         player_hits: "hits", player_total_bases: "total bases",
-        player_hr: "home run", player_rbi: "rbi", player_ks: "strikeouts",
+        player_hr: "home run", player_home_runs: "home run",
+        player_rbi: "rbi", player_rbis: "rbi",
+        player_ks: "strikeouts", player_strikeouts: "strikeouts",
         player_walks: "walks", player_stolen_bases: "stolen bases",
+        player_runs_scored: "runs scored", player_hits_runs_rbis: "hits + runs + RBIs",
         player_shots_on_goal: "shots on goal", player_goals: "goals",
         player_points_nhl: "points", player_saves: "saves",
         player_blocked_shots: "blocked shots",
@@ -320,7 +323,9 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
             const implied = price < 0
               ? Math.abs(price) / (Math.abs(price) + 100)
               : 100 / (price + 100);
-            const playerName = outcome.description || undefined;
+            // For scorer markets, outcome.description may be empty and player name is in outcome.name
+            const GENERIC_NAMES = new Set(["over", "under", "yes", "no"]);
+            const playerName = outcome.description || (outcome.name && !GENERIC_NAMES.has(outcome.name.toLowerCase()) ? outcome.name : undefined);
             const pKey = (playerName || "").toLowerCase();
             const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
 
@@ -494,7 +499,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       // Map Odds API market keys to stat labels
       const MKT_TO_STAT: Record<string, string> = {
         player_pass_yds: "passing yards", player_rush_yds: "rushing yards",
-        player_rec_yds: "receiving yards", player_receptions: "receptions",
+        player_rec_yds: "receiving yards", player_reception_yds: "receiving yards", player_receptions: "receptions",
         player_pass_tds: "passing touchdowns", player_pass_td: "passing touchdowns",
         player_rush_attempts: "rushing attempts", player_rush_att: "rushing attempts",
         player_anytime_td: "anytime touchdown", player_1st_td: "anytime touchdown",
@@ -503,8 +508,11 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         player_threes: "threes made", player_pra: "points + rebounds + assists",
         player_steals: "steals", player_blocks: "blocks",
         player_hits: "hits", player_total_bases: "total bases",
-        player_hr: "home run", player_rbi: "rbi", player_ks: "strikeouts",
+        player_hr: "home run", player_home_runs: "home run",
+        player_rbi: "rbi", player_rbis: "rbi",
+        player_ks: "strikeouts", player_strikeouts: "strikeouts",
         player_walks: "walks", player_stolen_bases: "stolen bases",
+        player_runs_scored: "runs scored", player_hits_runs_rbis: "hits + runs + RBIs",
         player_shots_on_goal: "shots on goal", player_goals: "goals",
         player_points_nhl: "points", player_saves: "saves",
         player_blocked_shots: "blocked shots",
@@ -520,7 +528,8 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
             const implied = price < 0
               ? Math.abs(price) / (Math.abs(price) + 100)
               : 100 / (price + 100);
-            const playerName = outcome.description || undefined;
+            const GENERIC_NAMES = new Set(["over", "under", "yes", "no"]);
+            const playerName = outcome.description || (outcome.name && !GENERIC_NAMES.has(outcome.name.toLowerCase()) ? outcome.name : undefined);
             const pKey = (playerName || "").toLowerCase();
             const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
 

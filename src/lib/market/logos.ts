@@ -56,6 +56,9 @@ const TEAM_ABBR: Record<string, string> = {
   "Seattle Kraken": "sea", "St. Louis Blues": "stl", "Tampa Bay Lightning": "tb",
   "Toronto Maple Leafs": "tor", "Utah Hockey Club": "uta", "Vancouver Canucks": "van",
   "Vegas Golden Knights": "vgk", "Washington Capitals": "wsh", "Winnipeg Jets": "wpg",
+  // Odds API short names
+  "LA Clippers": "lac", "LA Lakers": "lal", "LA Angels": "laa", "LA Dodgers": "lad",
+  "LA Chargers": "lac", "LA Rams": "lar", "LA Kings": "la",
 };
 
 export function teamAbbrFromName(fullName: string): string {
