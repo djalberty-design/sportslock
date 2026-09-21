@@ -331,7 +331,9 @@ export function GamePage({ eventId }: { eventId: string }) {
     const aiProb = q.aiProb ?? q.fairProb ?? 0.5;
     const probPct = Math.round(aiProb * 100);
     const hasAi = q.aiProb != null;
-    const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+    const rawLabel = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+    // Strip stat label suffix (added for AI parsing, not for display)
+    const label = rawLabel.replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "").trim();
     const playerName = q.player || q.row?.player;
     const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
     // Use enriched headshot from ESPN roster, fallback to brief map
