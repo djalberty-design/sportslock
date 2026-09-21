@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Activity, Beaker, Hexagon, Ticket, Settings } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
+import { getOddsQuotaFn } from "@/lib/market/server";
 import { cn, formatKickoff } from "@/lib/utils";
 import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
@@ -38,6 +39,25 @@ function DeskStamp() {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin } = useAccess();
+  const [quota, setQuota] = useState<number | null>(null);
+
+  // Fetch quota on mount for admin
+  useEffect(() => {
+    if (!isAdmin) return;
+    getOddsQuotaFn().then(setQuota).catch(() => {});
+    const interval = setInterval(() => getOddsQuotaFn().then(setQuota).catch(() => {}), 60_000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  // Calculate props pulls available (subtract reserved daily ML/spread pulls)
+  const propsAvailable = useMemo(() => {
+    if (quota == null) return null;
+    const now = new Date();
+    const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+    const activeSports = 3; // Sept: NFL, NCAAF, MLB (from getActiveSports)
+    const reservedForDailyPulls = daysLeft * activeSports;
+    return Math.max(0, quota - reservedForDailyPulls);
+  }, [quota]);
 
   return (
         <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
@@ -45,6 +65,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-4">
           <DeskStamp />
         </div>
+        {isAdmin && quota != null && (
+          <div className="flex items-center gap-2">
+            <span className={cn("font-mono", quota < 50 ? "text-red-400" : quota < 150 ? "text-amber-400" : "text-emerald-400")}>
+              {propsAvailable} prop pulls left
+            </span>
+            <span className="text-muted/50">·</span>
+            <span className="text-muted/70">{quota}/500 total</span>
+          </div>
+        )}
       </div>
       {/* Mobile Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden">

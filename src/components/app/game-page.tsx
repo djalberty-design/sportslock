@@ -294,6 +294,143 @@ export function GamePage({ eventId }: { eventId: string }) {
     setIsSaving(false);
   };
 
+  // Display-friendly prop category labels
+  const PROP_LABEL: Record<string, string> = {
+    player_anytime_td: "🏈 Anytime Touchdown",
+    player_pass_tds: "🎯 Passing Touchdowns",
+    player_pass_yds: "📊 Passing Yards",
+    player_rush_yds: "🏃 Rushing Yards",
+    player_reception_yds: "🤲 Receiving Yards",
+    player_receptions: "🤲 Receptions",
+    player_points: "🏀 Points",
+    player_rebounds: "🏀 Rebounds",
+    player_assists: "🏀 Assists",
+    player_threes: "🏀 Three-Pointers",
+    player_home_runs: "⚾ Home Runs",
+    player_strikeouts: "⚾ Strikeouts",
+    player_hits: "⚾ Hits",
+    player_total_bases: "⚾ Total Bases",
+    player_goals: "🏒 Goals",
+    player_shots_on_goal: "🏒 Shots on Goal",
+  };
+
+  // Category sort order (mirrors sportsbook layout)
+  const PROP_ORDER: string[] = [
+    "player_anytime_td", "player_pass_tds", "player_pass_yds",
+    "player_rush_yds", "player_reception_yds", "player_receptions",
+    "player_points", "player_rebounds", "player_assists", "player_threes",
+    "player_home_runs", "player_strikeouts", "player_hits", "player_total_bases",
+    "player_goals", "player_shots_on_goal",
+  ];
+
+  const renderPropCard = (q: any, i: number) => {
+    const amOdds = getAmOdds(q);
+    const prob = getProb(q);
+    const probPct = Math.round(prob * 100);
+    const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
+    const playerName = q.player || q.row?.player;
+    const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
+    const headshotUrl = (q.row as any)?.headshot
+      || (playerName ? headshotMap.get(playerName.toLowerCase()) : undefined)
+      || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
+    const mType = q.marketType || q.row?.marketType || "";
+    const mLabel = PROP_LABEL[mType]?.replace(/^[^\s]+\s/, "") || mType.replace(/^player_/, "").replace(/_/g, " ");
+    const rowKey = `${q.selection}-${mType}`;
+    const isExp = expandedRow === rowKey;
+
+    let vegasP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
+    let vProb = vegasP < 0 ? (-vegasP / (-vegasP + 100)) : (100 / (vegasP + 100));
+    const edgePct = ((prob - vProb) * 100).toFixed(1);
+
+    return (
+      <div key={`${q.selection}-${mType}-${i}`}>
+        <div
+          className={cn(
+            "bg-panel border rounded-lg p-3 flex items-center justify-between transition-colors cursor-pointer",
+            isSelected(q) ? "border-primary/50 bg-primary/5" : "border-line hover:border-primary/30"
+          )}
+          onClick={() => setExpandedRow(isExp ? null : rowKey)}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {headshotUrl ? (
+              <div className="shrink-0 size-10">
+                <img src={headshotUrl} className="size-full rounded-full object-cover ring-1 ring-line bg-obsidian" alt={playerName || ""} />
+              </div>
+            ) : playerName ? (
+              <div className="shrink-0 size-10 rounded-full bg-line/50 ring-1 ring-line flex items-center justify-center text-muted text-xs font-bold">
+                {playerName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+              </div>
+            ) : null}
+            <div className="flex flex-col min-w-0">
+              {playerName ? (
+                <>
+                  <span className="font-bold text-ink text-sm truncate">{playerName}</span>
+                  <span className="text-muted text-xs truncate">{label} {pointText}</span>
+                </>
+              ) : (
+                <span className="font-bold text-ink text-sm truncate">{label} {pointText}</span>
+              )}
+              <span className="text-[10px] uppercase tracking-wider text-muted/60 mt-0.5">{mLabel}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleLeg(q); }}
+              className={cn("flex flex-col items-center justify-center min-w-[70px] h-10 rounded-md border transition-colors",
+                isSelected(q) ? "bg-primary border-primary text-primary-foreground" : "bg-obsidian border-line text-primary hover:border-primary/50"
+              )}
+            >
+              <span className="font-mono text-sm font-bold">{amOdds}</span>
+            </button>
+          </div>
+        </div>
+        <div className="mt-2 mx-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
+              <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
+            </div>
+            <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
+              {probPct}%
+            </span>
+            {parseFloat(edgePct) !== 0 && (
+              <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
+              </span>
+            )}
+          </div>
+          <p className="text-[9px] text-muted italic ml-0.5">
+            {probPct >= 70 ? "Strong favorite — wins most of the time" : probPct >= 55 ? "Slight edge — better than a coin flip" : probPct >= 45 ? "Close to a toss-up — could go either way" : probPct >= 30 ? "Underdog — lower chance, bigger payout" : "Long shot — risky but high reward"}
+          </p>
+        </div>
+        <AnimatePresence>
+          {isExp && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="bg-obsidian border border-t-0 border-line rounded-b-lg px-4 py-3 grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Our AI says</div>
+                  <div className="text-lg font-mono font-bold text-primary">{probPct}%</div>
+                  <div className="text-[9px] text-muted">chance to hit</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Vegas says</div>
+                  <div className="text-lg font-mono font-bold text-ink">{Math.round(vProb * 100)}%</div>
+                  <div className="text-[9px] text-muted">implied odds</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Your edge</div>
+                  <div className={cn("text-lg font-mono font-bold", parseFloat(edgePct) > 0 ? "text-emerald-400" : "text-red-400")}>
+                    {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
+                  </div>
+                  <div className="text-[9px] text-muted">{parseFloat(edgePct) > 0 ? "value bet" : "bad value"}</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   const renderGrid = (type: string) => {
     let items: any[] = [];
     const lines = gameQuotes.filter((q: any) => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
@@ -301,6 +438,22 @@ export function GamePage({ eventId }: { eventId: string }) {
     if (type === "popular") items = [...lines.slice(0, 4), ...gameProps.slice(0, 6)];
     else if (type === "props") items = gameProps;
     else if (type === "lines") items = lines;
+
+    // Group props by category when on props tab
+    const grouped = type === "props" ? (() => {
+      const map = new Map<string, any[]>();
+      for (const q of items) {
+        const cat = q.marketType || q.row?.marketType || "other";
+        if (!map.has(cat)) map.set(cat, []);
+        map.get(cat)!.push(q);
+      }
+      // Sort categories by PROP_ORDER
+      return [...map.entries()].sort(([a], [b]) => {
+        const ai = PROP_ORDER.indexOf(a);
+        const bi = PROP_ORDER.indexOf(b);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
+    })() : null;
 
     return (
       <div className="flex flex-col gap-3 pb-24">
@@ -323,116 +476,16 @@ export function GamePage({ eventId }: { eventId: string }) {
             )}
           </div>
         )}
-        {items.map((q, i) => {
-          const amOdds = getAmOdds(q);
-          const prob = getProb(q);
-          const probPct = Math.round(prob * 100);
-          const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
-          const playerName = q.player || q.row?.player;
-          const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
-          const headshotUrl = (q.row as any)?.headshot
-            || (playerName ? headshotMap.get(playerName.toLowerCase()) : undefined)
-            || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
-          const rowKey = `${q.selection}-${q.marketType || ""}`;
-          const isExp = expandedRow === rowKey;
-
-          // Edge vs vegas
-          let vegasP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
-          let vProb = vegasP < 0 ? (-vegasP / (-vegasP + 100)) : (100 / (vegasP + 100));
-          const edgePct = ((prob - vProb) * 100).toFixed(1);
-
-          return (
-            <div key={i}>
-              <div
-                className={cn(
-                  "bg-panel border rounded-lg p-3 flex items-center justify-between transition-colors cursor-pointer",
-                  isSelected(q) ? "border-primary/50 bg-primary/5" : "border-line hover:border-primary/30"
-                )}
-                onClick={() => setExpandedRow(isExp ? null : rowKey)}
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  {headshotUrl && (
-                    <div className="shrink-0 size-10">
-                      <img src={headshotUrl} className="size-full rounded-full object-cover ring-1 ring-line bg-obsidian" alt={playerName || ""} />
-                    </div>
-                  )}
-                  <div className="flex flex-col min-w-0">
-                    {playerName ? (
-                      <>
-                        <span className="font-bold text-ink text-sm truncate">{playerName}</span>
-                        <span className="text-muted text-xs truncate">{label} {pointText}</span>
-                      </>
-                    ) : (
-                      <span className="font-bold text-ink text-sm truncate">{label} {pointText}</span>
-                    )}
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold mt-0.5 inline-flex items-center gap-1">{q.marketType || q.row?.marketType} <MarketTip type={q.marketType || q.row?.marketType} /></span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleLeg(q); }}
-                    className={cn("flex flex-col items-center justify-center min-w-[70px] h-10 rounded-md border transition-colors",
-                      isSelected(q) ? "bg-primary border-primary text-primary-foreground" : "bg-obsidian border-line text-primary hover:border-primary/50"
-                    )}
-                  >
-                    <span className="font-mono text-sm font-bold">{amOdds}</span>
-                  </button>
-                </div>
-              </div>
-              {/* Always-visible AI prediction bar */}
-              <div className="mt-2 mx-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
-                    <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
-                  </div>
-                  <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
-                    {probPct}%
-                  </span>
-                  {parseFloat(edgePct) !== 0 && (
-                    <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-                      {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
-                    </span>
-                  )}
-                </div>
-                <p className="text-[9px] text-muted italic ml-0.5">
-                  {probPct >= 70 ? "Strong favorite — wins most of the time" : probPct >= 55 ? "Slight edge — better than a coin flip" : probPct >= 45 ? "Close to a toss-up — could go either way" : probPct >= 30 ? "Underdog — lower chance, bigger payout" : "Long shot — risky but high reward"}
-                </p>
-              </div>
-
-              {/* Simulation detail — expanded on click */}
-              <AnimatePresence>
-                {isExp && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="bg-obsidian border border-t-0 border-line rounded-b-lg px-4 py-3 grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Our AI says</div>
-                        <div className="text-lg font-mono font-bold text-primary">{probPct}%</div>
-                        <div className="text-[9px] text-muted">chance to win</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Vegas says</div>
-                        <div className="text-lg font-mono font-bold text-ink">{Math.round(vProb * 100)}%</div>
-                        <div className="text-[9px] text-muted">implied odds</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Your edge</div>
-                        <div className={cn("text-lg font-mono font-bold", parseFloat(edgePct) > 0 ? "text-emerald-400" : "text-red-400")}>
-                          {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
-                        </div>
-                        <div className="text-[9px] text-muted">{parseFloat(edgePct) > 0 ? "value bet" : "bad value"}</div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        {grouped ? grouped.map(([cat, catItems]) => (
+          <div key={cat} className="flex flex-col gap-2">
+            <div className="sticky top-[180px] z-10 bg-background/95 backdrop-blur px-1 py-2 border-b border-line/30">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                {PROP_LABEL[cat] || cat.replace(/^player_/, "").replace(/_/g, " ")} <span className="text-muted font-normal ml-1">({catItems.length})</span>
+              </h3>
             </div>
-          );
-        })}
+            {catItems.map((q: any, i: number) => renderPropCard(q, i))}
+          </div>
+        )) : items.map((q, i) => renderPropCard(q, i))}
       </div>
     );
   };
