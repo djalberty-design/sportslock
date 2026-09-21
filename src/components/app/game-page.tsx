@@ -459,9 +459,10 @@ export function GamePage({ eventId }: { eventId: string }) {
         if (q.homeAway) return q.homeAway === teamFilter;
         // Fallback: match team name against home/away
         const pTeam = (q.team || "").toLowerCase();
-        if (teamFilter === "home") return pTeam && homeTeam.includes(pTeam);
-        if (teamFilter === "away") return pTeam && awayTeam.includes(pTeam);
-        return true;
+        if (!pTeam) return false; // Exclude unmatched players from team-specific views
+        if (teamFilter === "home") return homeTeam.includes(pTeam);
+        if (teamFilter === "away") return awayTeam.includes(pTeam);
+        return false;
       });
     }
 
@@ -498,13 +499,18 @@ export function GamePage({ eventId }: { eventId: string }) {
         if (!map.has(cat)) map.set(cat, []);
         map.get(cat)!.push(q);
       }
-      // Sort players within each category: lower odds = more prominent player (depth chart proxy)
+      // Sort players within each category by prominence
       for (const [, arr] of map) {
         arr.sort((a: any, b: any) => {
-          const aOdds = Math.abs(a.price || 999);
-          const bOdds = Math.abs(b.price || 999);
-          // Lower absolute odds first (favorites/stars), then by AI edge
-          if (aOdds !== bOdds) return aOdds - bOdds;
+          // For Yes/No markets (anytime TD), lower positive odds = more prominent
+          // For O/U markets, higher point = more prominent (QB has 265.5 yds, WR3 has 25.5)
+          const aPoint = a.point ?? 0;
+          const bPoint = b.point ?? 0;
+          if (aPoint !== bPoint) return bPoint - aPoint; // Higher line first
+          // Then by lower price (favorites first)
+          const aPrice = a.price || 999;
+          const bPrice = b.price || 999;
+          if (aPrice !== bPrice) return aPrice - bPrice;
           return (b.aiEdge || 0) - (a.aiEdge || 0);
         });
       }

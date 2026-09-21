@@ -287,14 +287,34 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       try {
         const { buildLiveSnapshot } = await import("@/lib/market/live-board");
         const snapshot = await buildLiveSnapshot();
-        const fullEventId = `oddsapi-${sport}-${data.eventId}`;
+        const fullEventId = data.eventId.startsWith("oddsapi-") ? data.eventId : `oddsapi-${sport}-${data.eventId}`;
         brief = snapshot?.briefs?.find((b: any) => b.eventId === fullEventId);
       } catch {}
+
+      // Map Odds API market keys to stat labels that detectStat() recognizes
+      const MKT_TO_STAT: Record<string, string> = {
+        player_pass_yds: "passing yards", player_rush_yds: "rushing yards",
+        player_rec_yds: "receiving yards", player_receptions: "receptions",
+        player_pass_tds: "passing touchdowns", player_pass_td: "passing touchdowns",
+        player_rush_attempts: "rushing attempts", player_rush_att: "rushing attempts",
+        player_anytime_td: "anytime touchdown", player_1st_td: "anytime touchdown",
+        player_2_plus_tds: "2+ touchdowns",
+        player_points: "points", player_rebounds: "rebounds", player_assists: "assists",
+        player_threes: "threes made", player_pra: "points + rebounds + assists",
+        player_steals: "steals", player_blocks: "blocks",
+        player_hits: "hits", player_total_bases: "total bases",
+        player_hr: "home run", player_rbi: "rbi", player_ks: "strikeouts",
+        player_walks: "walks", player_stolen_bases: "stolen bases",
+        player_shots_on_goal: "shots on goal", player_goals: "goals",
+        player_points_nhl: "points", player_saves: "saves",
+        player_blocked_shots: "blocked shots",
+      };
 
       const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
         for (const mkt of bk.markets || []) {
+          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^player_/, "").replace(/_/g, " ") || "";
           for (const outcome of mkt.outcomes || []) {
             const price = outcome.price || -110;
             const implied = price < 0
@@ -304,14 +324,17 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
             const pKey = (playerName || "").toLowerCase();
             const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
 
+            // Include stat label in selection so parsePropSelection/detectStat can match
+            const selectionWithStat = outcome.description
+              ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""} ${statLabel}`
+              : `${outcome.name} ${outcome.point ?? ""} ${statLabel}`;
+
             const prop: any = {
               eventId: `oddsapi-${sport}-${data.eventId}`,
               sport,
               home,
               away,
-              selection: outcome.description
-                ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
-                : `${outcome.name} ${outcome.point ?? ""}`,
+              selection: selectionWithStat.trim(),
               player: playerName,
               marketType: mkt.key || "prop",
               point: outcome.point,
@@ -463,10 +486,30 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         brief = snapshot?.briefs?.find((b: any) => b.eventId === fullEventId);
       } catch {}
 
+      // Map Odds API market keys to stat labels
+      const MKT_TO_STAT: Record<string, string> = {
+        player_pass_yds: "passing yards", player_rush_yds: "rushing yards",
+        player_rec_yds: "receiving yards", player_receptions: "receptions",
+        player_pass_tds: "passing touchdowns", player_pass_td: "passing touchdowns",
+        player_rush_attempts: "rushing attempts", player_rush_att: "rushing attempts",
+        player_anytime_td: "anytime touchdown", player_1st_td: "anytime touchdown",
+        player_2_plus_tds: "2+ touchdowns",
+        player_points: "points", player_rebounds: "rebounds", player_assists: "assists",
+        player_threes: "threes made", player_pra: "points + rebounds + assists",
+        player_steals: "steals", player_blocks: "blocks",
+        player_hits: "hits", player_total_bases: "total bases",
+        player_hr: "home run", player_rbi: "rbi", player_ks: "strikeouts",
+        player_walks: "walks", player_stolen_bases: "stolen bases",
+        player_shots_on_goal: "shots on goal", player_goals: "goals",
+        player_points_nhl: "points", player_saves: "saves",
+        player_blocked_shots: "blocked shots",
+      };
+
       const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
         for (const mkt of bk.markets || []) {
+          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^player_/, "").replace(/_/g, " ") || "";
           for (const outcome of mkt.outcomes || []) {
             const price = outcome.price || -110;
             const implied = price < 0
@@ -476,14 +519,16 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
             const pKey = (playerName || "").toLowerCase();
             const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
 
+            const selectionWithStat = outcome.description
+              ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""} ${statLabel}`
+              : `${outcome.name} ${outcome.point ?? ""} ${statLabel}`;
+
             const prop: any = {
               eventId: data.eventId,
               sport,
               home,
               away,
-              selection: outcome.description
-                ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
-                : `${outcome.name} ${outcome.point ?? ""}`,
+              selection: selectionWithStat.trim(),
               player: playerName,
               marketType: mkt.key || "prop",
               point: outcome.point,
@@ -517,6 +562,11 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
                   prop.aiEdge = +(report.hit - implied).toFixed(4);
                   prop.aiLean = report.lean;
                   prop.aiConfidence = report.confidence;
+                  prop.aiStat = report.stat;
+                  prop.aiBecause = report.because;
+                  prop.aiLayerCount = report.layers?.length || 0;
+                  prop.aiIllegal = report.illegal;
+                  prop.aiStandDown = report.standDown;
                 }
               } catch {}
             }
