@@ -7,7 +7,7 @@ import { leagueOfficialName, stripWrongCollegeLogo } from "@/lib/market/logo-gua
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
-import { fetchRealPropsFn, getOddsQuotaFn } from "@/lib/market/server";
+import { fetchRealPropsFn, getCachedPropsFn, getOddsQuotaFn } from "@/lib/market/server";
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
 import { sportLabel } from "@/lib/copy";
@@ -19,6 +19,7 @@ function TheMatrix() {
   const { isAdmin } = useAccess();
   const [quota, setQuota] = useState<number | null>(null);
   const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
+  const [cachedEvents, setCachedEvents] = useState<Set<string>>(new Set());
 
   const SPORT_KEY: Record<string, string> = {
     NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
@@ -33,15 +34,36 @@ function TheMatrix() {
   const handleFetchProps = async (eventId: string, sport: string) => {
     const sportKey = SPORT_KEY[sport];
     if (!sportKey) return;
+    // Confirm before re-pulling a cached event
+    if (cachedEvents.has(eventId) && !confirm("Props already loaded. Use 1 API request to refresh?")) return;
     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
     setFetchingEvent(eventId);
     try {
       await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
+      setCachedEvents(prev => new Set(prev).add(eventId));
       const q = await getOddsQuotaFn();
       if (q != null) setQuota(q);
     } catch (e) { console.error(e); }
     setFetchingEvent(null);
   };
+
+  // Check which games already have cached props (free, no API cost)
+  useEffect(() => {
+    if (!isAdmin || !snapshot?.briefs?.length) return;
+    const checkCache = async () => {
+      const found = new Set<string>();
+      for (const b of snapshot.briefs.slice(0, 20)) {
+        const sportKey = SPORT_KEY[b.sport];
+        if (!sportKey) continue;
+        try {
+          const res = await getCachedPropsFn({ data: { sportKey, eventId: b.eventId } });
+          if (res.ok && res.props?.length) found.add(b.eventId);
+        } catch {}
+      }
+      if (found.size > 0) setCachedEvents(found);
+    };
+    checkCache();
+  }, [isAdmin, snapshot?.briefs?.length]);
 
   const gamesMap = new Map<string, any>();
   snapshot?.briefs?.forEach((b: any) => {
@@ -260,12 +282,12 @@ function TheMatrix() {
               <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
                  <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
                  <div className="flex items-center gap-3">
-                   {isAdmin && (
-                     <button onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }} disabled={fetchingEvent === g.eventId} className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 disabled:opacity-50">
-                       <Zap className="size-3" />
-                       {fetchingEvent === g.eventId ? "Pulling..." : "Fetch Props"}
-                     </button>
-                   )}
+                    {isAdmin && (
+                      <button onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }} disabled={fetchingEvent === g.eventId} className={`flex items-center gap-1 text-xs font-bold disabled:opacity-50 ${cachedEvents.has(g.eventId) ? "text-emerald-400 hover:text-emerald-300" : "text-amber-400 hover:text-amber-300"}`}>
+                        <Zap className="size-3" />
+                        {fetchingEvent === g.eventId ? "Pulling..." : cachedEvents.has(g.eventId) ? "Props ✓" : "Fetch Props"}
+                      </button>
+                    )}
                    <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
                  </div>
               </div>

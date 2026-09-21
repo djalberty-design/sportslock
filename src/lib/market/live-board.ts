@@ -744,7 +744,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   ]);
   if (quotes.length === 0 && oddsApiMains && oddsApiMains.length > 0) {
     quotes = quotesFromOddsApi(oddsApiMains);
-    notes.push("ESPN scraper manually disabled. Board schedule and lines powered 100% by The Odds-API.");
+    notes.push("No public ticket/handle tape on this pull.");
   }
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();
@@ -919,7 +919,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     briefs,
     predict,
     sourceNote: live
-      ? `Odds API board (${listed.join(", ")}) as of ${asOf}.${notes.length ? ` ${notes.join("; ")}.` : ""}${tapeNote} Prediction markets are research, not a Hard Rock fill. Not a lock.`
+      ? `Odds API board (${listed.join(", ")}) · Last updated ${new Date(asOf).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZoneName: "short" })}.${notes.length ? ` ${notes.join("; ")}.` : ""}${tapeNote} Prediction markets are research, not a Hard Rock fill. Not a lock.`
       : "Odds API returned no games. Quota may be exhausted.",
   };
 }

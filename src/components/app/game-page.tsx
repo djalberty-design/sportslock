@@ -36,6 +36,10 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [propsFetched, setPropsFetched] = useState(false);
   const [propsCacheTime, setPropsCacheTime] = useState<string | null>(null);
 
+  // Must be defined before handleFetchRealProps and useEffect that reference it
+  const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
+  const firstQuoteRef = gameQuotes[0];
+
   const handleFetchRealProps = async () => {
     if (!firstQuoteRef?.sport) return;
     const sportKey = SPORT_KEY[firstQuoteRef.sport] || firstQuoteRef.sport;
@@ -72,9 +76,6 @@ export function GamePage({ eventId }: { eventId: string }) {
       })
       .catch(() => {});
   }, [firstQuoteRef?.sport, eventId, propsFetched]);
-
-  const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
-  const firstQuoteRef = gameQuotes[0];
 
   const gameProps = useMemo(() => {
     const allProps = picks?.allProps || picks?.props || [];
