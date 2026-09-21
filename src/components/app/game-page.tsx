@@ -245,6 +245,11 @@ export function GamePage({ eventId }: { eventId: string }) {
         home: firstQuote?.home || "",
         away: firstQuote?.away || "",
         fastLog: true,
+        // Forward line/market for auto-grader (single-leg)
+        ...(legs.length === 1 ? {
+          point: (legs[0] as any).point ?? undefined,
+          marketType: (legs[0] as any).marketType ?? undefined,
+        } : {}),
       });
 
       // Also log to server

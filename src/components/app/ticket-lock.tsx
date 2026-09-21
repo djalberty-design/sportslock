@@ -122,6 +122,11 @@ export function buildLockPayload(
     gameIds: delayed.filter(Boolean).map((r) => r!.eventId),
     home: items[0].home,
     away: items[0].away,
+    // Forward line/market for auto-grader (single-leg only)
+    ...(items.length === 1 ? {
+      point: items[0].point ?? undefined,
+      marketType: items[0].marketType ?? undefined,
+    } : {}),
   };
 }
 
