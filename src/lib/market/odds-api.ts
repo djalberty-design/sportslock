@@ -84,6 +84,16 @@ export function getOddsQuota() {
   return globalCache.quotaRemaining;
 }
 
+/** Check quota via the lightweight /sports endpoint (free, doesn't count) */
+export async function getOddsQuotaLive(): Promise<number | null> {
+  if (globalCache.quotaRemaining != null) return globalCache.quotaRemaining;
+  try {
+    const res = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${ODDS_API_KEY}`);
+    noteQuota(res);
+    return globalCache.quotaRemaining;
+  } catch { return null; }
+}
+
 function oddsUrl(path: string, extra: string) {
   return `https://api.the-odds-api.com/v4/${path}?apiKey=${ODDS_API_KEY}&regions=${ODDS_REGIONS}&oddsFormat=american&${extra}&bookmakers=${ODDS_BOOKS}`;
 }

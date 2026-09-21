@@ -744,7 +744,6 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   ]);
   if (quotes.length === 0 && oddsApiMains && oddsApiMains.length > 0) {
     quotes = quotesFromOddsApi(oddsApiMains);
-    notes.push("No public ticket/handle tape on this pull.");
   }
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();
@@ -919,7 +918,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     briefs,
     predict,
     sourceNote: live
-      ? `Odds API board (${listed.join(", ")}) · Last updated ${new Date(asOf).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZoneName: "short" })}.${notes.length ? ` ${notes.join("; ")}.` : ""}${tapeNote} Prediction markets are research, not a Hard Rock fill. Not a lock.`
+      ? `Odds API board (${listed.join(", ")}) · Updated ${new Date(asOf).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZoneName: "short" })}.${publicSplits.length ? ` Ticket/handle tape on ${publicSplits.length} game${publicSplits.length === 1 ? "" : "s"}.` : ""} Lines are research, not a lock.`
       : "Odds API returned no games. Quota may be exhausted.",
   };
 }

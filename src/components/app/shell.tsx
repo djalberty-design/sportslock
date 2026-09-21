@@ -45,18 +45,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAdmin) return;
     getOddsQuotaFn().then(setQuota).catch(() => {});
-    const interval = setInterval(() => getOddsQuotaFn().then(setQuota).catch(() => {}), 60_000);
+    const interval = setInterval(() => getOddsQuotaFn().then(setQuota).catch(() => {}), 120_000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
-  // Calculate props pulls available (subtract reserved daily ML/spread pulls)
-  const propsAvailable = useMemo(() => {
+  // Real sport season schedule → active daily pulls needed
+  const quotaInfo = useMemo(() => {
     if (quota == null) return null;
     const now = new Date();
-    const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-    const activeSports = 3; // Sept: NFL, NCAAF, MLB (from getActiveSports)
-    const reservedForDailyPulls = daysLeft * activeSports;
-    return Math.max(0, quota - reservedForDailyPulls);
+    const month = now.getMonth() + 1; // 1-indexed
+    // Count active sports this month (matches getActiveSports in odds-api.ts)
+    let activeSports = 0;
+    if (month >= 9 || month <= 2) activeSports++; // NFL: Sep-Feb (reg+playoffs)
+    if (month >= 8 || month <= 1) activeSports++; // NCAAF: Aug-Jan
+    if (month >= 3 && month <= 11) activeSports++; // MLB: Mar-Nov (reg+playoffs)
+    if (month >= 10 || month <= 6) activeSports++; // NBA: Oct-Jun
+    if (month >= 10 || month <= 6) activeSports++; // NHL: Oct-Jun
+    if (month >= 11 || month <= 4) activeSports++; // NCAAB: Nov-Apr
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = daysInMonth - now.getDate();
+    const reservedForDaily = daysLeft * activeSports;
+    const propsAvail = Math.max(0, quota - reservedForDaily);
+    const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const resetLabel = resetDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return { propsAvail, activeSports, daysLeft, reservedForDaily, resetLabel };
   }, [quota]);
 
   return (
@@ -65,13 +78,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-4">
           <DeskStamp />
         </div>
-        {isAdmin && quota != null && (
-          <div className="flex items-center gap-2">
-            <span className={cn("font-mono", quota < 50 ? "text-red-400" : quota < 150 ? "text-amber-400" : "text-emerald-400")}>
-              {propsAvailable} prop pulls left
+        {isAdmin && quota != null && quotaInfo && (
+          <div className="flex items-center gap-2 normal-case tracking-normal" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
+            <span className={cn("font-mono", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
+              ⚡ {quotaInfo.propsAvail} prop pulls
             </span>
-            <span className="text-muted/50">·</span>
-            <span className="text-muted/70">{quota}/500 total</span>
+            <span className="text-muted/40">|</span>
+            <span className="text-muted/60 font-mono">{quota}/500</span>
+            <span className="text-muted/40">|</span>
+            <span className="text-muted/50">resets {quotaInfo.resetLabel}</span>
           </div>
         )}
       </div>

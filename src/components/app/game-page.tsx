@@ -35,6 +35,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [fetchedProps, setFetchedProps] = useState<any[]>([]);
   const [propsFetched, setPropsFetched] = useState(false);
   const [propsCacheTime, setPropsCacheTime] = useState<string | null>(null);
+  const [propFilter, setPropFilter] = useState<string>("all");
 
   // Must be defined before handleFetchRealProps and useEffect that reference it
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
@@ -439,6 +440,25 @@ export function GamePage({ eventId }: { eventId: string }) {
     else if (type === "props") items = gameProps;
     else if (type === "lines") items = lines;
 
+    // Collect available categories for filter pills
+    const availableCategories = type === "props" ? (() => {
+      const counts = new Map<string, number>();
+      for (const q of items) {
+        const cat = q.marketType || q.row?.marketType || "other";
+        counts.set(cat, (counts.get(cat) || 0) + 1);
+      }
+      return [...counts.entries()].sort(([a], [b]) => {
+        const ai = PROP_ORDER.indexOf(a);
+        const bi = PROP_ORDER.indexOf(b);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
+    })() : [];
+
+    // Apply category filter
+    if (type === "props" && propFilter !== "all") {
+      items = items.filter((q: any) => (q.marketType || q.row?.marketType) === propFilter);
+    }
+
     // Group props by category when on props tab
     const grouped = type === "props" ? (() => {
       const map = new Map<string, any[]>();
@@ -447,7 +467,6 @@ export function GamePage({ eventId }: { eventId: string }) {
         if (!map.has(cat)) map.set(cat, []);
         map.get(cat)!.push(q);
       }
-      // Sort categories by PROP_ORDER
       return [...map.entries()].sort(([a], [b]) => {
         const ai = PROP_ORDER.indexOf(a);
         const bi = PROP_ORDER.indexOf(b);
@@ -457,6 +476,30 @@ export function GamePage({ eventId }: { eventId: string }) {
 
     return (
       <div className="flex flex-col gap-3 pb-24">
+        {/* Category filter pills */}
+        {type === "props" && availableCategories.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 py-1">
+            <button
+              onClick={() => setPropFilter("all")}
+              className={cn("px-3 py-1 rounded-full text-[11px] font-bold transition-colors border",
+                propFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+              )}
+            >
+              All ({gameProps.length})
+            </button>
+            {availableCategories.map(([cat, count]) => (
+              <button
+                key={cat}
+                onClick={() => setPropFilter(propFilter === cat ? "all" : cat)}
+                className={cn("px-3 py-1 rounded-full text-[11px] font-bold transition-colors border",
+                  propFilter === cat ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+                )}
+              >
+                {PROP_LABEL[cat]?.replace(/^[^\s]+\s/, "") || cat.replace(/^player_/, "").replace(/_/g, " ")} ({count})
+              </button>
+            ))}
+          </div>
+        )}
         {items.length === 0 && (
           <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl flex flex-col items-center gap-3">
             <p>

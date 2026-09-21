@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { BRAND } from "@/lib/brand";
 import { buildLiveSnapshot } from "./live-board";
 import { ESPN_PATH, applyLeaderStats, enrichResearchForm, fetchEspnRoster, fetchEspnTeamLeaders, mergeResearchPlayers, parseEspnSummary, parseInternalEventId, type EventResearch } from "./research";
-import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";import { getOddsQuota } from "./odds-api";
+import type { ContestOffer, DeskSnapshot, ParsedTicket } from "./types";
 import { resolveVisionKey, VISION_MODELS, VISION_UNAVAILABLE } from "./vision-key";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { isAdminEmail, normalizeEmail } from "@/lib/admin";
@@ -230,7 +230,8 @@ export const getOddsQuotaFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<number | null> => {
   await assertAdmin(context.userId);
-  return getOddsQuota();
+  const { getOddsQuotaLive } = await import("@/lib/market/odds-api");
+  return getOddsQuotaLive();
 });
 
 export const fetchRealPropsFn = createServerFn({ method: "POST" })
