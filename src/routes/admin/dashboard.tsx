@@ -116,6 +116,7 @@ function Dashboard() {
           <div className="mt-4 flex items-center gap-4">
             <div className="flex-1 h-8 bg-line/30 rounded-full overflow-hidden relative">
               <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted/50" title="50% = random" />
+              <div className="absolute top-0 bottom-0 w-px border-l border-dashed border-amber-400/60" style={{ left: "52.4%" }} title="52.4% = break even" />
               <div className={cn("h-full rounded-full transition-all", wr >= 55 ? "bg-emerald-500" : wr >= 52 ? "bg-amber-500" : "bg-red-500")}
                 style={{ width: `${Math.min(wr, 100)}%` }} />
             </div>
@@ -123,8 +124,8 @@ function Dashboard() {
               {wr}%
             </span>
           </div>
-          <div className="flex justify-between text-[10px] text-muted mt-1 px-1">
-            <span>0%</span><span>50% (random)</span><span>100%</span>
+          <div className="flex justify-between text-[10px] text-muted mt-1 px-1 relative">
+            <span>0%</span><span>50% (random)</span><span className="absolute text-amber-400/70" style={{ left: "52.4%" }}>52.4%</span><span>100%</span>
           </div>
         </section>
 
