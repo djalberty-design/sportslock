@@ -867,7 +867,7 @@ function rankRows(rows: ScanRow[], bucket: PickBucket, why: (r: ScanRow) => stri
           return pre.length ? pre : scored;
         })()
       : scored;
-  const perEvent = bucket === "period" ? 1 : bucket === "popular" ? 3 : 2;
+  const perEvent = bucket === "period" ? 1 : bucket === "popular" ? 3 : bucket === "prop" ? 20 : 2;
   const count = new Map<string, number>();
   const out: DeskPick[] = [];
   for (const p of picks) {

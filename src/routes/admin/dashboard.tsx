@@ -107,6 +107,74 @@ function Dashboard() {
           tooltip="Predictions not yet graded — need final scores. Use 'Grade Now' to process them." />
       </div>
 
+      {/* Daily Digest + Rolling Record */}
+      {(stats as any).dailyDigest && (() => {
+        const d = (stats as any).dailyDigest;
+        const todayDecided = d.todayWins + d.todayLosses;
+        return (
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Today's Summary */}
+            <section className="bg-panel border border-line rounded-xl p-4">
+              <SectionHeader icon={<Flame />} title="Today's Summary"
+                description="Graded picks from today's completed games." />
+              <div className="mt-3">
+                {todayDecided > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-display font-bold text-ink">{d.todayWins}-{d.todayLosses}</span>
+                      <span className={cn("text-sm font-bold", d.todayWins > d.todayLosses ? "text-emerald-400" : d.todayWins < d.todayLosses ? "text-red-400" : "text-muted")}>
+                        ({Math.round(d.todayWins / todayDecided * 100)}%)
+                      </span>
+                    </div>
+                    {d.bestHit && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-emerald-400 font-bold">🎯 Best Hit</span>
+                        <span className="text-muted">{d.bestHit.sport} · {d.bestHit.selection} · {d.bestHit.home} vs {d.bestHit.away}</span>
+                      </div>
+                    )}
+                    {d.worstMiss && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-red-400 font-bold">❌ Worst Miss</span>
+                        <span className="text-muted">{d.worstMiss.sport} · {d.worstMiss.selection} · {d.worstMiss.home} vs {d.worstMiss.away}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">No graded picks yet today.</p>
+                )}
+              </div>
+            </section>
+
+            {/* Rolling Record */}
+            <section className="bg-panel border border-line rounded-xl p-4">
+              <SectionHeader icon={<BarChart2 />} title="Rolling Record"
+                description="Win rate over different time windows." />
+              <div className="mt-3 space-y-2">
+                {[
+                  { label: "7 Day", ...d.week },
+                  { label: "30 Day", ...d.month },
+                  { label: "All Time", ...d.allTime },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between text-sm">
+                    <span className="text-muted font-medium">{row.label}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-ink font-bold">{row.wins}-{row.losses}</span>
+                      <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full",
+                        row.pct >= 55 ? "bg-emerald-500/20 text-emerald-400" :
+                        row.pct >= 52 ? "bg-amber-500/20 text-amber-400" :
+                        row.pct > 0 ? "bg-red-500/20 text-red-400" : "bg-line text-muted"
+                      )}>
+                        {row.pct}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        );
+      })()}
+
       {/* Quick Performance Breakdown */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* Win Rate Gauge */}

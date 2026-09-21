@@ -443,12 +443,14 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       const enrichedKey = `enriched-props:${rawId}`;
       const enriched = await readOddsApiCache(enrichedKey);
       if (enriched?.data && Array.isArray(enriched.data) && enriched.data.length > 0) {
-        // Check if enriched cache has AI scores — if not, it's from pre-fix version, re-enrich
+        // Check if enriched cache has AI scores AND is not expired (24h TTL)
         const hasAi = enriched.data.some((p: any) => p.aiProb != null);
-        if (hasAi) {
+        const cacheAge = Date.now() - new Date(enriched.fetchedAt).getTime();
+        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+        if (hasAi && cacheAge < CACHE_TTL) {
           return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
         }
-        // Stale enriched cache (no AI) — fall through to re-enrich
+        // Stale enriched cache (no AI or expired) — fall through to re-enrich
       }
 
       // Fallback to raw cache — enrich it (one-time, no Odds API call)
@@ -841,10 +843,47 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         }
       }
 
+      // Daily digest — today's performance from market_tape
+      const todayRaw = await sql`
+        SELECT sport, market_type, selection, home, away, model_probability, edge, status, graded_at
+        FROM market_tape
+        WHERE recommended = true
+          AND status IN ('WIN', 'LOSS')
+          AND graded_at >= current_date
+        ORDER BY graded_at DESC
+      `;
+      const todayWins = todayRaw.filter(r => r.status === 'WIN').length;
+      const todayLosses = todayRaw.filter(r => r.status === 'LOSS').length;
+      const bestHit = todayRaw.find(r => r.status === 'WIN');
+      const worstMiss = todayRaw.find(r => r.status === 'LOSS');
+
+      // 7-day and 30-day rolling records from market_tape
+      const rollingRaw = await sql`
+        SELECT
+          count(*) filter (where status = 'WIN' AND graded_at >= current_date - interval '7 days')::int as w7,
+          count(*) filter (where status = 'LOSS' AND graded_at >= current_date - interval '7 days')::int as l7,
+          count(*) filter (where status = 'WIN' AND graded_at >= current_date - interval '30 days')::int as w30,
+          count(*) filter (where status = 'LOSS' AND graded_at >= current_date - interval '30 days')::int as l30,
+          count(*) filter (where status = 'WIN')::int as wall,
+          count(*) filter (where status = 'LOSS')::int as lall
+        FROM market_tape
+        WHERE recommended = true AND status IN ('WIN', 'LOSS')
+      `;
+      const r = rollingRaw[0] || { w7: 0, l7: 0, w30: 0, l30: 0, wall: 0, lall: 0 };
+      const dailyDigest = {
+        todayWins, todayLosses,
+        bestHit: bestHit ? { sport: bestHit.sport, selection: bestHit.selection, home: bestHit.home, away: bestHit.away, edge: Number(bestHit.edge) || 0 } : null,
+        worstMiss: worstMiss ? { sport: worstMiss.sport, selection: worstMiss.selection, home: worstMiss.home, away: worstMiss.away, edge: Number(worstMiss.edge) || 0 } : null,
+        week: { wins: r.w7, losses: r.l7, pct: (r.w7 + r.l7) > 0 ? Math.round(r.w7 / (r.w7 + r.l7) * 1000) / 10 : 0 },
+        month: { wins: r.w30, losses: r.l30, pct: (r.w30 + r.l30) > 0 ? Math.round(r.w30 / (r.w30 + r.l30) * 1000) / 10 : 0 },
+        allTime: { wins: r.wall, losses: r.lall, pct: (r.wall + r.lall) > 0 ? Math.round(r.wall / (r.wall + r.lall) * 1000) / 10 : 0 },
+      };
+
       return {
         total: t.total, wins: t.wins, losses: t.losses, pushes: t.pushes, pending: t.pending,
         winRate, byMarket, bySport, byEdgeTier, recentLogs, autopsySummary,
         streakData: { currentStreak, streakType, longestWin, longestLoss },
+        dailyDigest,
       };
     } catch (e: any) {
       console.error("getBrainStatsFn error:", e);
@@ -853,6 +892,7 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         byMarket: [], bySport: [], byEdgeTier: [], recentLogs: [],
         autopsySummary: { highVariance: 0, modelError: 0, unreviewed: 0 },
         streakData: { currentStreak: 0, streakType: "NONE", longestWin: 0, longestLoss: 0 },
+        dailyDigest: { todayWins: 0, todayLosses: 0, bestHit: null, worstMiss: null, week: { wins: 0, losses: 0, pct: 0 }, month: { wins: 0, losses: 0, pct: 0 }, allTime: { wins: 0, losses: 0, pct: 0 } },
       };
     }
   });

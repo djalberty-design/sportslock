@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { fetchRealPropsFn, getCachedPropsFn, lockPredictionFn } from "@/lib/market/server";
 import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
-import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [propsCacheTime, setPropsCacheTime] = useState<string | null>(null);
   const [propFilter, setPropFilter] = useState<string>("all");
   const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [confidenceFilter, setConfidenceFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Reset props state when navigating between games
@@ -46,6 +47,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     setPropsCacheTime(null);
     setPropFilter("all");
     setTeamFilter("all");
+    setConfidenceFilter("all");
     setSearchQuery("");
   }, [eventId]);
 
@@ -353,9 +355,27 @@ export function GamePage({ eventId }: { eventId: string }) {
       || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
     const mType = q.marketType || q.row?.marketType || "";
     const mLabel = PROP_LABEL[mType]?.replace(/^[^\s]+\s/, "") || mType.replace(/^player_/, "").replace(/_/g, " ");
+    
+    const statParts = [];
+    if (q.stats != null && q.stats !== "") {
+      const s = typeof q.stats === "object" ? q.stats.value || q.stats.avg : q.stats;
+      if (s) statParts.push(`Season: ${s} avg`);
+    }
+    if (q.recentStats != null && q.recentStats !== "") {
+      const r = typeof q.recentStats === "object" ? q.recentStats.value || q.recentStats.avg : q.recentStats;
+      if (r) statParts.push(`Last 3: ${r} avg`);
+    }
+    if (q.position) statParts.push(`Pos: ${q.position}`);
+    else if (q.team) statParts.push(`Team: ${q.team}`);
     const teamPos = [q.team, q.position].filter(Boolean).join(" · ");
+    const statLine = statParts.length > 0 ? statParts.join(" · ") : teamPos;
+
     const rowKey = `${q.selection}-${mType}`;
     const isExp = expandedRow === rowKey;
+
+    const confidence = (q.confidence || q.row?.confidence || "medium").toLowerCase();
+    const isHigh = confidence === "high";
+    const isLow = confidence === "low";
 
     let vegasP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
     let vProb = vegasP < 0 ? (-vegasP / (-vegasP + 100)) : (100 / (vegasP + 100));
@@ -366,7 +386,9 @@ export function GamePage({ eventId }: { eventId: string }) {
         <div
           className={cn(
             "bg-panel border rounded-lg p-3 flex items-center justify-between transition-colors cursor-pointer",
-            isSelected(q) ? "border-primary/50 bg-primary/5" : "border-line hover:border-primary/30"
+            isSelected(q) ? "border-primary/50 bg-primary/5" : "border-line hover:border-primary/30",
+            isHigh ? "border-l-4 border-l-amber-400" : "",
+            isLow ? "opacity-70" : ""
           )}
           onClick={() => setExpandedRow(isExp ? null : rowKey)}
         >
@@ -383,12 +405,18 @@ export function GamePage({ eventId }: { eventId: string }) {
             <div className="flex flex-col min-w-0">
               {playerName ? (
                 <>
-                  <span className="font-bold text-ink text-sm truncate">{playerName}</span>
+                  <span className="font-bold text-ink text-sm truncate flex items-center gap-1">
+                    {playerName}
+                    {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
+                  </span>
                   <span className="text-muted text-xs truncate">{label}</span>
-                  {teamPos && <span className="text-[10px] text-muted/50 uppercase tracking-wider">{teamPos}</span>}
+                  {statLine && <span className="text-[10px] text-muted">{statLine}</span>}
                 </>
               ) : (
-                <span className="font-bold text-ink text-sm truncate">{label} {pointText}</span>
+                <span className="font-bold text-ink text-sm truncate flex items-center gap-1">
+                  {label} {pointText}
+                  {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
+                </span>
               )}
             </div>
           </div>
@@ -484,6 +512,10 @@ export function GamePage({ eventId }: { eventId: string }) {
       items = items.filter((q: any) => (q.player || "").toLowerCase().includes(sq));
     }
 
+    // Apply confidence filter
+    if (type === "props" && confidenceFilter !== "all") {
+      items = items.filter((q: any) => (q.confidence || q.row?.confidence || "medium").toLowerCase() === confidenceFilter);
+    }
     // Collect available categories for filter pills (after team/search filter)
     const availableCategories = type === "props" ? (() => {
       const counts = new Map<string, number>();
@@ -559,7 +591,27 @@ export function GamePage({ eventId }: { eventId: string }) {
                 className="flex-1 bg-panel border border-line rounded-lg px-3 py-1.5 text-sm text-ink placeholder:text-muted/50 focus:outline-none focus:border-primary/50"
               />
             </div>
-            {/* Row 2: Category pills (horizontal scroll) */}
+            {/* Row 2: Confidence filter */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { key: "all", label: "All Confidence" },
+                { key: "high", label: "High" },
+                { key: "medium", label: "Medium" },
+                { key: "low", label: "Low" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setConfidenceFilter(key)}
+                  className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0 flex items-center gap-1",
+                    confidenceFilter === key ? "bg-amber-400/10 text-amber-400 border-amber-400/30" : "bg-panel border-line text-muted hover:border-amber-400/30"
+                  )}
+                >
+                  {key === "high" && <Star className={cn("size-3", confidenceFilter === "high" ? "fill-amber-400" : "")} />}
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Row 3: Category pills (horizontal scroll) */}
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setPropFilter("all")}

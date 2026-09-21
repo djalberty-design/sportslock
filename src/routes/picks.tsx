@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, BarChart2 } from "lucide-react";
+import { Target, BarChart2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
@@ -90,6 +90,7 @@ function TheLab() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [propFilter, setPropFilter] = useState("all");
+  const [confidenceFilter, setConfidenceFilter] = useState("all");
 
   // Get unique games for team toggle
   const games = useMemo(() => {
@@ -121,8 +122,11 @@ function TheLab() {
     if (propFilter !== "all") {
       items = items.filter((p: any) => p.marketType === propFilter);
     }
+    if (confidenceFilter !== "all") {
+      items = items.filter((p: any) => (p.confidence || p.row?.confidence || "medium").toLowerCase() === confidenceFilter);
+    }
     return items;
-  }, [allProps, teamFilter, searchQuery, propFilter, games]);
+  }, [allProps, teamFilter, searchQuery, propFilter, confidenceFilter, games]);
 
   // Get available categories (pre-filter)
   const availableCategories = useMemo(() => {
@@ -217,7 +221,27 @@ function TheLab() {
                 className="flex-1 bg-panel border border-line rounded-lg px-3 py-1.5 text-sm text-ink placeholder:text-muted/50 focus:outline-none focus:border-primary/50"
               />
             </div>
-            {/* Row 2: Category pills */}
+            {/* Row 2: Confidence filter */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { key: "all", label: "All Confidence" },
+                { key: "high", label: "High" },
+                { key: "medium", label: "Medium" },
+                { key: "low", label: "Low" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setConfidenceFilter(key)}
+                  className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0 flex items-center gap-1",
+                    confidenceFilter === key ? "bg-amber-400/10 text-amber-400 border-amber-400/30" : "bg-panel border-line text-muted hover:border-amber-400/30"
+                  )}
+                >
+                  {key === "high" && <Star className={cn("size-3", confidenceFilter === "high" ? "fill-amber-400" : "")} />}
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Row 3: Category pills */}
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setPropFilter("all")}
@@ -268,8 +292,16 @@ function TheLab() {
                 const amOdds = rawP > 0 ? `+${rawP}` : `${rawP}`;
                 const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
 
+                const confidence = (p.confidence || p.row?.confidence || "medium").toLowerCase();
+                const isHigh = confidence === "high";
+                const isLow = confidence === "low";
+
                 return (
-                  <div key={`${p.selection}-${i}`} className="rounded-xl border border-line bg-panel p-3 hover:border-primary/30 transition-all">
+                  <div key={`${p.selection}-${i}`} className={cn(
+                    "rounded-xl border border-line bg-panel p-3 hover:border-primary/30 transition-all",
+                    isHigh ? "border-l-4 border-l-amber-400" : "",
+                    isLow ? "opacity-70" : ""
+                  )}>
                     <div className="flex items-center gap-3">
                       {/* Headshot */}
                       {headshotUrl ? (
@@ -286,7 +318,10 @@ function TheLab() {
                       {/* Player info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-ink truncate">{playerName || p.selection}</span>
+                          <span className="text-sm font-bold text-ink truncate flex items-center gap-1">
+                            {playerName || p.selection}
+                            {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
+                          </span>
                           {teamPos && <span className="text-[10px] text-muted/50 uppercase tracking-wider shrink-0">{teamPos}</span>}
                         </div>
                         {playerName && <span className="text-xs text-muted truncate block">{cleanLabel}</span>}
