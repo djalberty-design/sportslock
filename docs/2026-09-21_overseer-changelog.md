@@ -13,6 +13,16 @@
 
 ---
 
+### Commit `4d70b24` — Fix: Admin Props Button Now Visible
+
+**ROOT CAUSE:** `game-page.tsx` used `selectIsAdmin` from desk-store which checks `adminEmail` field. `setAdminEmail` was NEVER CALLED anywhere in the app, so `adminEmail` was always `""`, so `isAdmin` was always `false`. The button code was deployed but invisible.
+
+**FIX:** Switched to `useAccess()` hook which checks the server-side role via the access API. Same hook used by all other admin-gated UI (Overseer, shell nav, etc.).
+
+The "Pull Props (1 Req)" button at top of game tickets now shows for `djalberty@gmail.com`.
+
+---
+
 **The closed feedback loop is now wired end-to-end.**
 
 Every cron sweep now runs 6 steps: Ledger → Tape → Grade → Autopsy → Suggestions → **Analysis (NEW)**
