@@ -35,13 +35,13 @@ Full audit of 30 prior conversations identified 6 partial implementations and 3 
 - **Fix**: Added spread grading (margin + line > 0 = win) and total grading (combined score vs line, checking over/under in description). Falls back to `"void"` only when no `point`/`line` is stored on the ticket.
 - **Status**: ✅ DONE
 
-#### Fix #5: `desk_ledger_bets` Has No Auto-Settlement Pipeline
-- **Root Cause**: Signed-in user bets in Postgres have no cron or sweeper.
-- **Fix**: Extend `sweepLedger()` to also process `desk_ledger_bets`.
-- **Status**: PENDING
+#### Fix #5: `desk_ledger_bets` Has No Auto-Settlement Pipeline ✅
+- **Root Cause**: Signed-in user bets in Postgres had no cron or sweeper.
+- **Fix**: Added `sweepUserBets()` function to `sweeper.ts`. Refactored `sweepLedger()` to orchestrate both `sweepDeskLedger()` (multi-leg paper tickets) and `sweepUserBets()` (single signed-in user bets). Both use the same ESPN score matching and `gradeMarket()`.
+- **Status**: ✅ DONE
 
-#### Fix #6: Not All Stored Data Visible in Analysis UI
-- **File**: `src/routes/admin/analysis.tsx`
-- **Root Cause**: LLM autopsy text, layer weights, copula values, simulation details stored but not displayed.
-- **Fix**: Add expandable "Raw Data" section to analysis table rows.
-- **Status**: PENDING
+#### Fix #6: Not All Stored Data Visible in Analysis UI ✅
+- **Files**: `src/lib/market/server.ts`, `src/routes/admin/analysis.tsx`
+- **Root Cause**: Analysis query only selected 11 columns; autopsy bucket/note, event ID, phase, in-play status, and the full engine snapshot were stored but never shown.
+- **Fix**: (a) Extended SQL query to include `bucket`, `autopsy_note`, `event_id`, `phase`, `in_play`, `snapshot`. (b) Added expandable 3-column detail panel when clicking any prediction row: Game Details (score, price, line, side, phase), Timing & Identity (snap/start/graded timestamps, event ID), AI Analysis (autopsy bucket + note), plus collapsible raw engine snapshot JSON.
+- **Status**: ✅ DONE
