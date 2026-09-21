@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAnalysisDataFn, batchGradeFn } from "@/lib/market/server";
 import { cn } from "@/lib/utils";
@@ -211,7 +211,8 @@ function AnalysisWorkbench() {
             </thead>
             <tbody>
               {rows.map((r: any) => (
-                <tr key={r.id}
+                <React.Fragment key={r.id}>
+                <tr
                   onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}
                   className="border-b border-line/50 hover:bg-line/20 cursor-pointer transition-colors"
                 >
@@ -239,6 +240,61 @@ function AnalysisWorkbench() {
                     {r.snappedAt ? new Date(r.snappedAt).toLocaleDateString() : "—"}
                   </td>
                 </tr>
+                {expandedRow === r.id && (
+                  <tr className="bg-obsidian/50">
+                    <td colSpan={8} className="px-4 py-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                        {/* Column 1: Game Details */}
+                        <div className="space-y-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">Game Details</div>
+                          <div><span className="text-muted">Final Score:</span> <span className="text-ink font-mono">{r.resultHome != null ? `${r.away} ${r.resultAway} — ${r.home} ${r.resultHome}` : "Not yet graded"}</span></div>
+                          <div><span className="text-muted">Odds Price:</span> <span className="text-ink font-mono">{r.price != null ? (r.price > 0 ? `+${r.price}` : r.price) : "—"}</span></div>
+                          <div><span className="text-muted">Line:</span> <span className="text-ink font-mono">{r.line != null ? r.line : "—"}</span></div>
+                          <div><span className="text-muted">Side:</span> <span className="text-ink">{r.side || "—"}</span></div>
+                          <div><span className="text-muted">Phase:</span> <span className="text-ink">{r.phase || "—"}</span></div>
+                          <div><span className="text-muted">In-Play:</span> <span className="text-ink">{r.inPlay ? "Yes" : "No"}</span></div>
+                        </div>
+                        {/* Column 2: Timing & IDs */}
+                        <div className="space-y-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">Timing & Identity</div>
+                          <div><span className="text-muted">Snapped:</span> <span className="text-ink">{r.snappedAt ? new Date(r.snappedAt).toLocaleString() : "—"}</span></div>
+                          <div><span className="text-muted">Game Start:</span> <span className="text-ink">{r.start ? new Date(r.start).toLocaleString() : "—"}</span></div>
+                          <div><span className="text-muted">Graded:</span> <span className="text-ink">{r.gradedAt ? new Date(r.gradedAt).toLocaleString() : "Not graded"}</span></div>
+                          <div><span className="text-muted">Event ID:</span> <span className="text-ink font-mono text-[10px] break-all">{r.eventId || "—"}</span></div>
+                        </div>
+                        {/* Column 3: AI Analysis */}
+                        <div className="space-y-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">AI Analysis</div>
+                          <div><span className="text-muted">Autopsy Bucket:</span>{" "}
+                            {r.bucket ? (
+                              <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", {
+                                "bg-red-500/15 text-red-400": r.bucket === "model_miss",
+                                "bg-amber-500/15 text-amber-400": r.bucket === "echoed_book",
+                                "bg-zinc-500/15 text-zinc-400": r.bucket === "high_variance",
+                                "bg-emerald-500/15 text-emerald-400": r.bucket === "settled",
+                              })}>{r.bucket.replace(/_/g, " ")}</span>
+                            ) : <span className="text-muted">—</span>}
+                          </div>
+                          {r.autopsyNote && (
+                            <div className="bg-line/20 rounded p-2 text-muted italic">{r.autopsyNote}</div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Snapshot JSON */}
+                      {r.snapshot && (
+                        <details className="mt-3">
+                          <summary className="text-[10px] uppercase tracking-wider text-muted font-bold cursor-pointer hover:text-ink">
+                            Engine Snapshot (Raw JSON) ▸
+                          </summary>
+                          <pre className="mt-1 p-2 bg-zinc-950 border border-line rounded text-[10px] text-muted font-mono max-h-48 overflow-auto whitespace-pre-wrap">
+                            {JSON.stringify(r.snapshot, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
               {!rows.length && (
                 <tr><td colSpan={8} className="py-8 text-center text-muted">No predictions match the current filter.</td></tr>

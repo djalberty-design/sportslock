@@ -4,6 +4,7 @@ import { gradeMarket } from "@/lib/market/grade-tape";
 
 /**
  * Grade pending tickets in desk_ledger against completed game scores.
+ * Also sweeps desk_ledger_bets (signed-in user bets).
  * 
  * Uses live scoreboards (ESPN/MLB/NHL) with fuzzy team matching,
  * not event ID → ESPN lookup which broke when we moved to Odds API events.
@@ -14,11 +15,27 @@ export async function sweepLedger() {
   // 1. Fetch completed scores
   const scores = await fetchLiveScores().catch(() => []);
   const finals = scores.filter((s) => s.complete);
-  if (!finals.length) return { success: true, message: "No completed games in scoreboards", gradedCount: 0 };
+  if (!finals.length) return { success: true, message: "No completed games in scoreboards", gradedCount: 0, userBetsGraded: 0 };
 
-  // 2. Fetch pending tickets
+  // 2. Sweep desk_ledger (multi-leg paper tickets)
+  const ledgerResult = await sweepDeskLedger(sql, finals);
+  
+  // 3. Sweep desk_ledger_bets (signed-in user single bets)
+  const userBetsResult = await sweepUserBets(sql, finals);
+
+  return {
+    success: true,
+    gradedCount: ledgerResult,
+    userBetsGraded: userBetsResult,
+  };
+}
+
+/**
+ * Sweep multi-leg tickets in desk_ledger.
+ */
+async function sweepDeskLedger(sql: any, finals: any[]): Promise<number> {
   const pending = await sql`SELECT * FROM desk_ledger WHERE status = 'pending' LIMIT 50`;
-  if (!pending || pending.length === 0) return { success: true, message: "No pending tickets", gradedCount: 0 };
+  if (!pending || pending.length === 0) return 0;
 
   let gradedCount = 0;
 
@@ -48,7 +65,6 @@ export async function sweepLedger() {
         ) || null;
         
         // Fallback for totals/props: selection is "Over 224.5" etc, no team name
-        // Try matching via home/away fields stored on the leg itself
         if (!hit && (leg.home || leg.away)) {
           hit = finals.find(
             (s) =>
@@ -58,8 +74,7 @@ export async function sweepLedger() {
           ) || null;
         }
         
-        // Final fallback: if another leg on this ticket already matched a game,
-        // and this is a total/prop for the same sport, use that game
+        // Final fallback: inherit game from sibling leg
         if (!hit && ticketGame) {
           const isTotalOrProp = /total|over|under/i.test(marketType) || /\b(over|under)\b/i.test(selection);
           if (isTotalOrProp && (!sport || !ticketGame.sport || ticketGame.sport === sport)) {
@@ -72,7 +87,6 @@ export async function sweepLedger() {
           break;
         }
         
-        // Remember the matched game for sibling legs
         if (!ticketGame) ticketGame = hit;
 
         const outcome = gradeMarket({
@@ -93,14 +107,11 @@ export async function sweepLedger() {
 
         if (outcome === "LOSS") hasLoss = true;
         if (outcome === "PUSH") hasPush = true;
-        
-        // Short-circuit: any loss kills the ticket
         if (hasLoss) break;
       }
 
       if (!allSettled) continue;
 
-      // 3. Grade the final ticket
       const ticketOutcome = hasLoss ? "loss" : "win";
 
       await sql`
@@ -116,5 +127,78 @@ export async function sweepLedger() {
     }
   }
 
-  return { success: true, gradedCount };
+  return gradedCount;
+}
+
+/**
+ * Sweep single bets in desk_ledger_bets (signed-in user bets).
+ * These rows have home, away, sport, market_type, and ticket_name directly.
+ */
+async function sweepUserBets(sql: any, finals: any[]): Promise<number> {
+  let pending: any[];
+  try {
+    pending = await sql`SELECT * FROM desk_ledger_bets WHERE result = 'PENDING' LIMIT 100`;
+  } catch {
+    // Table may not exist yet
+    return 0;
+  }
+  if (!pending || pending.length === 0) return 0;
+
+  let gradedCount = 0;
+
+  for (const bet of pending) {
+    try {
+      const home = bet.home || "";
+      const away = bet.away || "";
+      const sport = bet.sport || null;
+      const marketType = bet.market_type || "ml";
+      const selection = bet.ticket_name || "";
+
+      // Match to a completed game via home/away team names
+      let hit = finals.find(
+        (s) =>
+          (!sport || !s.sport || s.sport === sport) &&
+          ((home && teamsMatch(home, s.home, s.homeAbbr)) ||
+           (away && teamsMatch(away, s.away, s.awayAbbr)))
+      ) || null;
+
+      // Fallback: try matching ticket_name (selection) against team names
+      if (!hit) {
+        hit = finals.find(
+          (s) =>
+            (!sport || !s.sport || s.sport === sport) &&
+            (teamsMatch(selection, s.home, s.homeAbbr) ||
+             teamsMatch(selection, s.away, s.awayAbbr))
+        ) || null;
+      }
+
+      if (!hit) continue;
+
+      const outcome = gradeMarket({
+        marketType,
+        side: null,
+        selection,
+        line: null,
+        home: hit.home,
+        away: hit.away,
+        homeScore: hit.homeScore,
+        awayScore: hit.awayScore,
+      });
+
+      if (!outcome) continue;
+
+      await sql`
+        UPDATE desk_ledger_bets
+        SET result = ${outcome},
+            updated_at = now()
+        WHERE id = ${bet.id}
+      `;
+      gradedCount++;
+
+    } catch (e) {
+      console.error(`Failed to grade user bet ${bet.id}:`, e);
+    }
+  }
+
+  return gradedCount;
 }

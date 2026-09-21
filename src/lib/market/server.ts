@@ -758,7 +758,8 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
       const rowsQuery = `
         SELECT id, selection, sport, home, away, market_type, side, line,
                price, model_probability, edge, status, result_home, result_away,
-               graded_at, snapped_at, start
+               graded_at, snapped_at, start, event_id, phase, in_play,
+               bucket, autopsy_note, snapshot
         FROM market_tape
         ${where}
         ORDER BY snapped_at DESC
@@ -812,6 +813,13 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
           gradedAt: r.graded_at ? String(r.graded_at) : null,
           snappedAt: String(r.snapped_at),
           start: r.start ? String(r.start) : null,
+          // Extended data for raw view
+          eventId: r.event_id || null,
+          phase: r.phase || null,
+          inPlay: r.in_play || false,
+          bucket: r.bucket || null,
+          autopsyNote: r.autopsy_note || null,
+          snapshot: r.snapshot || null,
         })),
       };
     } catch (e: any) {
