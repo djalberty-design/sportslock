@@ -595,7 +595,6 @@ export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(async (): Promise<{ ok: boolean; props: any[] }> => {
     try {
-      const { getSql } = await import("@/lib/db");
       const sql = await getSql();
       const rows = await sql<{ data: any; fetched_at: string }>`
         SELECT data, fetched_at FROM odds_api_cache
