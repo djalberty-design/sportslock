@@ -240,13 +240,12 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ ok: boolean; props?: any[]; error?: string }> => {
     try {
       await assertAdmin(context.userId);
-      const { fetchOddsApiProps } = await import("@/lib/market/odds-api");
+      const { fetchOddsApiProps, writeOddsApiCache } = await import("@/lib/market/odds-api");
       const res = await fetchOddsApiProps(data.sportKey, data.eventId, true);
       if (!res) return { ok: false, error: "Odds API returned empty response" };
       if (res.__error) return { ok: false, error: `Odds API HTTP ${res.status}: ${res.message || "Unknown error"}` };
 
-      // Normalize raw Odds API response into QuoteLine-compatible props
-      const props: any[] = [];
+      // Determine sport and team names
       const event = res;
       const home = event.home_team || event.homeTeam || "";
       const away = event.away_team || event.awayTeam || "";
@@ -258,6 +257,41 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
         : data.sportKey.includes("nhl") ? "NHL"
         : data.sportKey.toUpperCase();
 
+      const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
+
+      // ── Phase 1: Fetch ESPN rosters for headshots + team + position (free) ──
+      const { teamAbbrFromName } = await import("@/lib/market/logos");
+      const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
+      const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
+
+      const [homeRoster, awayRoster] = espnPath ? await Promise.all([
+        fetchEspnRoster(espnPath, homeAbbr, home, "home").catch(() => []),
+        fetchEspnRoster(espnPath, awayAbbr, away, "away").catch(() => []),
+      ]) : [[], []];
+
+      // Build player lookup: name → { headshot, team, position, homeAway, stats }
+      const playerMap = new Map<string, { headshot?: string; team: string; position: string; homeAway: string; stats?: Record<string, number>; recentStats?: Record<string, number>; recentN?: number; usageMin?: number }>();
+      for (const p of [...homeRoster, ...awayRoster]) {
+        const key = (p.name || "").toLowerCase();
+        if (key) playerMap.set(key, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats, recentStats: p.recentStats, recentN: p.recentN, usageMin: p.usageMin });
+        // Also index by last name for fuzzy matching
+        const last = key.split(" ").pop();
+        if (last && last.length > 2 && !playerMap.has(last)) playerMap.set(last, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats });
+      }
+
+      // ── Phase 2: Build enriched props with AI model ──
+      const { buildPropChance, propContextFromBrief, parsePropSelection } = await import("@/lib/market/props");
+
+      // Try to get the game brief for AI context
+      let brief: any = undefined;
+      try {
+        const { buildLiveSnapshot } = await import("@/lib/market/live-board");
+        const snapshot = await buildLiveSnapshot();
+        const fullEventId = `oddsapi-${sport}-${data.eventId}`;
+        brief = snapshot?.briefs?.find((b: any) => b.eventId === fullEventId);
+      } catch {}
+
+      const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
         for (const mkt of bk.markets || []) {
@@ -266,7 +300,11 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
             const implied = price < 0
               ? Math.abs(price) / (Math.abs(price) + 100)
               : 100 / (price + 100);
-            props.push({
+            const playerName = outcome.description || undefined;
+            const pKey = (playerName || "").toLowerCase();
+            const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
+
+            const prop: any = {
               eventId: `oddsapi-${sport}-${data.eventId}`,
               sport,
               home,
@@ -274,23 +312,86 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
               selection: outcome.description
                 ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
                 : `${outcome.name} ${outcome.point ?? ""}`,
-              player: outcome.description || undefined,
+              player: playerName,
               marketType: mkt.key || "prop",
               point: outcome.point,
               price,
               fairProb: implied,
               isProp: true,
               source: bk.key || "odds-api",
-            });
+              // Phase 1: Enriched fields from ESPN roster
+              headshot: rosterHit?.headshot || undefined,
+              team: rosterHit?.team || undefined,
+              position: rosterHit?.position || undefined,
+              homeAway: rosterHit?.homeAway || undefined,
+            };
+
+            // Phase 2: Run AI model if we have a brief
+            if (brief && playerName) {
+              try {
+                const parsed = parsePropSelection(prop.selection, sport, {
+                  player: playerName,
+                  point: outcome.point,
+                  side: outcome.name?.toLowerCase(),
+                });
+                if (parsed && parsed.stat !== "unknown") {
+                  const ctx = propContextFromBrief(brief, {
+                    home, away,
+                    player: playerName,
+                    playerTeam: rosterHit?.team,
+                    stat: parsed.stat,
+                  });
+                  const report = buildPropChance({
+                    sport,
+                    selection: prop.selection,
+                    price,
+                    player: playerName,
+                    side: parsed.side,
+                    point: outcome.point,
+                    home,
+                    away,
+                    playerTeam: rosterHit?.team,
+                    gameTotal: brief.total,
+                    homeSpread: brief.homeSpread,
+                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : brief.chanceHome ? (1 - brief.chanceHome) : undefined,
+                    weatherTemp: brief.weatherTemp,
+                    weatherWind: brief.weatherWind,
+                    weatherPrecip: brief.weatherPrecip,
+                    venue: brief.venue,
+                    injuries: brief.injuries,
+                    ...ctx,
+                  });
+                  prop.aiProb = report.hit;
+                  prop.aiEdge = +(report.hit - implied).toFixed(4);
+                  prop.aiLean = report.lean;
+                  prop.aiConfidence = report.confidence;
+                  prop.aiStat = report.stat;
+                  prop.aiBecause = report.because;
+                  prop.aiLayerCount = report.layers?.length || 0;
+                  prop.aiIllegal = report.illegal;
+                  prop.aiStandDown = report.standDown;
+                }
+              } catch {}
+            }
+
+            props.push(prop);
           }
         }
       }
+
+      // Save enriched props to DB cache (so cached loads also have headshots + AI)
+      try {
+        const rawId = data.eventId.replace(/^oddsapi-[A-Z]+-/, "");
+        const enrichedCacheKey = `enriched-props:${rawId}`;
+        await writeOddsApiCache(enrichedCacheKey, props);
+      } catch {}
 
       return { ok: true, props };
     } catch (e: any) {
       return { ok: false, error: String(e) };
     }
   });
+
 
 /** Load cached props for a game (no API call, free) */
 export const getCachedPropsFn = createServerFn({ method: "POST" })
@@ -300,11 +401,19 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
     try {
       const { readOddsApiCache } = await import("@/lib/market/odds-api");
       const rawId = data.eventId.replace(/^oddsapi-[A-Z]+-/, "");
+
+      // Try enriched cache first (has headshots + AI scores)
+      const enrichedKey = `enriched-props:${rawId}`;
+      const enriched = await readOddsApiCache(enrichedKey);
+      if (enriched?.data && Array.isArray(enriched.data) && enriched.data.length > 0) {
+        return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
+      }
+
+      // Fallback to raw cache
       const cacheKey = `props:${rawId}`;
       const cached = await readOddsApiCache(cacheKey);
       if (!cached?.data) return { ok: false };
 
-      // Normalize just like fetchRealPropsFn does
       const event = cached.data;
       const home = event.home_team || event.homeTeam || "";
       const away = event.away_team || event.awayTeam || "";

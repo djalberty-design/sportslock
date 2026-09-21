@@ -36,6 +36,8 @@ export function GamePage({ eventId }: { eventId: string }) {
   const [propsFetched, setPropsFetched] = useState(false);
   const [propsCacheTime, setPropsCacheTime] = useState<string | null>(null);
   const [propFilter, setPropFilter] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Must be defined before handleFetchRealProps and useEffect that reference it
   const gameQuotes = useMemo(() => snapshot?.quotes?.filter((q: any) => q.eventId === eventId) || [], [snapshot, eventId]);
@@ -326,22 +328,26 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const renderPropCard = (q: any, i: number) => {
     const amOdds = getAmOdds(q);
-    const prob = getProb(q);
-    const probPct = Math.round(prob * 100);
+    const aiProb = q.aiProb ?? q.fairProb ?? 0.5;
+    const probPct = Math.round(aiProb * 100);
+    const hasAi = q.aiProb != null;
     const label = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
     const playerName = q.player || q.row?.player;
     const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
-    const headshotUrl = (q.row as any)?.headshot
+    // Use enriched headshot from ESPN roster, fallback to brief map
+    const headshotUrl = q.headshot
+      || (q.row as any)?.headshot
       || (playerName ? headshotMap.get(playerName.toLowerCase()) : undefined)
       || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
     const mType = q.marketType || q.row?.marketType || "";
     const mLabel = PROP_LABEL[mType]?.replace(/^[^\s]+\s/, "") || mType.replace(/^player_/, "").replace(/_/g, " ");
+    const teamPos = [q.team, q.position].filter(Boolean).join(" · ");
     const rowKey = `${q.selection}-${mType}`;
     const isExp = expandedRow === rowKey;
 
     let vegasP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
     let vProb = vegasP < 0 ? (-vegasP / (-vegasP + 100)) : (100 / (vegasP + 100));
-    const edgePct = ((prob - vProb) * 100).toFixed(1);
+    const edgePct = hasAi ? (q.aiEdge ? (q.aiEdge * 100).toFixed(1) : ((aiProb - vProb) * 100).toFixed(1)) : ((aiProb - vProb) * 100).toFixed(1);
 
     return (
       <div key={`${q.selection}-${mType}-${i}`}>
@@ -367,11 +373,11 @@ export function GamePage({ eventId }: { eventId: string }) {
                 <>
                   <span className="font-bold text-ink text-sm truncate">{playerName}</span>
                   <span className="text-muted text-xs truncate">{label} {pointText}</span>
+                  {teamPos && <span className="text-[10px] text-muted/50 uppercase tracking-wider">{teamPos}</span>}
                 </>
               ) : (
                 <span className="font-bold text-ink text-sm truncate">{label} {pointText}</span>
               )}
-              <span className="text-[10px] uppercase tracking-wider text-muted/60 mt-0.5">{mLabel}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -391,6 +397,7 @@ export function GamePage({ eventId }: { eventId: string }) {
               <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
             </div>
             <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
+              {hasAi && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 mr-1 font-bold">AI</span>}
               {probPct}%
             </span>
             {parseFloat(edgePct) !== 0 && (
@@ -440,7 +447,22 @@ export function GamePage({ eventId }: { eventId: string }) {
     else if (type === "props") items = gameProps;
     else if (type === "lines") items = lines;
 
-    // Collect available categories for filter pills
+    // Get team abbrs for filter display
+    const homeAbbr = items[0]?.home?.split(" ").pop()?.toUpperCase() || "HOME";
+    const awayAbbr = items[0]?.away?.split(" ").pop()?.toUpperCase() || "AWAY";
+
+    // Apply team filter
+    if (type === "props" && teamFilter !== "all") {
+      items = items.filter((q: any) => q.homeAway === teamFilter);
+    }
+
+    // Apply search filter
+    if (type === "props" && searchQuery.trim()) {
+      const sq = searchQuery.toLowerCase();
+      items = items.filter((q: any) => (q.player || "").toLowerCase().includes(sq));
+    }
+
+    // Collect available categories for filter pills (after team/search filter)
     const availableCategories = type === "props" ? (() => {
       const counts = new Map<string, number>();
       for (const q of items) {
@@ -476,28 +498,58 @@ export function GamePage({ eventId }: { eventId: string }) {
 
     return (
       <div className="flex flex-col gap-3 pb-24">
-        {/* Category filter pills */}
-        {type === "props" && availableCategories.length > 1 && (
-          <div className="flex flex-wrap gap-1.5 py-1">
-            <button
-              onClick={() => setPropFilter("all")}
-              className={cn("px-3 py-1 rounded-full text-[11px] font-bold transition-colors border",
-                propFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
-              )}
-            >
-              All ({gameProps.length})
-            </button>
-            {availableCategories.map(([cat, count]) => (
+        {/* Props filter bar */}
+        {type === "props" && gameProps.length > 0 && (
+          <div className="flex flex-col gap-2 sticky top-[140px] z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
+            {/* Row 1: Team toggle + Search */}
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg border border-line overflow-hidden shrink-0">
+                {[
+                  { key: "all", label: "Both" },
+                  { key: "away", label: awayAbbr },
+                  { key: "home", label: homeAbbr },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTeamFilter(key)}
+                    className={cn("px-3 py-1.5 text-[11px] font-bold transition-colors",
+                      teamFilter === key ? "bg-primary text-primary-foreground" : "bg-panel text-muted hover:bg-line/50"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Search player..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-panel border border-line rounded-lg px-3 py-1.5 text-sm text-ink placeholder:text-muted/50 focus:outline-none focus:border-primary/50"
+              />
+            </div>
+            {/* Row 2: Category pills (horizontal scroll) */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               <button
-                key={cat}
-                onClick={() => setPropFilter(propFilter === cat ? "all" : cat)}
-                className={cn("px-3 py-1 rounded-full text-[11px] font-bold transition-colors border",
-                  propFilter === cat ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+                onClick={() => setPropFilter("all")}
+                className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0",
+                  propFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
                 )}
               >
-                {PROP_LABEL[cat]?.replace(/^[^\s]+\s/, "") || cat.replace(/^player_/, "").replace(/_/g, " ")} ({count})
+                All ({items.length})
               </button>
-            ))}
+              {availableCategories.map(([cat, count]) => (
+                <button
+                  key={cat}
+                  onClick={() => setPropFilter(propFilter === cat ? "all" : cat)}
+                  className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0",
+                    propFilter === cat ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+                  )}
+                >
+                  {PROP_LABEL[cat]?.replace(/^[^\s]+\s/, "") || cat.replace(/^player_/, "").replace(/_/g, " ")} ({count})
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {items.length === 0 && (
