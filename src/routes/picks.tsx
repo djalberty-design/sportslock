@@ -1,81 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Flame, BarChart2 } from "lucide-react";
-import { espnLogoUrl } from "@/lib/market/logos";
+import { Target, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo } from "react";
-import { getCachedPropsFn } from "@/lib/market/server";
+import { getAllEnrichedPropsFn } from "@/lib/market/server";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
 });
 
 function TheLab() {
-  const { picks, snapshot } = useDeskDecision();
+  const { picks } = useDeskDecision();
   const scanProps = picks?.props || [];
   const sportFilter = useDeskStore((s) => s.sportFilter);
 
-  // Load on-demand cached props from all games with cached data
+  // Load all enriched props from DB cache (single query, no quota)
   const [cachedProps, setCachedProps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    async function loadCachedProps() {
-      const events = snapshot?.quotes?.filter((q: any) => q.isProp || q.cachedProps)
-        || [];
-      // Get unique events that might have cached props
-      const gameIds = new Set<string>();
-      for (const q of snapshot?.quotes || []) {
-        if (q.eventId?.startsWith("oddsapi-")) gameIds.add(q.eventId);
-      }
-      // Also check the brief list for games
-      for (const b of snapshot?.briefs || []) {
-        if (b.eventId?.startsWith("oddsapi-")) gameIds.add(b.eventId);
-      }
-      if (gameIds.size === 0) return;
+    getAllEnrichedPropsFn()
+      .then((res) => {
+        if (res.ok && res.props) setCachedProps(res.props);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-      const allProps: any[] = [];
-      for (const eventId of gameIds) {
-        const sportKey = eventId.includes("-NFL-") ? "americanfootball_nfl"
-          : eventId.includes("-NCAAF-") ? "americanfootball_ncaaf"
-          : eventId.includes("-MLB-") ? "baseball_mlb"
-          : eventId.includes("-NBA-") ? "basketball_nba"
-          : eventId.includes("-NHL-") ? "icehockey_nhl"
-          : eventId.includes("-NCAAB-") ? "basketball_ncaab"
-          : "";
-        if (!sportKey) continue;
-        try {
-          const res = await getCachedPropsFn({ data: { sportKey, eventId } });
-          if (res.ok && res.props) {
-            allProps.push(...res.props);
-          }
-        } catch {}
-      }
-      setCachedProps(allProps);
-    }
-    loadCachedProps();
-  }, [snapshot]);
-
-  // Merge: scan props + cached props (deduplicate by selection)
+  // Merge: cached props + scan props (deduplicate by selection)
   const mergedProps = useMemo(() => {
     const seen = new Set<string>();
     const result: any[] = [];
-    // Prioritize cached (enriched) props
     for (const p of cachedProps) {
       const key = p.selection;
       if (seen.has(key)) continue;
       seen.add(key);
       result.push(p);
     }
-    // Add scan props that aren't duplicates
     for (const p of scanProps) {
       const key = p.selection;
       if (seen.has(key)) continue;
       seen.add(key);
       result.push(p);
     }
-    // Sort by AI edge (best value first)
-    return result.sort((a, b) => (b.aiEdge || b.score || 0) - (a.aiEdge || a.score || 0));
+    // Sort by AI edge (best value first), then by probability
+    return result.sort((a, b) => {
+      const aEdge = a.aiEdge ?? (a.score || 0);
+      const bEdge = b.aiEdge ?? (b.score || 0);
+      if (bEdge !== aEdge) return bEdge - aEdge;
+      return (b.aiProb || b.chance || 0) - (a.aiProb || a.chance || 0);
+    });
   }, [cachedProps, scanProps]);
 
   const allProps = mergedProps;
@@ -93,22 +68,27 @@ function TheLab() {
         )}
       </div>
 
-      {/* Sport Filter */}
       <div className="mb-4">
         <SportFilter sports={liveSports} />
       </div>
 
       <div className="flex flex-col gap-3">
-        {props.map((p, i) => {
+        {loading && (
+          <div className="text-center p-10 text-muted">
+            <div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+            Loading AI picks...
+          </div>
+        )}
+        {!loading && props.map((p, i) => {
           const playerName = p.player || p.row?.player;
           const selection = playerName ? p.selection.replace(playerName, '').trim() : p.selection;
           const headshotUrl = p.headshot || (p.row as any)?.headshot;
           const teamPos = [p.team, p.position].filter(Boolean).join(" · ");
-          
+
           // Odds
           const rawP = p.price || p.row?.hardRockPrice || p.row?.consensusPrice || -110;
           const pAm = rawP > 0 ? `+${rawP}` : `${rawP}`;
-          
+
           // AI Probability
           const aiProb = p.aiProb ?? p.chance ?? p.fairProb ?? 0.5;
           const hitProb = Math.round(aiProb * 100);
@@ -116,22 +96,14 @@ function TheLab() {
           const implied = rawP < 0 ? Math.abs(rawP) / (Math.abs(rawP) + 100) : 100 / (rawP + 100);
           const vegasImplied = Math.round(implied * 100);
           const edgeVal = p.aiEdge ? p.aiEdge * 100 : (p.score ?? 0) * 100;
-          const isSharp = (p.row?.handlePct || 0) - (p.row?.ticketPct || 0) >= 15;
 
-          // Initials fallback
           const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
+
+          // Market type label
+          const mktLabel = (p.marketType || "").replace(/^player_/, "").replace(/_/g, " ");
 
           return (
             <div key={`${p.selection}-${i}`} className="group relative overflow-hidden rounded-xl border border-line bg-panel p-4 hover:border-primary/50 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-              
-              {/* Sharp badge */}
-              {isSharp && (
-                <div className="absolute top-0 right-0 z-10 bg-orange-500/10 px-2 py-1 rounded-bl-lg border-l border-b border-orange-500/20 flex items-center gap-1">
-                  <Flame className="size-3 text-orange-500 fill-orange-500/20" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-orange-500">Sharp</span>
-                </div>
-              )}
-              
               {/* Player info */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {headshotUrl ? (
@@ -145,13 +117,14 @@ function TheLab() {
                     <Target className="size-5 text-muted opacity-50" />
                   </div>
                 )}
-                
+
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-bold text-ink truncate">{playerName || p.selection}</span>
                   {playerName && <span className="text-xs text-muted truncate">{selection}</span>}
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {teamPos && <span className="text-[10px] uppercase tracking-wider text-muted/60">{teamPos}</span>}
-                    <span className="text-[10px] text-muted/40">{p.away || "AWAY"} @ {p.home || "HOME"}</span>
+                    <span className="text-[10px] text-muted/40">{mktLabel}</span>
+                    <span className="text-[10px] text-muted/40">{p.away || ""} @ {p.home || ""}</span>
                   </div>
                 </div>
               </div>
@@ -173,7 +146,9 @@ function TheLab() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] text-muted font-mono">Vegas: {vegasImplied}%</span>
-                  <span className={cn("text-[9px] font-mono px-1 rounded", edgeVal > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>Edge: {edgeVal > 0 ? "+" : ""}{edgeVal.toFixed(1)}%</span>
+                  <span className={cn("text-[9px] font-mono px-1 rounded", edgeVal > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                    Edge: {edgeVal > 0 ? "+" : ""}{edgeVal.toFixed(1)}%
+                  </span>
                 </div>
               </div>
 
@@ -186,11 +161,11 @@ function TheLab() {
             </div>
           );
         })}
-        {props.length === 0 && (
+        {!loading && props.length === 0 && (
           <div className="text-center p-10 text-muted border border-dashed border-line rounded-xl">
             <Target className="size-8 mx-auto mb-3 opacity-50" />
             <p>No active props found in The Lab right now.</p>
-            <p className="text-xs mt-2">Pull player props from a game's matchup page to populate AI picks.</p>
+            <p className="text-xs mt-2 text-muted/60">Pull player props from a game's matchup page to populate AI picks here.</p>
           </div>
         )}
       </div>

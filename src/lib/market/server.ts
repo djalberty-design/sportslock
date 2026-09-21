@@ -535,6 +535,31 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
     }
   });
 
+/** Load ALL enriched props across all games (for The Lab page) */
+export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async (): Promise<{ ok: boolean; props: any[] }> => {
+    try {
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      const rows = await sql<{ data: any; fetched_at: string }>`
+        SELECT data, fetched_at FROM odds_api_cache
+        WHERE key LIKE 'enriched-props:%'
+        AND fetched_at > NOW() - INTERVAL '48 hours'
+        ORDER BY fetched_at DESC
+      `;
+      const allProps: any[] = [];
+      for (const row of rows) {
+        if (Array.isArray(row.data)) {
+          allProps.push(...row.data);
+        }
+      }
+      return { ok: true, props: allProps };
+    } catch {
+      return { ok: true, props: [] };
+    }
+  });
+
 export const lockPredictionFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { legs: Array<{ eventId: string; selection: string; marketType: string; point?: number; price: number; fairProb: number }> }) => d)
