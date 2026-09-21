@@ -196,7 +196,16 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
   }
 
   try {
-    const markets = "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_home_runs,player_strikeouts,player_hits,player_points,player_rebounds,player_assists";
+    // Sport-specific prop markets — sending invalid ones causes HTTP 422
+    const SPORT_MARKETS: Record<string, string> = {
+      americanfootball_nfl: "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_anytime_td",
+      americanfootball_ncaaf: "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_anytime_td",
+      basketball_nba: "player_points,player_rebounds,player_assists,player_threes",
+      basketball_ncaab: "player_points,player_rebounds,player_assists,player_threes",
+      baseball_mlb: "player_home_runs,player_strikeouts,player_hits,player_total_bases",
+      icehockey_nhl: "player_points,player_assists,player_goals,player_shots_on_goal",
+    };
+    const markets = SPORT_MARKETS[sportKey] || "player_points,player_assists";
     const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, `markets=${markets}`);
     const res = await fetch(url);
     noteQuota(res);
