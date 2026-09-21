@@ -381,3 +381,71 @@ export async function listTapeDesk(limit = 80): Promise<TapeDeskRow[]> {
     return [];
   }
 }
+
+/**
+ * Write prop AI predictions to market_tape (for self-improvement loop).
+ * Called from fetchRealPropsFn when props have AI scores.
+ */
+export async function writePropTape(props: any[]): Promise<{ wrote: number }> {
+  try {
+    await ensureTapeTable();
+    const sql = await getSql();
+    // Add player column if missing
+    await sql.query(`alter table market_tape add column if not exists player text`);
+
+    let wrote = 0;
+    for (const p of props) {
+      if (!p.aiProb || p.aiIllegal || p.aiStandDown) continue;
+      const model = clipProb(p.aiProb);
+      const price = Number.isFinite(p.price) ? Math.round(p.price) : null;
+      const implied = p.fairProb ?? 0.5;
+      const edge = model != null ? +(model - implied).toFixed(4) : null;
+
+      await sql.query(
+        `insert into market_tape (
+          event_id, sport, home, away, market_type, side, selection,
+          line, price, model_probability, edge, phase, in_play, complete,
+          snapshot, recommended, player
+        ) values (
+          $1,$2,$3,$4,$5,$6,$7,
+          $8,$9,$10,$11,$12,$13,$14,
+          $15::jsonb,$16,$17
+        )`,
+        [
+          p.eventId,
+          p.sport ?? null,
+          p.home ?? null,
+          p.away ?? null,
+          p.marketType || "prop",
+          p.selection?.includes("Over") ? "over" : p.selection?.includes("Under") ? "under" : p.selection?.includes("Yes") ? "yes" : "over",
+          p.selection,
+          p.point ?? null,
+          price,
+          model,
+          edge,
+          "pregame",
+          false,
+          false,
+          JSON.stringify({
+            aiProb: p.aiProb,
+            aiEdge: p.aiEdge,
+            aiLean: p.aiLean,
+            aiConfidence: p.aiConfidence,
+            aiStat: p.aiStat,
+            aiBecause: p.aiBecause,
+            player: p.player,
+            team: p.team,
+            position: p.position,
+            source: "odds_api_props",
+          }),
+          edge != null && edge > 0.02,
+          p.player ?? null,
+        ],
+      );
+      wrote++;
+    }
+    return { wrote };
+  } catch {
+    return { wrote: 0 };
+  }
+}

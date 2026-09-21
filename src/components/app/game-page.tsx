@@ -451,9 +451,18 @@ export function GamePage({ eventId }: { eventId: string }) {
     const homeAbbr = items[0]?.home?.split(" ").pop()?.toUpperCase() || "HOME";
     const awayAbbr = items[0]?.away?.split(" ").pop()?.toUpperCase() || "AWAY";
 
-    // Apply team filter
+    // Apply team filter — check homeAway field, or match team name against home/away
     if (type === "props" && teamFilter !== "all") {
-      items = items.filter((q: any) => q.homeAway === teamFilter);
+      const homeTeam = (items[0]?.home || "").toLowerCase();
+      const awayTeam = (items[0]?.away || "").toLowerCase();
+      items = items.filter((q: any) => {
+        if (q.homeAway) return q.homeAway === teamFilter;
+        // Fallback: match team name against home/away
+        const pTeam = (q.team || "").toLowerCase();
+        if (teamFilter === "home") return pTeam && homeTeam.includes(pTeam);
+        if (teamFilter === "away") return pTeam && awayTeam.includes(pTeam);
+        return true;
+      });
     }
 
     // Apply search filter
@@ -488,6 +497,16 @@ export function GamePage({ eventId }: { eventId: string }) {
         const cat = q.marketType || q.row?.marketType || "other";
         if (!map.has(cat)) map.set(cat, []);
         map.get(cat)!.push(q);
+      }
+      // Sort players within each category: lower odds = more prominent player (depth chart proxy)
+      for (const [, arr] of map) {
+        arr.sort((a: any, b: any) => {
+          const aOdds = Math.abs(a.price || 999);
+          const bOdds = Math.abs(b.price || 999);
+          // Lower absolute odds first (favorites/stars), then by AI edge
+          if (aOdds !== bOdds) return aOdds - bOdds;
+          return (b.aiEdge || 0) - (a.aiEdge || 0);
+        });
       }
       return [...map.entries()].sort(([a], [b]) => {
         const ai = PROP_ORDER.indexOf(a);

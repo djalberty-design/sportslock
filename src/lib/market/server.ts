@@ -386,6 +386,15 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
         await writeOddsApiCache(enrichedCacheKey, props);
       } catch {}
 
+      // Phase 3: Write AI predictions to market_tape (self-improvement loop)
+      try {
+        const propsWithAi = props.filter(p => p.aiProb != null);
+        if (propsWithAi.length > 0) {
+          const { writePropTape } = await import("@/lib/market/market-tape");
+          await writePropTape(propsWithAi);
+        }
+      } catch {}
+
       return { ok: true, props };
     } catch (e: any) {
       return { ok: false, error: String(e) };
@@ -399,7 +408,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
   .validator((d: { sportKey: string; eventId: string }) => d)
   .handler(async ({ data }): Promise<{ ok: boolean; props?: any[]; fetchedAt?: string }> => {
     try {
-      const { readOddsApiCache } = await import("@/lib/market/odds-api");
+      const { readOddsApiCache, writeOddsApiCache } = await import("@/lib/market/odds-api");
       const rawId = data.eventId.replace(/^oddsapi-[A-Z]+-/, "");
 
       // Try enriched cache first (has headshots + AI scores)
@@ -409,7 +418,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
       }
 
-      // Fallback to raw cache
+      // Fallback to raw cache — enrich it (one-time, no Odds API call)
       const cacheKey = `props:${rawId}`;
       const cached = await readOddsApiCache(cacheKey);
       if (!cached?.data) return { ok: false };
@@ -425,6 +434,35 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         : data.sportKey.includes("nhl") ? "NHL"
         : data.sportKey.toUpperCase();
 
+      const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
+
+      // Fetch ESPN rosters for headshots + team + position (free)
+      const { teamAbbrFromName } = await import("@/lib/market/logos");
+      const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
+      const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
+
+      const [homeRoster, awayRoster] = espnPath ? await Promise.all([
+        fetchEspnRoster(espnPath, homeAbbr, home, "home").catch(() => []),
+        fetchEspnRoster(espnPath, awayAbbr, away, "away").catch(() => []),
+      ]) : [[], []];
+
+      const playerMap = new Map<string, { headshot?: string; team: string; position: string; homeAway: string }>();
+      for (const p of [...homeRoster, ...awayRoster]) {
+        const key = (p.name || "").toLowerCase();
+        if (key) playerMap.set(key, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "" });
+        const last = key.split(" ").pop();
+        if (last && last.length > 2 && !playerMap.has(last)) playerMap.set(last, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "" });
+      }
+
+      // Build AI context
+      const { buildPropChance, propContextFromBrief, parsePropSelection } = await import("@/lib/market/props");
+      let brief: any = undefined;
+      try {
+        const snapshot = await buildLiveSnapshot();
+        const fullEventId = data.eventId.startsWith("oddsapi-") ? data.eventId : `oddsapi-${sport}-${rawId}`;
+        brief = snapshot?.briefs?.find((b: any) => b.eventId === fullEventId);
+      } catch {}
+
       const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
@@ -434,7 +472,11 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
             const implied = price < 0
               ? Math.abs(price) / (Math.abs(price) + 100)
               : 100 / (price + 100);
-            props.push({
+            const playerName = outcome.description || undefined;
+            const pKey = (playerName || "").toLowerCase();
+            const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
+
+            const prop: any = {
               eventId: data.eventId,
               sport,
               home,
@@ -442,17 +484,50 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
               selection: outcome.description
                 ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""}`
                 : `${outcome.name} ${outcome.point ?? ""}`,
-              player: outcome.description || undefined,
+              player: playerName,
               marketType: mkt.key || "prop",
               point: outcome.point,
               price,
               fairProb: implied,
               isProp: true,
               source: bk.key || "odds-api",
-            });
+              headshot: rosterHit?.headshot || undefined,
+              team: rosterHit?.team || undefined,
+              position: rosterHit?.position || undefined,
+              homeAway: rosterHit?.homeAway || undefined,
+            };
+
+            // Run AI model
+            if (brief && playerName) {
+              try {
+                const parsed = parsePropSelection(prop.selection, sport, {
+                  player: playerName, point: outcome.point, side: outcome.name?.toLowerCase(),
+                });
+                if (parsed && parsed.stat !== "unknown") {
+                  const ctx = propContextFromBrief(brief, { home, away, player: playerName, playerTeam: rosterHit?.team, stat: parsed.stat });
+                  const report = buildPropChance({
+                    sport, selection: prop.selection, price, player: playerName,
+                    side: parsed.side, point: outcome.point, home, away,
+                    playerTeam: rosterHit?.team, gameTotal: brief.total, homeSpread: brief.homeSpread,
+                    teamWinChance: rosterHit?.homeAway === "home" ? brief.chanceHome : brief.chanceHome ? (1 - brief.chanceHome) : undefined,
+                    weatherTemp: brief.weatherTemp, weatherWind: brief.weatherWind, weatherPrecip: brief.weatherPrecip,
+                    venue: brief.venue, injuries: brief.injuries, ...ctx,
+                  });
+                  prop.aiProb = report.hit;
+                  prop.aiEdge = +(report.hit - implied).toFixed(4);
+                  prop.aiLean = report.lean;
+                  prop.aiConfidence = report.confidence;
+                }
+              } catch {}
+            }
+
+            props.push(prop);
           }
         }
       }
+
+      // Save enriched cache for next time
+      try { await writeOddsApiCache(enrichedKey, props); } catch {}
 
       return { ok: true, props, fetchedAt: cached.fetchedAt.toISOString() };
     } catch (e) {
