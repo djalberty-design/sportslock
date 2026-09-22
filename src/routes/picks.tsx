@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { Target, Star, TrendingUp, Plus, Check, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SportFilter } from "@/components/app/sport-filter";
+import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { labScore, type LabScore } from "@/lib/market/ev-score";
 import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
+import { resolveTeamLogo } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -65,6 +66,10 @@ interface LabBet {
   isGameLine: boolean;
   isProp: boolean;
   isPeriod: boolean;
+  homeLogo?: string;
+  awayLogo?: string;
+  homeAbbr?: string;
+  awayAbbr?: string;
   source: "scan" | "cache";
 }
 
@@ -155,6 +160,10 @@ function TheLab() {
         isGameLine: !isProp && !isPeriod,
         isProp,
         isPeriod,
+        homeLogo: r.homeLogo,
+        awayLogo: r.awayLogo,
+        homeAbbr: r.homeAbbr,
+        awayAbbr: r.awayAbbr,
         source: "scan",
       });
     }
@@ -197,10 +206,9 @@ function TheLab() {
     return result;
   }, [scan?.rows, cachedProps]);
 
-  // Apply sport filter
+  // Apply sport filter (handles "ALL" correctly)
   const sportFiltered = useMemo(() => {
-    if (!sportFilter) return allBets;
-    return allBets.filter(b => b.sport.toLowerCase().includes(sportFilter.toLowerCase()));
+    return applySportFilter(allBets, sportFilter);
   }, [allBets, sportFilter]);
 
   // Available sports
@@ -411,17 +419,34 @@ function TheLab() {
                   <div className="flex items-center gap-3">
                     {/* Stars + Avatar */}
                     <div className="flex flex-col items-center gap-1 shrink-0">
-                      {b.headshot ? (
-                        <img src={b.headshot} className="size-10 rounded-full object-cover ring-2 ring-line bg-obsidian" alt="" />
-                      ) : initials ? (
-                        <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-muted">{initials}</span>
-                        </div>
-                      ) : (
-                        <div className="size-10 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center">
-                          <Target className="size-4 text-primary" />
-                        </div>
-                      )}
+                      {(() => {
+                        // 1. Player headshot (props)
+                        if (b.headshot) return <img src={b.headshot} className="size-10 rounded-full object-cover ring-2 ring-line bg-obsidian" alt="" />;
+                        // 2. Team logo (game lines) — figure out which team is selected
+                        if (!playerName) {
+                          const sel = (b.selection || "").toLowerCase();
+                          const isHome = b.home && sel.includes(b.home.toLowerCase().split(" ").pop() || "");
+                          const isAway = !isHome && b.away && sel.includes(b.away.toLowerCase().split(" ").pop() || "");
+                          const logoUrl = isHome
+                            ? (b.homeLogo || resolveTeamLogo(b.sport, { abbr: b.homeAbbr, name: b.home }))
+                            : isAway
+                            ? (b.awayLogo || resolveTeamLogo(b.sport, { abbr: b.awayAbbr, name: b.away }))
+                            : (b.homeLogo || resolveTeamLogo(b.sport, { abbr: b.homeAbbr, name: b.home }));
+                          if (logoUrl) return <img src={logoUrl} className="size-10 rounded-full object-contain bg-obsidian ring-2 ring-line p-1" alt="" />;
+                        }
+                        // 3. Initials fallback (props without headshot)
+                        if (initials) return (
+                          <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-muted">{initials}</span>
+                          </div>
+                        );
+                        // 4. Icon fallback
+                        return (
+                          <div className="size-10 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center">
+                            <Target className="size-4 text-primary" />
+                          </div>
+                        );
+                      })()}
                       <div className="flex gap-px">{renderStars(stars)}</div>
                     </div>
 
