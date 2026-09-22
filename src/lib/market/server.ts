@@ -869,14 +869,14 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         FROM market_tape
         WHERE recommended = true AND status IN ('WIN', 'LOSS')
       `;
-      const r = rollingRaw[0] || { w7: 0, l7: 0, w30: 0, l30: 0, wall: 0, lall: 0 };
+      const roll = rollingRaw[0] || { w7: 0, l7: 0, w30: 0, l30: 0, wall: 0, lall: 0 };
       const dailyDigest = {
         todayWins, todayLosses,
         bestHit: bestHit ? { sport: bestHit.sport, selection: bestHit.selection, home: bestHit.home, away: bestHit.away, edge: Number(bestHit.edge) || 0 } : null,
         worstMiss: worstMiss ? { sport: worstMiss.sport, selection: worstMiss.selection, home: worstMiss.home, away: worstMiss.away, edge: Number(worstMiss.edge) || 0 } : null,
-        week: { wins: r.w7, losses: r.l7, pct: (r.w7 + r.l7) > 0 ? Math.round(r.w7 / (r.w7 + r.l7) * 1000) / 10 : 0 },
-        month: { wins: r.w30, losses: r.l30, pct: (r.w30 + r.l30) > 0 ? Math.round(r.w30 / (r.w30 + r.l30) * 1000) / 10 : 0 },
-        allTime: { wins: r.wall, losses: r.lall, pct: (r.wall + r.lall) > 0 ? Math.round(r.wall / (r.wall + r.lall) * 1000) / 10 : 0 },
+        week: { wins: roll.w7, losses: roll.l7, pct: (roll.w7 + roll.l7) > 0 ? Math.round(roll.w7 / (roll.w7 + roll.l7) * 1000) / 10 : 0 },
+        month: { wins: roll.w30, losses: roll.l30, pct: (roll.w30 + roll.l30) > 0 ? Math.round(roll.w30 / (roll.w30 + roll.l30) * 1000) / 10 : 0 },
+        allTime: { wins: roll.wall, losses: roll.lall, pct: (roll.wall + roll.lall) > 0 ? Math.round(roll.wall / (roll.wall + roll.lall) * 1000) / 10 : 0 },
       };
 
       return {

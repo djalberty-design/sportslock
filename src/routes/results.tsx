@@ -9,7 +9,7 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
   .handler(async () => {
     const sql = await getSql();
     const rows = await sql`
-      SELECT sport, type, market_type as market, selection, home, away, model_probability as model_prob, edge, status, graded_at, snapped_at
+      SELECT sport, market_type as market, selection, home, away, model_probability as model_prob, edge, status, graded_at, snapped_at
       FROM market_tape
       WHERE status IN ('WIN', 'LOSS')
       ORDER BY graded_at DESC
