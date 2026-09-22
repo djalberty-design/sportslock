@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Star, TrendingUp, ArrowUpDown, Plus, Check, Clock, Zap } from "lucide-react";
+import { Target, Star, TrendingUp, Plus, Check, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
+import { SportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
