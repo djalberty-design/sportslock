@@ -125,10 +125,21 @@ function TheLab() {
 
     const dedupKey = (b: any) => `${b.eventId || ""}|${b.marketType || ""}|${b.selection || ""}|${b.side || ""}`;
 
+    // A bet is "live" if the game has already started (start time in the past) or inPlay is set
+    const now = Date.now();
+    const isLive = (b: any) => {
+      if (b.inPlay) return true;
+      if (b.start) {
+        const start = new Date(b.start).getTime();
+        if (!isNaN(start) && start < now) return true;
+      }
+      return false;
+    };
+
     // 1. Scan rows (game lines + period + any props from the scan)
     const rows = scan?.rows || [];
     for (const r of rows) {
-      if (r.inPlay) continue; // pregame only
+      if (isLive(r)) continue; // pregame only
       const key = dedupKey(r);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -170,6 +181,7 @@ function TheLab() {
 
     // 2. Cached enriched props (from admin pulls)
     for (const p of cachedProps) {
+      if (isLive(p)) continue; // pregame only
       const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
