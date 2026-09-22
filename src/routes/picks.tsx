@@ -125,19 +125,42 @@ function TheLab() {
 
     const dedupKey = (b: any) => `${b.eventId || ""}|${b.marketType || ""}|${b.selection || ""}|${b.side || ""}`;
 
-    // A bet is "live" if the game has already started (start time in the past) or inPlay is set
+    // Build a map of eventId → start time and a set of known-live events from the scan
     const now = Date.now();
+    const eventStartMap = new Map<string, string>();
+    const liveEventIds = new Set<string>();
+    const liveMatchups = new Set<string>(); // "away|home" for cross-format matching
+    const rows = scan?.rows || [];
+    for (const r of rows) {
+      if (r.eventId && r.start && !eventStartMap.has(r.eventId)) {
+        eventStartMap.set(r.eventId, r.start);
+      }
+      // Mark event as live if inPlay OR start is in the past
+      if (r.eventId) {
+        const started = r.inPlay || (r.start && new Date(r.start).getTime() < now);
+        if (started) {
+          liveEventIds.add(r.eventId);
+          // Also track by matchup names for cross-format matching
+          if (r.home && r.away) liveMatchups.add(`${r.away.toLowerCase()}|${r.home.toLowerCase()}`);
+        }
+      }
+    }
+
+    // A bet is "live" if inPlay, start is in the past, event is live, or matchup is live
     const isLive = (b: any) => {
       if (b.inPlay) return true;
-      if (b.start) {
-        const start = new Date(b.start).getTime();
+      if (b.eventId && liveEventIds.has(b.eventId)) return true;
+      // Cross-format: match by team names
+      if (b.home && b.away && liveMatchups.has(`${b.away.toLowerCase()}|${b.home.toLowerCase()}`)) return true;
+      const startStr = b.start || eventStartMap.get(b.eventId || "");
+      if (startStr) {
+        const start = new Date(startStr).getTime();
         if (!isNaN(start) && start < now) return true;
       }
       return false;
     };
 
     // 1. Scan rows (game lines + period + any props from the scan)
-    const rows = scan?.rows || [];
     for (const r of rows) {
       if (isLive(r)) continue; // pregame only
       const key = dedupKey(r);
@@ -179,9 +202,9 @@ function TheLab() {
       });
     }
 
-    // 2. Cached enriched props (from admin pulls)
+    // 2. Cached enriched props (from admin pulls) — filter out live events
     for (const p of cachedProps) {
-      if (isLive(p)) continue; // pregame only
+      if (isLive(p)) continue; // pregame only (cross-references scan for start times)
       const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -196,7 +219,7 @@ function TheLab() {
         eventId: p.eventId || "",
         home: p.home || "",
         away: p.away || "",
-        start: p.start || "",
+        start: p.start || eventStartMap.get(p.eventId || "") || "",
         price,
         player: p.player,
         headshot: p.headshot || (p.row as any)?.headshot,
