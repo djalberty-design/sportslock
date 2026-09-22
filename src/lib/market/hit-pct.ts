@@ -48,7 +48,7 @@ export function ticketHitPct(opts: {
 }): number | null {
   const model = Number(opts.chance ?? opts.fairProb);
   const book = americanImplied(opts.price);
-  const modelOk = Number.isFinite(model) && model > 0.12 && model < 0.88;
+  const modelOk = Number.isFinite(model) && model > 0.03 && model < 0.97;
   if (modelOk) return clipHitPct(model);
   if (book != null) return clipHitPct(book);
   if (Number.isFinite(model)) return clipHitPct(Math.min(0.99, Math.max(0.01, model)));
