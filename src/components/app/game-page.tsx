@@ -340,8 +340,8 @@ export function GamePage({ eventId }: { eventId: string }) {
 
   const renderPropCard = (q: any, i: number) => {
     const amOdds = getAmOdds(q);
-    const aiProb = q.aiProb ?? q.fairProb ?? 0.5;
-    const probPct = Math.round(aiProb * 100);
+    const rawAi = q.aiProb ?? q.fairProb ?? null;
+    const probPct = ticketHitPct({ chance: q.chance ?? rawAi, fairProb: q.fairProb ?? rawAi, price: q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice }) ?? Math.round((rawAi ?? 0.5) * 100);
     const hasAi = q.aiProb != null;
     const rawLabel = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
     // Strip stat label suffix (added for AI parsing, not for display)
@@ -379,7 +379,7 @@ export function GamePage({ eventId }: { eventId: string }) {
 
     let vegasP = q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice || -110;
     let vProb = vegasP < 0 ? (-vegasP / (-vegasP + 100)) : (100 / (vegasP + 100));
-    const edgePct = hasAi ? (q.aiEdge ? (q.aiEdge * 100).toFixed(1) : ((aiProb - vProb) * 100).toFixed(1)) : ((aiProb - vProb) * 100).toFixed(1);
+    const edgePct = hasAi ? (q.aiEdge ? (q.aiEdge * 100).toFixed(1) : ((probPct / 100 - vProb) * 100).toFixed(1)) : ((probPct / 100 - vProb) * 100).toFixed(1);
 
     return (
       <div key={`${q.selection}-${mType}-${i}`}>
@@ -438,11 +438,11 @@ export function GamePage({ eventId }: { eventId: string }) {
             </div>
             <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
               {hasAi && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 mr-1 font-bold">AI</span>}
-              {probPct}%
+              {probPct}% hit
             </span>
             {parseFloat(edgePct) !== 0 && (
               <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-                {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
+                {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}% edge
               </span>
             )}
           </div>

@@ -6,6 +6,7 @@ import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo } from "react";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
+import { ticketHitPct } from "@/lib/market/hit-pct";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -282,12 +283,12 @@ function TheLab() {
                   .trim();
                 const headshotUrl = p.headshot || (p.row as any)?.headshot;
                 const teamPos = [p.team, p.position].filter(Boolean).join(" · ");
-                const aiProb = p.aiProb ?? p.fairProb ?? 0.5;
-                const probPct = Math.round(aiProb * 100);
+                const rawAi = p.aiProb ?? p.fairProb ?? null;
+                const probPct = ticketHitPct({ chance: p.chance ?? rawAi, fairProb: p.fairProb ?? rawAi, price: p.price }) ?? Math.round((rawAi ?? 0.5) * 100);
                 const hasAi = p.aiProb != null;
                 const rawP = p.price || -110;
                 const implied = rawP < 0 ? Math.abs(rawP) / (Math.abs(rawP) + 100) : 100 / (rawP + 100);
-                const edgeVal = p.aiEdge ? p.aiEdge * 100 : ((aiProb - implied) * 100);
+                const edgeVal = p.aiEdge ? p.aiEdge * 100 : ((probPct / 100 - implied) * 100);
                 const edgePct = edgeVal.toFixed(1);
                 const amOdds = rawP > 0 ? `+${rawP}` : `${rawP}`;
                 const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
@@ -344,11 +345,11 @@ function TheLab() {
                         </div>
                         <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
                           {hasAi && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 mr-1 font-bold">AI</span>}
-                          {probPct}%
+                          {probPct}% hit
                         </span>
                         {parseFloat(edgePct) !== 0 && (
                           <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-                            {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
+                            {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}% edge
                           </span>
                         )}
                       </div>

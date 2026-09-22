@@ -156,7 +156,7 @@ function TheMatrix() {
         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
           <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
         </div>
-        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "later" : `${hit}%`}</span>
+        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "—" : `${hit}% hit`}</span>
       </div>
     );
   }
@@ -235,15 +235,15 @@ function TheMatrix() {
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{sportLabel(g.sport)}</span>
                 </div>
                 
-                {/* Market Implied Projection */}
+                {/* AI Hit Probability */}
                 {hasOdds && (
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> % to Win</span>
-                    <span className="text-primary">{projFavorite} {projProb}%</span>
+                    <span className="flex items-center gap-1"><BarChart2 className="size-3 text-primary" /> AI Pick</span>
+                    <span className="text-primary">{lean.label} {lean.pct ?? projProb}%</span>
                   </div>
                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${projProb}%` }} />
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${lean.pct ?? projProb}%` }} />
                   </div>
                 </div>
                 )}
