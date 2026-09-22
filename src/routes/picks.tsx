@@ -1,60 +1,103 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, BarChart2, Star } from "lucide-react";
+import { Target, Star, TrendingUp, ArrowUpDown, Plus, Check, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
-import { ticketHitPct } from "@/lib/market/hit-pct";
+import { formatAmerican } from "@/lib/market/hit-pct";
+import { labScore, type LabScore } from "@/lib/market/ev-score";
+import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
 });
 
-// Same label/order maps as game-page.tsx
-const PROP_LABEL: Record<string, string> = {
-  player_anytime_td: "🏈 Anytime Touchdown",
-  player_pass_tds: "🎯 Passing Touchdowns",
-  player_pass_yds: "📊 Passing Yards",
-  player_rush_yds: "🏃 Rushing Yards",
-  player_reception_yds: "🤲 Receiving Yards",
-  player_rec_yds: "🤲 Receiving Yards",
-  player_receptions: "🤲 Receptions",
-  player_rush_att: "🏃 Rushing Attempts",
-  player_rush_attempts: "🏃 Rushing Attempts",
-  player_points: "🏀 Points",
-  player_rebounds: "🏀 Rebounds",
-  player_assists: "🏀 Assists",
-  player_threes: "🏀 Three-Pointers",
-  player_home_runs: "⚾ Home Runs",
-  player_hr: "⚾ Home Runs",
-  player_strikeouts: "⚾ Strikeouts",
-  player_ks: "⚾ Strikeouts",
-  player_hits: "⚾ Hits",
-  player_total_bases: "⚾ Total Bases",
-  player_goals: "🏒 Goals",
-  player_shots_on_goal: "🏒 Shots on Goal",
-  player_saves: "🏒 Saves",
-  player_blocked_shots: "🏒 Blocked Shots",
-};
+/* ── Tab / sort / filter constants ──────────────────────── */
 
-const PROP_ORDER: string[] = [
-  "player_anytime_td", "player_pass_tds", "player_pass_yds",
-  "player_rush_yds", "player_reception_yds", "player_rec_yds", "player_receptions",
-  "player_rush_att", "player_rush_attempts",
-  "player_points", "player_rebounds", "player_assists", "player_threes",
-  "player_home_runs", "player_hr", "player_strikeouts", "player_ks",
-  "player_hits", "player_total_bases",
-  "player_goals", "player_shots_on_goal", "player_saves", "player_blocked_shots",
+type BetTab = "all" | "lines" | "props" | "periods";
+type SortMode = "ev" | "hit" | "payout" | "time";
+
+const TAB_LABELS: { key: BetTab; label: string }[] = [
+  { key: "all", label: "All Bets" },
+  { key: "lines", label: "Game Lines" },
+  { key: "props", label: "Player Props" },
+  { key: "periods", label: "Periods" },
 ];
 
-function TheLab() {
-  const { picks } = useDeskDecision();
-  const scanProps = picks?.props || [];
-  const sportFilter = useDeskStore((s) => s.sportFilter);
+const SORT_OPTIONS: { key: SortMode; label: string; icon: any }[] = [
+  { key: "ev", label: "EV Score", icon: TrendingUp },
+  { key: "hit", label: "Hit %", icon: Target },
+  { key: "payout", label: "Payout", icon: Zap },
+  { key: "time", label: "Game Time", icon: Clock },
+];
 
-  // Load all enriched props from DB cache
+const STAR_FILTERS = [
+  { key: 0, label: "All" },
+  { key: 3, label: "3+ ★" },
+  { key: 4, label: "4+ ★" },
+  { key: 5, label: "5 ★" },
+];
+
+/* ── Unified bet type ───────────────────────────────────── */
+
+interface LabBet {
+  id: string;
+  selection: string;
+  marketType: string;
+  sport: string;
+  eventId: string;
+  home: string;
+  away: string;
+  start: string;
+  price: number;
+  player?: string;
+  headshot?: string;
+  team?: string;
+  position?: string;
+  side?: string;
+  point?: number;
+  chance: number;
+  fairProb: number;
+  inPlay: boolean;
+  lab: LabScore;
+  isGameLine: boolean;
+  isProp: boolean;
+  isPeriod: boolean;
+  source: "scan" | "cache";
+}
+
+/* ── Helpers ────────────────────────────────────────────── */
+
+function betCategory(b: LabBet): BetTab {
+  if (b.isProp) return "props";
+  if (b.isPeriod) return "periods";
+  return "lines";
+}
+
+function marketLabel(mkt: string): string {
+  if (mkt === "ml") return "Moneyline";
+  if (mkt === "spread") return "Spread";
+  if (mkt === "total") return "Total";
+  if (mkt === "prop") return "Prop";
+  return mkt.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderStars(n: number) {
+  return Array.from({ length: 5 }, (_, i) => (
+    <Star key={i} className={cn("size-3", i < n ? "text-amber-400 fill-amber-400" : "text-line/40")} />
+  ));
+}
+
+/* ── Component ──────────────────────────────────────────── */
+
+function TheLab() {
+  const { picks, scan } = useDeskDecision();
+  const sportFilter = useDeskStore((s) => s.sportFilter);
+  const { legs: sgpSlip, addLeg, removeLeg } = useParlaySlip();
+
+  // Load enriched props from DB
   const [cachedProps, setCachedProps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -64,118 +107,197 @@ function TheLab() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Merge cached + scan props (deduplicate)
-  const mergedProps = useMemo(() => {
+  // Filter & sort state
+  const [tab, setTab] = useState<BetTab>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("ev");
+  const [minStars, setMinStars] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Build unified bet pool from scan rows + cached props
+  const allBets: LabBet[] = useMemo(() => {
     const seen = new Set<string>();
-    const result: any[] = [];
-    const dedupKey = (p: any) => `${p.eventId || ""}|${p.player || ""}|${p.marketType || ""}|${p.selection || ""}`;
+    const result: LabBet[] = [];
+
+    const dedupKey = (b: any) => `${b.eventId || ""}|${b.marketType || ""}|${b.selection || ""}|${b.side || ""}`;
+
+    // 1. Scan rows (game lines + period + any props from the scan)
+    const rows = scan?.rows || [];
+    for (const r of rows) {
+      if (r.inPlay) continue; // pregame only
+      const key = dedupKey(r);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const chance = r.fairProb ?? r.chance ?? 0.5;
+      const price = r.price || -110;
+      const isProp = !!(r.isProp || r.marketType === "prop" || (r.marketType || "").startsWith("player_"));
+      const isPeriod = !isProp && /^(1st|2nd|3rd|first|second|third)/i.test(r.selection || "");
+      const lab = labScore({ chance, fairProb: r.fairProb ?? chance, price });
+      result.push({
+        id: key,
+        selection: r.selection || "",
+        marketType: r.marketType || "ml",
+        sport: r.sport || "",
+        eventId: r.eventId || "",
+        home: r.home || "",
+        away: r.away || "",
+        start: r.start || "",
+        price,
+        player: r.player,
+        headshot: r.headshot,
+        team: r.team,
+        position: r.position,
+        side: r.side,
+        point: r.point,
+        chance,
+        fairProb: r.fairProb ?? chance,
+        inPlay: !!r.inPlay,
+        lab,
+        isGameLine: !isProp && !isPeriod,
+        isProp,
+        isPeriod,
+        source: "scan",
+      });
+    }
+
+    // 2. Cached enriched props (from admin pulls)
     for (const p of cachedProps) {
       const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
-      result.push(p);
-    }
-    for (const p of scanProps) {
-      const key = dedupKey(p);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.push(p);
-    }
-    return result;
-  }, [cachedProps, scanProps]);
-
-  const allProps = applySportFilter(mergedProps, sportFilter);
-  const liveSports = [...new Set(mergedProps.map((p: any) => p.sport).filter(Boolean))];
-
-  // Filter state (mirrors matchup page)
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [propFilter, setPropFilter] = useState("all");
-  const [confidenceFilter, setConfidenceFilter] = useState("all");
-
-  // Get unique games for team toggle
-  const games = useMemo(() => {
-    const m = new Map<string, { home: string; away: string }>();
-    for (const p of allProps) {
-      const key = `${p.away}@${p.home}`;
-      if (!m.has(key)) m.set(key, { home: p.home, away: p.away });
-    }
-    return [...m.values()];
-  }, [allProps]);
-
-  // Apply filters
-  const filtered = useMemo(() => {
-    let items = allProps;
-    if (teamFilter !== "all") {
-      items = items.filter((q: any) => {
-        if (q.homeAway) return q.homeAway === teamFilter;
-        const pTeam = (q.team || "").toLowerCase();
-        if (!pTeam) return false;
-        if (teamFilter === "home") return games.some(g => g.home.toLowerCase().includes(pTeam));
-        if (teamFilter === "away") return games.some(g => g.away.toLowerCase().includes(pTeam));
-        return false;
+      const chance = p.aiProb ?? p.fairProb ?? p.chance ?? 0.5;
+      const price = p.price || -110;
+      const lab = labScore({ chance, fairProb: p.fairProb ?? chance, price });
+      result.push({
+        id: key,
+        selection: p.selection || "",
+        marketType: p.marketType || "prop",
+        sport: p.sport || "",
+        eventId: p.eventId || "",
+        home: p.home || "",
+        away: p.away || "",
+        start: p.start || "",
+        price,
+        player: p.player,
+        headshot: p.headshot || (p.row as any)?.headshot,
+        team: p.team,
+        position: p.position,
+        side: p.side,
+        point: p.point,
+        chance,
+        fairProb: p.fairProb ?? chance,
+        inPlay: false,
+        lab,
+        isGameLine: false,
+        isProp: true,
+        isPeriod: false,
+        source: "cache",
       });
     }
+
+    return result;
+  }, [scan?.rows, cachedProps]);
+
+  // Apply sport filter
+  const sportFiltered = useMemo(() => {
+    if (!sportFilter) return allBets;
+    return allBets.filter(b => b.sport.toLowerCase().includes(sportFilter.toLowerCase()));
+  }, [allBets, sportFilter]);
+
+  // Available sports
+  const liveSports = useMemo(() =>
+    [...new Set(allBets.map(b => b.sport).filter(Boolean))],
+    [allBets]
+  );
+
+  // Tab counts
+  const tabCounts = useMemo(() => {
+    const counts = { all: sportFiltered.length, lines: 0, props: 0, periods: 0 };
+    for (const b of sportFiltered) {
+      if (b.isGameLine) counts.lines++;
+      else if (b.isProp) counts.props++;
+      else if (b.isPeriod) counts.periods++;
+    }
+    return counts;
+  }, [sportFiltered]);
+
+  // Filter + sort
+  const displayBets = useMemo(() => {
+    let items = sportFiltered;
+
+    // Tab filter
+    if (tab !== "all") {
+      items = items.filter(b => betCategory(b) === tab);
+    }
+
+    // Star filter
+    if (minStars > 0) {
+      items = items.filter(b => b.lab.stars >= minStars);
+    }
+
+    // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      items = items.filter((p: any) => (p.player || "").toLowerCase().includes(q) || (p.selection || "").toLowerCase().includes(q));
+      items = items.filter(b =>
+        (b.player || "").toLowerCase().includes(q) ||
+        b.selection.toLowerCase().includes(q) ||
+        b.home.toLowerCase().includes(q) ||
+        b.away.toLowerCase().includes(q)
+      );
     }
-    if (propFilter !== "all") {
-      items = items.filter((p: any) => p.marketType === propFilter);
-    }
-    if (confidenceFilter !== "all") {
-      items = items.filter((p: any) => (p.confidence || p.row?.confidence || "medium").toLowerCase() === confidenceFilter);
-    }
-    return items;
-  }, [allProps, teamFilter, searchQuery, propFilter, confidenceFilter, games]);
 
-  // Get available categories (pre-filter)
-  const availableCategories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of allProps) {
-      const cat = p.marketType || "other";
-      counts.set(cat, (counts.get(cat) || 0) + 1);
-    }
-    return [...counts.entries()].sort(([a], [b]) => {
-      const ai = PROP_ORDER.indexOf(a);
-      const bi = PROP_ORDER.indexOf(b);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    // Sort
+    const sorted = [...items].sort((a, b) => {
+      switch (sortMode) {
+        case "ev": return b.lab.ev - a.lab.ev || b.lab.hitPct - a.lab.hitPct;
+        case "hit": return b.lab.hitPct - a.lab.hitPct || b.lab.ev - a.lab.ev;
+        case "payout": {
+          const aDec = a.price >= 100 ? a.price / 100 + 1 : 100 / Math.abs(a.price) + 1;
+          const bDec = b.price >= 100 ? b.price / 100 + 1 : 100 / Math.abs(b.price) + 1;
+          return bDec - aDec || b.lab.ev - a.lab.ev;
+        }
+        case "time": return new Date(a.start || 0).getTime() - new Date(b.start || 0).getTime() || b.lab.ev - a.lab.ev;
+        default: return 0;
+      }
     });
-  }, [allProps]);
 
-  // Group by category + sort by prediction (highest first)
-  const grouped = useMemo(() => {
-    const map = new Map<string, any[]>();
-    for (const q of filtered) {
-      const cat = q.marketType || "other";
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(q);
-    }
-    // Sort within each category by AI prediction (highest first)
-    for (const [, arr] of map) {
-      arr.sort((a: any, b: any) => {
-        const aProb = a.aiProb ?? a.fairProb ?? 0;
-        const bProb = b.aiProb ?? b.fairProb ?? 0;
-        if (bProb !== aProb) return bProb - aProb;
-        return (b.aiEdge || 0) - (a.aiEdge || 0);
+    return sorted;
+  }, [sportFiltered, tab, minStars, searchQuery, sortMode]);
+
+  // Add-to-parlay handler
+  const toggleLeg = useCallback((b: LabBet) => {
+    const mkt = b.marketType || "unknown";
+    if (isLegSelected(sgpSlip, b.selection, mkt)) {
+      removeLeg(b.selection, mkt);
+    } else {
+      addLeg({
+        eventId: b.eventId,
+        selection: b.selection,
+        marketType: mkt,
+        side: b.side,
+        point: b.point,
+        price: b.price,
+        fairProb: b.lab.hitPct / 100,
+        sport: b.sport,
+        home: b.home,
+        away: b.away,
+        player: b.player,
       });
     }
-    return [...map.entries()].sort(([a], [b]) => {
-      const ai = PROP_ORDER.indexOf(a);
-      const bi = PROP_ORDER.indexOf(b);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-    });
-  }, [filtered]);
+  }, [sgpSlip, addLeg, removeLeg]);
+
+  const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
 
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
+      {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
         <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">AI Picks</span>
+          The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">Build Your Parlay</span>
         </h1>
-        {mergedProps.length > 0 && (
-          <p className="text-sm text-muted">{mergedProps.length} player props analyzed · Sorted by highest prediction</p>
-        )}
+        <p className="text-sm text-muted">
+          Every pregame bet ranked by Expected Value. Higher EV = AI thinks it has better value vs the book.
+          {allBets.length > 0 && <span className="text-primary font-bold ml-1">{allBets.length} bets analyzed</span>}
+        </p>
       </div>
 
       {/* Sport Filter */}
@@ -187,195 +309,193 @@ function TheLab() {
       {loading && (
         <div className="text-center p-10 text-muted">
           <div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-          Loading AI picks...
+          Analyzing all bets...
         </div>
       )}
 
-      {!loading && allProps.length > 0 && (
+      {!loading && allBets.length > 0 && (
         <div className="flex flex-col gap-3 pb-24">
-          {/* Filter bar — mirrors matchup page */}
+          {/* Filter bar */}
           <div className="flex flex-col gap-2 sticky top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
-            {/* Row 1: Team toggle + Search */}
-            <div className="flex items-center gap-2">
+            {/* Row 1: Bet type tabs */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {TAB_LABELS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={cn("px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors border shrink-0",
+                    tab === key ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+                  )}
+                >
+                  {label} ({tabCounts[key]})
+                </button>
+              ))}
+            </div>
+
+            {/* Row 2: Star filter + Sort + Search */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Star filter */}
               <div className="flex rounded-lg border border-line overflow-hidden shrink-0">
-                {[
-                  { key: "all", label: "Both" },
-                  { key: "away", label: "Away" },
-                  { key: "home", label: "Home" },
-                ].map(({ key, label }) => (
+                {STAR_FILTERS.map(({ key, label }) => (
                   <button
                     key={key}
-                    onClick={() => setTeamFilter(key)}
-                    className={cn("px-3 py-1.5 text-[11px] font-bold transition-colors",
-                      teamFilter === key ? "bg-primary text-primary-foreground" : "bg-panel text-muted hover:bg-line/50"
+                    onClick={() => setMinStars(key)}
+                    className={cn("px-2.5 py-1.5 text-[10px] font-bold transition-colors",
+                      minStars === key ? "bg-amber-400/20 text-amber-400" : "bg-panel text-muted hover:bg-line/50"
                     )}
                   >
                     {label}
                   </button>
                 ))}
               </div>
+
+              {/* Sort */}
+              <div className="flex rounded-lg border border-line overflow-hidden shrink-0">
+                {SORT_OPTIONS.map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSortMode(key)}
+                    className={cn("px-2.5 py-1.5 text-[10px] font-bold transition-colors flex items-center gap-1",
+                      sortMode === key ? "bg-primary/20 text-primary" : "bg-panel text-muted hover:bg-line/50"
+                    )}
+                  >
+                    <Icon className="size-3" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Search */}
               <input
                 type="text"
-                placeholder="Search player..."
+                placeholder="Search player or team..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-panel border border-line rounded-lg px-3 py-1.5 text-sm text-ink placeholder:text-muted/50 focus:outline-none focus:border-primary/50"
+                className="flex-1 min-w-[120px] bg-panel border border-line rounded-lg px-3 py-1.5 text-sm text-ink placeholder:text-muted/50 focus:outline-none focus:border-primary/50"
               />
-            </div>
-            {/* Row 2: Confidence filter */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-              {[
-                { key: "all", label: "All Confidence" },
-                { key: "high", label: "High" },
-                { key: "medium", label: "Medium" },
-                { key: "low", label: "Low" },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setConfidenceFilter(key)}
-                  className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0 flex items-center gap-1",
-                    confidenceFilter === key ? "bg-amber-400/10 text-amber-400 border-amber-400/30" : "bg-panel border-line text-muted hover:border-amber-400/30"
-                  )}
-                >
-                  {key === "high" && <Star className={cn("size-3", confidenceFilter === "high" ? "fill-amber-400" : "")} />}
-                  {label}
-                </button>
-              ))}
-            </div>
-            {/* Row 3: Category pills */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setPropFilter("all")}
-                className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0",
-                  propFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
-                )}
-              >
-                All ({allProps.length})
-              </button>
-              {availableCategories.map(([cat, count]) => (
-                <button
-                  key={cat}
-                  onClick={() => setPropFilter(propFilter === cat ? "all" : cat)}
-                  className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border shrink-0",
-                    propFilter === cat ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
-                  )}
-                >
-                  {PROP_LABEL[cat]?.replace(/^[^\s]+\s/, "") || cat.replace(/^player_/, "").replace(/_/g, " ")} ({count})
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* Grouped sections */}
-          {grouped.map(([cat, catItems]) => (
-            <div key={cat} className="flex flex-col gap-2">
-              <div className="sticky top-[96px] z-10 bg-background/95 backdrop-blur px-1 py-2 border-b border-line/30">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-                  {PROP_LABEL[cat] || cat.replace(/^player_/, "").replace(/_/g, " ")} <span className="text-muted font-normal ml-1">({catItems.length})</span>
-                </h3>
-              </div>
-              {catItems.map((p: any, i: number) => {
-                const playerName = p.player || p.row?.player;
-                const label = playerName ? p.selection.replace(playerName, "").trim() : p.selection;
-                // Strip stat label from display
-                const cleanLabel = label
-                  .replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "")
-                  .trim();
-                const headshotUrl = p.headshot || (p.row as any)?.headshot;
-                const teamPos = [p.team, p.position].filter(Boolean).join(" · ");
-                const rawAi = p.aiProb ?? p.fairProb ?? null;
-                const probPct = ticketHitPct({ chance: p.chance ?? rawAi, fairProb: p.fairProb ?? rawAi, price: p.price }) ?? Math.round((rawAi ?? 0.5) * 100);
-                const hasAi = p.aiProb != null;
-                const rawP = p.price || -110;
-                const implied = rawP < 0 ? Math.abs(rawP) / (Math.abs(rawP) + 100) : 100 / (rawP + 100);
-                const edgeVal = p.aiEdge ? p.aiEdge * 100 : ((probPct / 100 - implied) * 100);
-                const edgePct = edgeVal.toFixed(1);
-                const amOdds = rawP > 0 ? `+${rawP}` : `${rawP}`;
-                const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
+          {/* Results count */}
+          <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wider px-1">
+            <span>{displayBets.length} bet{displayBets.length !== 1 ? "s" : ""} · Sorted by {SORT_OPTIONS.find(s => s.key === sortMode)?.label}</span>
+            <span className="text-[9px] text-muted/60">Pregame only · EV = (Hit% × Payout) − 1</span>
+          </div>
 
-                const confidence = (p.confidence || p.row?.confidence || "medium").toLowerCase();
-                const isHigh = confidence === "high";
-                const isLow = confidence === "low";
+          {/* Bet cards */}
+          <div className="flex flex-col gap-2">
+            {displayBets.map((b) => {
+              const selected = isInSlip(b);
+              const amOdds = formatAmerican(b.price) || `${b.price}`;
+              const playerName = b.player;
+              const isGameLine = b.isGameLine;
+              const stars = b.lab.stars;
+              const matchup = `${b.away} @ ${b.home}`;
+              const startTime = b.start ? new Date(b.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "";
+              const sportLabel = (b.sport || "").replace("americanfootball_", "").replace("icehockey_", "").replace("baseball_", "").replace("basketball_", "").toUpperCase();
 
-                return (
-                  <div key={`${p.selection}-${i}`} className={cn(
-                    "rounded-xl border border-line bg-panel p-3 hover:border-primary/30 transition-all",
-                    isHigh ? "border-l-4 border-l-amber-400" : "",
-                    isLow ? "opacity-70" : ""
-                  )}>
-                    <div className="flex items-center gap-3">
-                      {/* Headshot */}
-                      {headshotUrl ? (
-                        <img src={headshotUrl} className="size-10 rounded-full object-cover ring-2 ring-line bg-obsidian shrink-0" alt={playerName || ""} />
+              // For game lines, show team name. For props, show player.
+              const displayName = playerName || b.selection;
+              const subtitle = playerName
+                ? b.selection.replace(playerName, "").replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "").trim()
+                : isGameLine ? marketLabel(b.marketType) : "";
+              const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
+
+              return (
+                <div key={b.id} className={cn(
+                  "rounded-xl border bg-panel p-3 transition-all",
+                  selected ? "border-primary ring-1 ring-primary/30" : "border-line hover:border-primary/30",
+                  stars >= 4 ? "border-l-4 border-l-amber-400" : "",
+                  b.lab.ev < 0 ? "opacity-60" : ""
+                )}>
+                  <div className="flex items-center gap-3">
+                    {/* Stars + Avatar */}
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      {b.headshot ? (
+                        <img src={b.headshot} className="size-10 rounded-full object-cover ring-2 ring-line bg-obsidian" alt="" />
                       ) : initials ? (
-                        <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center shrink-0">
+                        <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
                           <span className="text-[10px] font-bold text-muted">{initials}</span>
                         </div>
                       ) : (
-                        <div className="size-10 rounded-full bg-line ring-2 ring-line flex items-center justify-center shrink-0">
-                          <Target className="size-4 text-muted opacity-50" />
+                        <div className="size-10 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center">
+                          <Target className="size-4 text-primary" />
                         </div>
                       )}
-                      {/* Player info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-ink truncate flex items-center gap-1">
-                            {playerName || p.selection}
-                            {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
-                          </span>
-                          {teamPos && <span className="text-[10px] text-muted/50 uppercase tracking-wider shrink-0">{teamPos}</span>}
-                        </div>
-                        {playerName && <span className="text-xs text-muted truncate block">{cleanLabel}</span>}
-                        <span className="text-[10px] text-muted/40">{p.away || ""} @ {p.home || ""}</span>
-                      </div>
-                      {/* Odds */}
-                      <div className="shrink-0">
-                        <div className={cn("flex flex-col items-center justify-center min-w-[65px] h-10 rounded-md border transition-colors",
-                          "bg-obsidian border-line text-primary"
-                        )}>
-                          <span className="font-mono text-sm font-bold">{amOdds}</span>
-                        </div>
-                      </div>
+                      <div className="flex gap-px">{renderStars(stars)}</div>
                     </div>
-                    {/* AI bar */}
-                    <div className="mt-2 mx-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
-                          <div className={cn("h-full rounded-full transition-all duration-500", probPct >= 55 ? "bg-emerald-500" : probPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${probPct}%` }} />
-                        </div>
-                        <span className={cn("text-xs font-mono font-bold whitespace-nowrap", probPct >= 55 ? "text-emerald-400" : probPct >= 45 ? "text-amber-400" : "text-red-400")}>
-                          {hasAi && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 mr-1 font-bold">AI</span>}
-                          {probPct}% hit
-                        </span>
-                        {parseFloat(edgePct) !== 0 && (
-                          <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-                            {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}% edge
-                          </span>
-                        )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-ink truncate">{displayName}</span>
+                        {b.isProp && <span className="text-[8px] bg-violet-500/20 text-violet-400 rounded px-1 font-bold shrink-0">PROP</span>}
+                        {b.isPeriod && <span className="text-[8px] bg-sky-500/20 text-sky-400 rounded px-1 font-bold shrink-0">PERIOD</span>}
+                        {isGameLine && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 font-bold shrink-0">{marketLabel(b.marketType).toUpperCase()}</span>}
                       </div>
-                      <p className="text-[9px] text-muted italic ml-0.5">
-                        {probPct >= 70 ? "Strong favorite — wins most of the time" : probPct >= 55 ? "Slight edge — better than a coin flip" : probPct >= 45 ? "Close to a toss-up — could go either way" : probPct >= 30 ? "Underdog — lower chance, bigger payout" : "Long shot — risky but high reward"}
-                      </p>
+                      {subtitle && <span className="text-xs text-muted truncate block">{subtitle}</span>}
+                      <span className="text-[10px] text-muted/40">{matchup} · {sportLabel} · {startTime}</span>
+                    </div>
+
+                    {/* Odds + Add */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-col items-center min-w-[60px] h-10 rounded-md border bg-obsidian border-line justify-center">
+                        <span className="font-mono text-sm font-bold text-primary">{amOdds}</span>
+                      </div>
+                      <button
+                        onClick={() => toggleLeg(b)}
+                        className={cn("size-8 rounded-lg border flex items-center justify-center transition-all",
+                          selected
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "bg-panel border-line text-muted hover:border-primary/50 hover:text-primary"
+                        )}
+                      >
+                        {selected ? <Check className="size-4" /> : <Plus className="size-4" />}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ))}
 
-          {filtered.length === 0 && (
+                  {/* Hit bar + EV */}
+                  <div className="mt-2 mx-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full transition-all duration-500", b.lab.hitPct >= 55 ? "bg-emerald-500" : b.lab.hitPct >= 45 ? "bg-amber-500" : "bg-red-400")} style={{ width: `${b.lab.hitPct}%` }} />
+                      </div>
+                      <span className={cn("text-xs font-mono font-bold whitespace-nowrap", b.lab.hitPct >= 55 ? "text-emerald-400" : b.lab.hitPct >= 45 ? "text-amber-400" : "text-red-400")}>
+                        <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 mr-1 font-bold">AI</span>
+                        {b.lab.hitPct}% hit
+                      </span>
+                      <span className={cn("text-[9px] font-mono px-1 rounded font-bold", b.lab.ev >= 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                        EV {b.lab.evPct}
+                      </span>
+                      {parseFloat(b.lab.edgePct) !== 0 && (
+                        <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(b.lab.edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                          {b.lab.edgePct} edge
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-muted italic ml-0.5">
+                      {b.lab.label} — {b.lab.hitPct >= 70 ? "wins most of the time" : b.lab.hitPct >= 55 ? "better than a coin flip" : b.lab.hitPct >= 45 ? "could go either way" : b.lab.hitPct >= 30 ? "lower chance, bigger payout" : "risky but high reward"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {displayBets.length === 0 && (
             <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
-              No props match your filters. Try adjusting team or category.
+              No bets match your filters. Try adjusting tabs, stars, or search.
             </div>
           )}
         </div>
       )}
 
-      {!loading && allProps.length === 0 && (
+      {!loading && allBets.length === 0 && (
         <div className="text-center p-10 text-muted border border-dashed border-line rounded-xl">
           <Target className="size-8 mx-auto mb-3 opacity-50" />
-          <p>No active props found in The Lab right now.</p>
-          <p className="text-xs mt-2 text-muted/60">Pull player props from a game's matchup page to populate AI picks here.</p>
+          <p>No active bets found in The Lab right now.</p>
+          <p className="text-xs mt-2 text-muted/60">Bets appear here when the board is live and/or player props have been pulled.</p>
         </div>
       )}
     </div>
