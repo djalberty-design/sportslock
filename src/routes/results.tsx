@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/start";
+import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { useState, useEffect } from "react";
 import { History, CheckCircle2, XCircle } from "lucide-react";
