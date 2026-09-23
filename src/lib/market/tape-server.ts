@@ -109,3 +109,8 @@ export const submitHypothesisFn = createServerFn({ method: "POST" })
     return submitHypothesis(data.query, data.notes);
   });
 
+export const checkCircuitBreakersFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { checkCircuitBreakers } = await import("./dynamic-weights");
+  return checkCircuitBreakers();
+});
+

@@ -4,7 +4,7 @@ import { gradeMarketTape, gradePredictionLogs } from "@/lib/market/grade-tape";
 import { gradePlayerProps } from "@/lib/market/prop-grader";
 import { runTapeAutopsy } from "@/lib/market/autopsy-tape";
 import { runPostGradeAnalysis } from "@/lib/market/post-grade-analysis";
-import { calibrateWeights } from "@/lib/market/dynamic-weights";
+import { calibrateWeights, checkCircuitBreakers } from "@/lib/market/dynamic-weights";
 import { buildSuggestions } from "@/lib/market/suggestions";
 import { logActivity } from "@/lib/market/activity";
 
@@ -40,6 +40,9 @@ async function handleGrade() {
 
     // Step 7: Dynamic Blend Weights Calibration (re-weights 7d/30d performance safely)
     const calibrationResult = await calibrateWeights().catch(() => ({ ok: false, updated: [], summary: {} }));
+
+    // Step 7b: Alpha Drawdown Circuit Breakers (auto-reverts any sport with >= 4 model misses to defensive baseline)
+    const circuitBreakerResult = await checkCircuitBreakers().catch(() => ({ tripped: [], summary: {} }));
 
     // Step 8: Algorithmic Suggestion Generation (haircuts, sit orders, model tweaks)
     const suggestionResult = await buildSuggestions().catch(() => ({ ok: false }));

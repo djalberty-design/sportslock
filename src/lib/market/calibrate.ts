@@ -29,14 +29,117 @@ const MIN_BUCKET = 8;
 const PRIOR_STRENGTH = 12;
 
 let activeTable: ReliabilityBucket[] = [];
+let tableExpiresAt = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+let tableEnsured = false;
+
+async function loadSql() {
+  try {
+    const { getSql } = await import("@/lib/db");
+    return await getSql();
+  } catch {
+    return null;
+  }
+}
+
+export async function ensureReliabilityTable() {
+  if (tableEnsured) return;
+  try {
+    const sql = await loadSql();
+    if (!sql) return;
+    await sql.query(`
+      create table if not exists brain_reliability_table (
+        bucket integer primary key,
+        lo numeric not null,
+        hi numeric not null,
+        n integer not null default 0,
+        mean_p numeric not null default 0.5,
+        hit_rate numeric not null default 0.5,
+        updated_at timestamptz not null default now()
+      )
+    `);
+    tableEnsured = true;
+  } catch (err) {
+    console.error("[calibrate] ensureReliabilityTable error:", err);
+  }
+}
+
+export async function persistReliabilityTable(table: ReliabilityBucket[]): Promise<void> {
+  if (!table || !table.length) return;
+  try {
+    await ensureReliabilityTable();
+    const sql = await loadSql();
+    if (!sql) return;
+    for (let i = 0; i < table.length; i++) {
+      const b = table[i];
+      await sql.query(`
+        insert into brain_reliability_table (bucket, lo, hi, n, mean_p, hit_rate, updated_at)
+        values ($1, $2, $3, $4, $5, $6, now())
+        on conflict (bucket) do update set
+          lo = excluded.lo,
+          hi = excluded.hi,
+          n = excluded.n,
+          mean_p = excluded.mean_p,
+          hit_rate = excluded.hit_rate,
+          updated_at = now()
+      `, [i, b.lo, b.hi, b.n, b.meanP, b.hitRate]);
+    }
+  } catch (err) {
+    console.error("[calibrate] persistReliabilityTable error:", err);
+  }
+}
+
+export async function loadReliabilityTable(): Promise<ReliabilityBucket[]> {
+  if (activeTable.length > 0 && Date.now() < tableExpiresAt) {
+    return activeTable;
+  }
+  try {
+    await ensureReliabilityTable();
+    const sql = await loadSql();
+    if (!sql) return activeTable;
+    const rows = await sql.query<{
+      bucket: number;
+      lo: string | number;
+      hi: string | number;
+      n: number;
+      mean_p: string | number;
+      hit_rate: string | number;
+    }>(`select * from brain_reliability_table order by bucket asc`);
+
+    if (rows.length > 0) {
+      activeTable = rows.map((r) => ({
+        lo: Number(r.lo),
+        hi: Number(r.hi),
+        n: Number(r.n),
+        meanP: Number(r.mean_p),
+        hitRate: Number(r.hit_rate),
+      }));
+      tableExpiresAt = Date.now() + CACHE_TTL_MS;
+      return activeTable;
+    }
+  } catch (err) {
+    // fallback to in-memory activeTable
+  }
+  return activeTable;
+}
+
+export function getReliabilityTableSync(): ReliabilityBucket[] {
+  return activeTable;
+}
 
 export function setReliabilityTable(table: ReliabilityBucket[]): void {
   activeTable = Array.isArray(table) ? table : [];
+  tableExpiresAt = Date.now() + CACHE_TTL_MS;
+  // Asynchronously persist to database so all serverless lambdas share the empirical table
+  void persistReliabilityTable(activeTable).catch(() => {});
 }
 
 export function getReliabilityTable(): ReliabilityBucket[] {
   return activeTable;
 }
+
+// Eager hydration on startup/first load
+void loadReliabilityTable().catch(() => {});
 
 export function reliabilityTable(forecasts: { p: number; hit: boolean }[]): ReliabilityBucket[] {
   return FORECAST_BANDS.map(([lo, hi]) => {

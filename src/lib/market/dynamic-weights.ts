@@ -1,11 +1,12 @@
 import { getSql } from "@/lib/db";
+import { logActivity } from "@/lib/market/activity";
 
 export type BlendWeights = {
   wSim: number;
   wPool: number;
   wMarket: number;
   sport: string;
-  source: "default" | "calibrated" | "manual";
+  source: "default" | "calibrated" | "manual" | "circuit_breaker";
   sampleSize: number;
   updatedAt: string;
   notes?: string;
@@ -285,9 +286,107 @@ export async function calibrateWeights(): Promise<{ ok: boolean; updated: string
       summary[sport] = weightObj;
     }
 
+    // Run Alpha Drawdown Circuit Breakers to guard against sudden model miss clusters
+    const breakers = await checkCircuitBreakers();
+    for (const s of breakers.tripped) {
+      if (!updated.includes(s)) updated.push(s);
+      const w = await getDynamicWeights(s);
+      summary[s] = w;
+    }
+
     return { ok: true, updated, summary };
   } catch (err: any) {
     console.error("calibrateWeights error:", err);
     return { ok: false, updated: [], summary, error: String(err) } as any;
   }
 }
+
+/**
+ * Alpha Drawdown Circuit Breaker:
+ * Evaluates the last 10 decided recommended picks per sport in market_tape.
+ * If >= 4 consecutive picks or >= 5 of the last 10 are classified as 'model_miss',
+ * the circuit breaker trips, instantly reverting that sport's blend weights
+ * to the defensive baseline consensus anchor (0.10 / 0.10 / 0.80) to protect bankroll.
+ */
+export async function checkCircuitBreakers(): Promise<{ tripped: string[]; summary: Record<string, string> }> {
+  await ensureWeightsTable();
+  const tripped: string[] = [];
+  const summary: Record<string, string> = {};
+
+  try {
+    const sql = await getSql();
+    const sports = ["NFL", "NCAAF", "MLB", "NBA", "NHL", "NCAAB"];
+
+    for (const sport of sports) {
+      const rows = await sql.query<{
+        id: string;
+        bucket: string | null;
+        status: string;
+      }>(`
+        select id, bucket, status
+        from market_tape
+        where upper(sport) = $1
+          and status in ('WIN', 'LOSS')
+          and (recommended = true or model_probability >= 0.52)
+        order by coalesce(start, snapped_at) desc
+        limit 10
+      `, [sport]);
+
+      if (rows.length < 5) continue;
+
+      let consecutiveMisses = 0;
+      let totalMisses = 0;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].bucket === "model_miss") {
+          totalMisses++;
+          if (i === consecutiveMisses) consecutiveMisses++;
+        }
+      }
+
+      // Circuit Breaker Trigger: >= 4 consecutive misses OR >= 5 out of last 10 misses
+      if (consecutiveMisses >= 4 || totalMisses >= 5) {
+        const base = DEFAULT_WEIGHTS[sport] || DEFAULT_WEIGHTS.DEFAULT;
+        const note = `🛡️ Alpha Circuit Breaker Tripped: ${consecutiveMisses >= 4 ? `${consecutiveMisses} consecutive` : `${totalMisses}/10`} Model Misses detected. Auto-reverted to defensive consensus baseline (0.10/0.10/0.80) to protect bankroll.`;
+
+        await sql.query(`
+          insert into brain_model_weights (sport, w_sim, w_pool, w_market, source, sample_size, notes, updated_at)
+          values ($1, $2, $3, $4, 'circuit_breaker', $5, $6, now())
+          on conflict (sport) do update set
+            w_sim = excluded.w_sim,
+            w_pool = excluded.w_pool,
+            w_market = excluded.w_market,
+            source = 'circuit_breaker',
+            notes = excluded.notes,
+            updated_at = now()
+        `, [sport, base.wSim, base.wPool, base.wMarket, rows.length, note]);
+
+        const breakerObj: BlendWeights = {
+          sport,
+          wSim: base.wSim,
+          wPool: base.wPool,
+          wMarket: base.wMarket,
+          source: "circuit_breaker",
+          sampleSize: rows.length,
+          updatedAt: new Date().toISOString(),
+          notes: note,
+        };
+
+        weightsCache.set(sport, { weights: breakerObj, expiresAt: Date.now() + CACHE_TTL_MS });
+        tripped.push(sport);
+        summary[sport] = note;
+
+        void logActivity(
+          "brain",
+          `Alpha Circuit Breaker Tripped: ${sport}`,
+          note,
+          "system"
+        );
+      }
+    }
+  } catch (err) {
+    console.error("checkCircuitBreakers error:", err);
+  }
+
+  return { tripped, summary };
+}
+

@@ -7,6 +7,7 @@ import {
   calibrateWeightsFn,
   listHypothesesFn,
   submitHypothesisFn,
+  checkCircuitBreakersFn,
 } from "@/lib/market/tape-server";
 import { cn } from "@/lib/utils";
 import {
@@ -151,6 +152,18 @@ function Dashboard() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
       alert(`Dynamic blend weights calibrated across active sports based on 30-day performance.`);
+    },
+  });
+
+  const breakerMut = useMutation({
+    mutationFn: () => checkCircuitBreakersFn(),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
+      if (res.tripped?.length > 0) {
+        alert(`🛡️ Alpha Drawdown Circuit Breakers tripped for: ${res.tripped.join(", ")}. Reverted to baseline defensive consensus.`);
+      } else {
+        alert("✅ All sports passed circuit breaker audit. No consecutive model miss clusters detected.");
+      }
     },
   });
 
@@ -442,14 +455,25 @@ function Dashboard() {
               The calibrated mix of Consensus Market, 10k Monte Carlo, and Feature Ensembles. Consensus stays dominant (≥70%) to preserve the proven ~60% win rate.
             </p>
           </div>
-          <button
-            onClick={() => calibrateMut.mutate()}
-            disabled={calibrateMut.isPending}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50 shrink-0"
-          >
-            <RefreshCw className={cn("size-3", calibrateMut.isPending && "animate-spin")} />
-            {calibrateMut.isPending ? "Calibrating 30d..." : "Calibrate Weights (30d)"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => breakerMut.mutate()}
+              disabled={breakerMut.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              title="Audit recent loss autopsies and enforce circuit breaker fail-safe if model misses cluster"
+            >
+              <ShieldCheck className={cn("size-3", breakerMut.isPending && "animate-spin")} />
+              {breakerMut.isPending ? "Auditing..." : "Audit Circuit Breakers"}
+            </button>
+            <button
+              onClick={() => calibrateMut.mutate()}
+              disabled={calibrateMut.isPending}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={cn("size-3", calibrateMut.isPending && "animate-spin")} />
+              {calibrateMut.isPending ? "Calibrating 30d..." : "Calibrate Weights (30d)"}
+            </button>
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
@@ -457,6 +481,7 @@ function Dashboard() {
             const mktPct = Math.round((w.wMarket || 0.8) * 100);
             const simPct = Math.round((w.wSim || 0.1) * 100);
             const poolPct = Math.round((w.wPool || 0.1) * 100);
+            const isBreaker = w.source === "circuit_breaker";
             const isCalibrated = w.source === "calibrated";
             const isManual = w.source === "manual";
 
@@ -467,11 +492,12 @@ function Dashboard() {
                     <span className="font-mono text-sm font-bold text-ink">{w.sport}</span>
                     <span className={cn(
                       "text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase",
+                      isBreaker ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse" :
                       isCalibrated ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
                       isManual ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" :
                       "bg-line text-muted"
                     )}>
-                      {isCalibrated ? `CALIBRATED (n=${w.sampleSize})` : isManual ? "MANUAL" : "DEFAULT"}
+                      {isBreaker ? "🛡️ CIRCUIT BREAKER" : isCalibrated ? `CALIBRATED (n=${w.sampleSize})` : isManual ? "MANUAL" : "DEFAULT"}
                     </span>
                   </div>
                   <span className="text-[10px] text-muted font-mono">{mktPct}% Mkt</span>
