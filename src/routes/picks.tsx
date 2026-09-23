@@ -101,6 +101,60 @@ function marketLabel(mkt: string): string {
   return mkt.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function formatPropLabel(b: LabBet): string {
+  const mkt = String(b.marketType || "").toLowerCase();
+  const rawSel = String(b.selection || "");
+  const player = String(b.player || "");
+
+  // 1. Anytime Touchdown
+  if (mkt.includes("anytime_td") || mkt.includes("touchdown") || /anytime\s*touchdown/i.test(rawSel) || /to score a touchdown/i.test(rawSel)) {
+    return "Anytime Touchdown";
+  }
+
+  // 2. 2+ Touchdowns
+  if (mkt.includes("2_or_more_td") || /2\+\s*touchdowns/i.test(rawSel)) {
+    return "2+ Touchdowns";
+  }
+
+  // 3. First Touchdown
+  if (mkt.includes("first_td") || /first\s*touchdown/i.test(rawSel)) {
+    return "First Touchdown";
+  }
+
+  // Clean selection by removing the player's name if present
+  let cleanSel = rawSel;
+  if (player && cleanSel.toLowerCase().includes(player.toLowerCase())) {
+    cleanSel = cleanSel.replace(new RegExp(player, "i"), "").trim();
+  }
+
+  // If selection starts with "Yes " or "No "
+  cleanSel = cleanSel.replace(/^(yes|no)\s+/i, "").trim();
+
+  // If cleanSel already has "Over X.X Stat" or "Under X.X Stat"
+  if (/^(over|under)\s+\d+(\.\d+)?\s+[a-z]/i.test(cleanSel)) {
+    return cleanSel.replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // If cleanSel is just "Over X.X" or "Under X.X" (or side + point)
+  const readableStat = marketLabel(mkt);
+  const side = b.side ? b.side.charAt(0).toUpperCase() + b.side.slice(1).toLowerCase() : "";
+  const pt = b.point != null ? b.point : "";
+
+  if (/^(over|under)\s+\d+(\.\d+)?$/i.test(cleanSel)) {
+    return `${cleanSel} ${readableStat}`;
+  }
+
+  if (side && pt) {
+    return `${side} ${pt} ${readableStat}`;
+  }
+
+  if (cleanSel && cleanSel.toLowerCase() !== "yes" && cleanSel.toLowerCase() !== "no") {
+    return cleanSel;
+  }
+
+  return readableStat || "Player Prop";
+}
+
 function renderStars(n: number) {
   return Array.from({ length: 5 }, (_, i) => (
     <Star key={i} className={cn("size-3", i < n ? "text-amber-400 fill-amber-400" : "text-line/40")} />
@@ -576,7 +630,7 @@ function TheLab() {
 
               const displayName = playerName || b.selection;
               const subtitle = playerName
-                ? b.selection.replace(playerName, "").replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "").trim()
+                ? formatPropLabel(b)
                 : isGameLine ? marketLabel(b.marketType) : "";
 
               const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";

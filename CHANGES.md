@@ -293,5 +293,66 @@ This file documents every change made to the codebase in sequential order, detai
     - Verified the real sport schedule formula: Active sports (3 in September) × remaining days (7) = 21 reserved for daily lines. Out of 416 remaining, exactly 395 prop pulls are available this month.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
 
+---
+
+## Change 20: Player Prop Label Formatting & Strategy Recipe Text Truncation Fix
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/routes/picks.tsx`
+  - `src/components/app/ai-custom-architect.tsx`
+* **Rationale**:
+  - Player Prop Subtitle Fix ("Yes" Bug Eradication):
+    - Removed regex that stripped stat names from selections (which reduced Anytime Touchdown bets to just `"Yes"` and stat props to bare numbers like `"Over 4.5"`).
+    - Created `formatPropLabel(b)` to intelligently format player prop subtitles into clear, descriptive labels:
+      - Anytime touchdown markets map cleanly to `"Anytime Touchdown"`.
+      - 2+ touchdown markets map cleanly to `"2+ Touchdowns"`.
+      - First touchdown markets map cleanly to `"First Touchdown"`.
+      - Over/under stat props map cleanly to `"Over/Under [Point] [Stat Name]"` (e.g. `"Over 19.5 Receiving Yards"`, `"Over 4.5 Receptions"`).
+  - Strategy Recipe Cards:
+    - Removed `line-clamp-1` from strategy recipe descriptions in `AiCustomArchitect`.
+    - Added responsive multi-line wrapping with `leading-snug text-[9.5px] break-words` and `min-h-[64px]` to guarantee recipe descriptions are completely visible and never truncated.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+---
+
+## Change 21: Team Logos & Player Headshots in Custom Parlay Architect & My Action
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/components/app/ticket-leg-avatar.tsx` [NEW]
+  - `src/components/app/ai-custom-architect.tsx`
+  - `src/components/app/desk-page.tsx`
+* **Rationale**:
+  - Reusable Leg Avatar:
+    - Created `TicketLegAvatar` supporting both player props (with ESPN headshot resolution and memory caching) and game lines (with automatic home/away/selection team logo matching and SVG/monogram fallback).
+  - Custom Parlay Architect:
+    - Forwarded `headshot`, `homeLogo`, `awayLogo`, `homeAbbr`, `awayAbbr` in `candidatePool`.
+    - Integrated `TicketLegAvatar` into every leg card of the generated parlay grid.
+  - My Action Tickets:
+    - Added `TicketLegAvatar` to each leg in the multi-leg ticket drawer.
+    - Added `TicketLegAvatar` to single straight bet cards.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+---
+
+## Change 22: Brain Accuracy Gauge Collision Fix, Gold Ticket Transparency & Light Mode Contrast
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/routes/admin/dashboard.tsx`
+  - `src/routes/index.tsx`
+  - `src/styles.css`
+  - `src/components/app/sportslock-parlay-card.tsx`
+* **Rationale**:
+  - Overseer Brain Accuracy Gauge:
+    - Fixed collision where `50% (random)` and `52.4%` benchmark labels overlapped.
+    - Added discrete indicator markers on the progress gauge bar (`50% Random`, `52.4% Vig Line`, `55%+ Edge Zone`).
+    - Replaced overlapping text with a structured 4-column benchmark legend card (`50.0% Baseline Coin Flip`, `52.4% Vig Break-Even`, `55.0%+ Edge Zone`, `100% Theoretical Max`).
+  - Gold Ticket Transparency & Criteria Education:
+    - Added "Highest Quant Standard" badge and explicit criteria explanation to the Gold Ticket section in `index.tsx`.
+    - Upgraded the empty state card to clearly explain to users why no Gold Ticket is active when strict thresholds are not met (positive Quant EV, pregame only, no heavy chalk worse than -400, 35%–85% balanced win probability window, Gumbel copula anti-correlation check), protecting bankroll rather than forcing a subpar bet.
+  - Light Mode Mobile Contrast Hardening:
+    - In `styles.css`, added `html.light` high-contrast overrides mapping light amber classes (`text-amber-300`, `text-amber-200`, `text-amber-100`) to deep rich amber/bronze (`#b45309`, `#92400e`) and adjusting border/background opacities to meet WCAG AA contrast against white/light backgrounds.
+    - In `sportslock-parlay-card.tsx`, added responsive dark/light utility classes (`text-amber-800 dark:text-amber-300`, `text-amber-900 dark:text-amber-200`, `border-amber-600/40 dark:border-amber-400/35`) ensuring all text and callouts remain sharp and readable on both desktop and mobile in both modes.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
 
 

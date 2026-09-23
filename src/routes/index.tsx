@@ -61,16 +61,51 @@ function SportsLockCommandCenter() {
       ) : (
         <>
           <section className="space-y-3">
-            <div>
-              <h2 className="text-lg font-display font-bold text-ink tracking-tight">Gold ticket</h2>
-              <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
-                Best value parlay — highest expected return weighing probability, payout, and edge. Still research — this site never places the bet.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line/60 pb-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-display font-bold text-ink tracking-tight flex items-center gap-1.5">
+                    <span className="text-amber-500 dark:text-amber-400">★</span> Gold Ticket
+                  </h2>
+                  <span className="text-[10px] font-mono uppercase bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-600/30 dark:border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
+                    Highest Quant Standard
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
+                  Best value parlay on the board — highest positive EV (+EV) weighing probability, payout, and market edge. Research, not a lock.
+                </p>
+              </div>
             </div>
             {gold.length === 0 ? (
-              <p className="text-sm text-muted border border-dashed border-amber-400/20 rounded-xl px-4 py-6">
-                No gold ticket on this mix. Live games and weak legs stay off this badge.
-              </p>
+              <div className="border border-dashed border-amber-600/30 dark:border-amber-400/20 bg-amber-500/[0.04] rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
+                  <span className="text-base">🛡️</span> Why is there no Gold Ticket on this slate?
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  SportsLock’s <strong>Gold Ticket</strong> badge is intentionally selective. To protect bankroll, our AI only awards the Gold Badge when a parlay satisfies every single quality standard:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-muted">
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span><strong>Positive Quant EV (+EV)</strong>: Higher true win probability than Vegas implied odds.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span><strong>Pregame Only</strong>: In-progress live games are barred to avoid stale lines.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span><strong>No Extreme Chalk</strong>: No individual leg or parlay heavier than -400.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span><strong>Balanced Hit Window (35%–85%)</strong>: No low-probability lottery bets or zero-edge juice traps.</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted/80 italic pt-1 border-t border-line/40">
+                  When the current slate has no ticket meeting every standard, the AI deliberately shows none rather than recommending a subpar bet. Check the Catalog below or check back as lineups and odds update!
+                </p>
+              </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {gold.map((p: any, i: number) => (

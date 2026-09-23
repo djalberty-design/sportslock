@@ -735,17 +735,37 @@ function Dashboard() {
             description="How accurate is the model? 50% = random, 52.4% = break even after vig, 55%+ = strong edge." />
           <div className="mt-4 flex items-center gap-4">
             <div className="flex-1 h-8 bg-line/30 rounded-full overflow-hidden relative">
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted/50" title="50% = random" />
-              <div className="absolute top-0 bottom-0 w-px border-l border-dashed border-amber-400/60" style={{ left: "52.4%" }} title="52.4% = break even" />
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-muted/60 z-10" title="50.0% = Random (Coin Flip)" />
+              <div className="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10" style={{ left: "52.4%" }} title="52.4% = Break Even" />
+              <div className="absolute top-0 bottom-0 w-0.5 bg-emerald-400/70 z-10" style={{ left: "55%" }} title="55.0% = Profitable Edge" />
               <div className={cn("h-full rounded-full transition-all", wr >= 55 ? "bg-emerald-500" : wr >= 52 ? "bg-amber-500" : "bg-red-500")}
                 style={{ width: `${Math.min(wr, 100)}%` }} />
             </div>
-            <span className={cn("text-2xl font-display font-bold", wr >= 55 ? "text-emerald-400" : wr >= 52 ? "text-amber-400" : "text-red-400")}>
+            <span className={cn("text-2xl font-display font-bold shrink-0", wr >= 55 ? "text-emerald-400" : wr >= 52 ? "text-amber-400" : "text-red-400")}>
               {wr}%
             </span>
           </div>
-          <div className="flex justify-between text-[10px] text-muted mt-1 px-1 relative">
-            <span>0%</span><span>50% (random)</span><span className="absolute text-amber-400/70" style={{ left: "52.4%" }}>52.4%</span><span>100%</span>
+          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-line/40 text-center">
+            <div className="bg-obsidian/60 border border-line/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted">Baseline</div>
+              <div className="text-xs font-mono font-bold text-muted">50.0%</div>
+              <div className="text-[9px] text-muted/70">Coin Flip</div>
+            </div>
+            <div className="bg-obsidian/60 border border-amber-400/30 rounded-lg p-2">
+              <div className="text-[10px] text-amber-400/90 font-medium">Vig Line</div>
+              <div className="text-xs font-mono font-bold text-amber-400">52.4%</div>
+              <div className="text-[9px] text-muted/70">Break-Even</div>
+            </div>
+            <div className="bg-obsidian/60 border border-emerald-400/30 rounded-lg p-2">
+              <div className="text-[10px] text-emerald-400/90 font-medium">Edge Zone</div>
+              <div className="text-xs font-mono font-bold text-emerald-400">55.0%+</div>
+              <div className="text-[9px] text-muted/70">Profitable</div>
+            </div>
+            <div className="bg-obsidian/60 border border-line/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted">Ceiling</div>
+              <div className="text-xs font-mono font-bold text-ink">100.0%</div>
+              <div className="text-[9px] text-muted/70">Theoretical</div>
+            </div>
           </div>
         </section>
 

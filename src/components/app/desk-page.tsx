@@ -17,6 +17,7 @@ import { useDeskDecision } from "@/lib/market/use-board";
 import { ClvBadge } from "./competitive-widgets";
 import { getHardRockUrl } from "@/lib/market/hard-rock-links";
 import type { PaperTicket } from "@/lib/market/types";
+import { TicketLegAvatar } from "./ticket-leg-avatar";
 import {
   CheckCircle2,
   XCircle,
@@ -385,16 +386,17 @@ function HardRockTicketCard({
               <div className="divide-y divide-line/40 rounded-lg border border-line/50 bg-obsidian/40 overflow-hidden">
                 {legs.map((leg, idx) => (
                   <div key={idx} className="p-2.5 flex items-center justify-between gap-3 text-xs">
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] bg-primary/20 text-primary font-bold px-1 rounded">
-                          {idx + 1}
-                        </span>
-                        <span className="font-bold text-ink truncate">{leg.selection}</span>
-                      </div>
-                      <div className="text-[11px] text-muted truncate">
-                        {leg.marketType?.toUpperCase()} · {leg.away || "Away"} @ {leg.home || "Home"}
-                        {leg.finalScore ? ` (${leg.finalScore})` : ""}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="text-[10px] bg-primary/20 text-primary font-bold px-1 rounded shrink-0">
+                        {idx + 1}
+                      </span>
+                      <TicketLegAvatar leg={leg} size="sm" />
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="font-bold text-ink truncate">{leg.selection}</div>
+                        <div className="text-[11px] text-muted truncate">
+                          {leg.marketType?.toUpperCase()} · {leg.away || "Away"} @ {leg.home || "Home"}
+                          {leg.finalScore ? ` (${leg.finalScore})` : ""}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -414,16 +416,31 @@ function HardRockTicketCard({
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-display text-lg font-bold text-ink leading-snug">
-                  {ticket.description}
-                </h3>
-                {ticket.home && ticket.away && !isParlay && (
-                  <p className="text-xs text-muted">
-                    {ticket.away} at {ticket.home}
-                  </p>
-                )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <TicketLegAvatar
+                  leg={{
+                    selection: ticket.selection || ticket.description,
+                    sport: ticket.sport,
+                    home: ticket.home,
+                    away: ticket.away,
+                    isProp: ticket.isProp,
+                    player: ticket.player,
+                    marketType: ticket.marketType,
+                    side: ticket.side,
+                  }}
+                  size="md"
+                />
+                <div className="min-w-0">
+                  <h3 className="font-display text-lg font-bold text-ink leading-snug">
+                    {ticket.description}
+                  </h3>
+                  {ticket.home && ticket.away && !isParlay && (
+                    <p className="text-xs text-muted">
+                      {ticket.away} at {ticket.home}
+                    </p>
+                  )}
+                </div>
               </div>
               <span className="font-mono text-sm font-bold text-primary shrink-0">
                 {price > 0 ? `+${price}` : price}

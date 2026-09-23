@@ -99,3 +99,24 @@ html.light #app {
   background: var(--color-background);
   color: var(--color-foreground);
 }
+
+/* Light mode high-contrast overrides for gold/amber callouts and badges */
+html.light .text-amber-300,
+html.light .text-amber-200,
+html.light .text-amber-100 {
+  color: #b45309 !important; /* Deep amber/bronze 700 with high contrast */
+}
+html.light .text-amber-400 {
+  color: #92400e !important; /* Rich amber 800 */
+}
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/15,
+html.light .bg-amber-500\/20 {
+  background-color: rgba(217, 119, 6, 0.14) !important;
+}
+html.light .border-amber-400\/20,
+html.light .border-amber-400\/30,
+html.light .border-amber-400\/35,
+html.light .border-amber-500\/30 {
+  border-color: rgba(180, 83, 9, 0.35) !important;
+}

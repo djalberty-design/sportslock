@@ -4,6 +4,7 @@ import { useParlaySlip, type ParlayLeg } from "@/lib/parlay-slip";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { evaluateParlay, americanToDecimal, decimalToAmerican, evPct } from "@/lib/market/engine";
 import { cn } from "@/lib/utils";
+import { TicketLegAvatar } from "./ticket-leg-avatar";
 import {
   Sparkles,
   Layers,
@@ -69,6 +70,11 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             evPct: edge,
             isProp: true,
             player: p.player,
+            headshot: p.headshot || (p.row as any)?.headshot,
+            homeLogo: p.homeLogo || (p.row as any)?.homeLogo,
+            awayLogo: p.awayLogo || (p.row as any)?.awayLogo,
+            homeAbbr: p.homeAbbr || (p.row as any)?.homeAbbr,
+            awayAbbr: p.awayAbbr || (p.row as any)?.awayAbbr,
             tag: "fair_or_better",
             action: "enter_ticket",
             conviction: "high",
@@ -252,14 +258,14 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
                 key={r.id}
                 onClick={() => setRecipe(r.id)}
                 className={cn(
-                  "p-2 rounded-lg border text-left transition-all",
+                  "p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[64px]",
                   recipe === r.id
                     ? "bg-primary/10 border-primary ring-1 ring-primary/40 text-ink"
                     : "bg-obsidian border-line text-muted hover:text-ink hover:border-line/90",
                 )}
               >
-                <div className="text-[11px] font-bold truncate">{r.label}</div>
-                <div className="text-[9px] text-muted line-clamp-1">{r.desc}</div>
+                <div className="text-[11px] font-bold leading-tight mb-1">{r.label}</div>
+                <div className="text-[9.5px] text-muted leading-snug break-words">{r.desc}</div>
               </button>
             ))}
           </div>
@@ -320,10 +326,11 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
                 key={`${leg.eventId}-${idx}`}
                 className="bg-panel border border-line/70 rounded-lg p-3 flex items-center justify-between gap-3"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <span className="size-6 rounded-full bg-obsidian border border-line flex items-center justify-center text-[10px] font-mono font-bold text-muted shrink-0">
                     {idx + 1}
                   </span>
+                  <TicketLegAvatar leg={leg} size="sm" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-ink truncate">
                       {leg.selection}
