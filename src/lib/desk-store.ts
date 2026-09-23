@@ -80,7 +80,7 @@ export type DeskState = {
   resetPaper: () => void;
   rollAnchorsIfNeeded: () => void;
   placePaperTicket: (t: PlacePaperInput) => PlacePaperResult;
-  gradeTicket: (id: string, result: "win" | "loss" | "void", closePrice?: number) => void;
+  gradeTicket: (id: string, result: "win" | "loss" | "void", closePrice?: number, extra?: { finalScore?: string; legs?: any[] }) => void;
   dismissTicket: (id: string) => void;
   confirmParsed: (ticket: ParsedTicket) => void;
   removeConfirmed: (selection: string) => void;
@@ -266,7 +266,7 @@ export const useDeskStore = create<DeskState>()(
         });
         return { ok: true, ticket };
       },
-      gradeTicket: (id, result, closePrice) => {
+      gradeTicket: (id, result, closePrice, extra) => {
         const s = get();
         const ticket = s.paperTickets.find((x) => x.id === id);
         if (!ticket || ticket.status !== "open") return;
@@ -293,6 +293,9 @@ export const useDeskStore = create<DeskState>()(
                   closePrice,
                   clv,
                   pnl: result === "loss" ? -ticket.stake : pnl - ticket.stake,
+                  finalScore: extra?.finalScore ?? x.finalScore,
+                  legs: extra?.legs ?? x.legs,
+                  settledAt: new Date().toISOString(),
                 }
               : x,
           ),

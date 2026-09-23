@@ -292,7 +292,20 @@ export function GamePage({ eventId }: { eventId: string }) {
         chance: legs.reduce((acc, l) => acc * l.fairProb, 1),
         home: firstQuote?.home || "",
         away: firstQuote?.away || "",
+        sport: firstQuote?.sport || undefined,
         fastLog: true,
+        legs: legs.map((l) => ({
+          selection: l.selection,
+          marketType: l.marketType,
+          price: l.price,
+          fairProb: l.fairProb,
+          eventId: l.eventId,
+          home: firstQuote?.home || "",
+          away: firstQuote?.away || "",
+          sport: firstQuote?.sport || "",
+          point: (l as any).point ?? undefined,
+          status: "open",
+        })),
         // Forward line/market for auto-grader (single-leg)
         ...(legs.length === 1 ? {
           point: (legs[0] as any).point ?? undefined,

@@ -399,6 +399,20 @@ export type ParsedTicket = {
   confirmed: boolean;
 };
 
+export type PaperTicketLeg = {
+  selection: string;
+  marketType?: string;
+  price?: number;
+  fairProb?: number;
+  eventId?: string;
+  home?: string;
+  away?: string;
+  sport?: string;
+  point?: number;
+  status?: "open" | "win" | "loss" | "void";
+  finalScore?: string;
+};
+
 export type PaperTicket = {
   id: string;
   createdAt: string;
@@ -419,12 +433,16 @@ export type PaperTicket = {
   hedge?: boolean;
   home?: string;
   away?: string;
+  sport?: string;
   fairAtLock?: number;
   tapeSource?: TapeStamp;
   /** Spread/total line (e.g. -3.5, 224.5). Used by auto-grader. */
   point?: number;
   /** Market type (ml, spread, total). Used by auto-grader. */
   marketType?: string;
+  legs?: PaperTicketLeg[];
+  finalScore?: string;
+  settledAt?: string;
 };
 
 export type ContestOffer = {

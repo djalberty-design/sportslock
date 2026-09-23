@@ -37,9 +37,12 @@ function AnalysisWorkbench() {
 
   const gradeMut = useMutation({
     mutationFn: () => batchGradeFn(),
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       qc.invalidateQueries({ queryKey: ["analysis-data"] });
-      alert(`Graded ${result.graded} predictions (${result.historical || 0} from historical). ${result.expired || 0} expired.`);
+      const snappedMsg = result.snapped ? `Snapped ${result.snapped} new board predictions. ` : "";
+      const gradeMsg = `Graded ${result.graded || 0} predictions (${result.historical || 0} from historical). ${result.expired || 0} expired.`;
+      const noteMsg = (result.graded === 0 && !result.snapped) ? "\n\nAll completed games are up-to-date and graded. Remaining pending predictions are upcoming games." : "";
+      alert(`${snappedMsg}${gradeMsg}${noteMsg}`);
     },
   });
 
@@ -208,7 +211,7 @@ function AnalysisWorkbench() {
                 <th className="text-right py-2 px-2">Edge</th>
                 <th className="text-center py-2 px-2">Status</th>
                 <th className="text-center py-2 px-2 hidden md:table-cell">Score</th>
-                <th className="text-right py-2 px-2 hidden lg:table-cell">Date</th>
+                <th className="text-right py-2 px-2 hidden lg:table-cell" title="Scheduled game date (snapshot date shown below)">Game Date</th>
               </tr>
             </thead>
             <tbody>
@@ -238,8 +241,17 @@ function AnalysisWorkbench() {
                   <td className="py-2 px-2 text-center hidden md:table-cell font-mono text-muted">
                     {r.resultHome != null ? `${r.resultAway}-${r.resultHome}` : "—"}
                   </td>
-                  <td className="py-2 px-2 text-right text-muted hidden lg:table-cell">
-                    {r.snappedAt ? new Date(r.snappedAt).toLocaleDateString() : "—"}
+                  <td className="py-2 px-2 text-right hidden lg:table-cell">
+                    <div className="font-medium text-ink">
+                      {r.start
+                        ? new Date(r.start).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" })
+                        : (r.snappedAt ? new Date(r.snappedAt).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" }) : "—")}
+                    </div>
+                    {r.snappedAt && (
+                      <div className="text-[10px] text-muted">
+                        snapped {new Date(r.snappedAt).toLocaleDateString(undefined, { month: "numeric", day: "numeric" })}
+                      </div>
+                    )}
                   </td>
                 </tr>
                 {expandedRow === r.id && (

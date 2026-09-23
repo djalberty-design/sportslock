@@ -976,22 +976,36 @@ export const batchGradeFn = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     try {
       await assertAdmin(context.userId);
+      const { runMarketTape } = await import("@/lib/market/market-tape");
       const { gradeMarketTape, gradePredictionLogs } = await import("@/lib/market/grade-tape");
       const { gradePlayerProps } = await import("@/lib/market/prop-grader");
+      const { runTapeAutopsy } = await import("@/lib/market/autopsy-tape");
+      const { buildSuggestions } = await import("@/lib/market/suggestions");
+      const { runPostGradeAnalysis } = await import("@/lib/market/post-grade-analysis");
 
+      // Step 1: Snapshot current board into market_tape so total predictions grow on demand
+      const tapeRun = await runMarketTape().catch((e) => ({ ok: false, wrote: 0, skipped: 0, error: String(e) }));
+
+      // Step 2: Grade market tape, prediction logs, and player props
       const tapeResult = await gradeMarketTape();
       const predResult = await gradePredictionLogs();
       const propResult = await gradePlayerProps().catch(() => ({ graded: 0, unmatched: 0, skipped: 0, expired: 0 }));
 
+      // Step 3: Run self-improvement pipelines
+      await runTapeAutopsy().catch(() => {});
+      await buildSuggestions().catch(() => {});
+      await runPostGradeAnalysis().catch(() => {});
+
       return {
         ok: true,
+        snapped: tapeRun.wrote || 0,
         graded: tapeResult.graded + predResult.graded + propResult.graded,
         unmatched: tapeResult.unmatched + predResult.unmatched,
         historical: tapeResult.historical + predResult.historical,
         expired: tapeResult.expired + (propResult.expired || 0),
       };
     } catch (e: any) {
-      return { ok: false, graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) };
+      return { ok: false, snapped: 0, graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) };
     }
   });
 
@@ -1275,5 +1289,221 @@ export const runAnalysisFn = createServerFn({ method: "POST" })
       return runPostGradeAnalysis();
     } catch (e: any) {
       return { ok: false, segmentBrier: [], calibrationDrift: null, edgeProfitability: [], timestamp: "", error: String(e) };
+    }
+  });
+
+/**
+ * 100% Automated Settlement for User Action / Paper Tickets.
+ * Grades active user tickets against live scores, historical scores,
+ * and already-graded market tape records.
+ */
+export const settlePaperTicketsFn = createServerFn({ method: "POST" })
+  .validator((d: { tickets: any[] }) => d)
+  .handler(async ({ data }) => {
+    try {
+      const tickets = data.tickets || [];
+      if (tickets.length === 0) return { ok: true, settled: [], liveUpdates: [] };
+
+      const { fetchLiveScores, teamsMatch } = await import("@/lib/market/live-scores");
+      const { fetchHistoricalScores } = await import("@/lib/market/historical-scores");
+      const { gradeMarket } = await import("@/lib/market/grade-tape");
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+
+      // 1. Fetch live scores (covers today's games in play & final)
+      const liveScores = await fetchLiveScores().catch(() => []);
+
+      // 2. Fetch historical scores for recent days
+      const now = new Date();
+      const yesterday = new Date(Date.now() - 24 * 3600 * 1000);
+      const twoDaysAgo = new Date(Date.now() - 48 * 3600 * 1000);
+      const [histToday, histYest, histTwo] = await Promise.all([
+        fetchHistoricalScores(now).catch(() => []),
+        fetchHistoricalScores(yesterday).catch(() => []),
+        fetchHistoricalScores(twoDaysAgo).catch(() => []),
+      ]);
+
+      const allScores = [...liveScores, ...histToday, ...histYest, ...histTwo];
+
+      // 3. Also pull recent graded records from market_tape
+      const gradedTape = await sql.query<{
+        event_id: string;
+        home: string;
+        away: string;
+        market_type: string;
+        side: string;
+        selection: string;
+        line: string | number | null;
+        status: string;
+        result_home: number | null;
+        result_away: number | null;
+      }>(
+        `SELECT event_id, home, away, market_type, side, selection, line, status, result_home, result_away
+         FROM market_tape
+         WHERE status IN ('WIN', 'LOSS', 'PUSH')
+         ORDER BY graded_at DESC
+         LIMIT 600`,
+      ).catch(() => []);
+
+      const settled: Array<{
+        id: string;
+        result: "win" | "loss" | "void";
+        finalScore?: string;
+        homeScore?: number;
+        awayScore?: number;
+        settledLegs?: any[];
+      }> = [];
+
+      const liveUpdates: Array<{
+        id: string;
+        homeScore: number;
+        awayScore: number;
+        statusText?: string;
+      }> = [];
+
+      for (const t of tickets) {
+        if (t.status !== "open") continue;
+
+        // Check if this is a multi-leg parlay
+        if (t.legs && Array.isArray(t.legs) && t.legs.length > 1) {
+          let allLegsFinished = true;
+          let anyLegLoss = false;
+          let anyLegVoid = false;
+          const updatedLegs: any[] = [];
+
+          for (const leg of t.legs) {
+            const legHit = allScores.find(
+              (s) =>
+                s.complete &&
+                (!leg.sport || !s.sport || s.sport.toUpperCase() === leg.sport.toUpperCase()) &&
+                ((leg.home && leg.away && teamsMatch(s.home, leg.home) && teamsMatch(s.away, leg.away)) ||
+                 teamsMatch(s.home, leg.selection) || teamsMatch(s.away, leg.selection))
+            );
+
+            if (legHit) {
+              const legOutcome = gradeMarket({
+                marketType: leg.marketType || "ml",
+                side: leg.side || (teamsMatch(leg.selection, legHit.home) ? "home" : teamsMatch(leg.selection, legHit.away) ? "away" : null),
+                selection: leg.selection,
+                line: leg.point != null ? Number(leg.point) : null,
+                home: legHit.home,
+                away: legHit.away,
+                homeScore: legHit.homeScore,
+                awayScore: legHit.awayScore,
+              });
+
+              if (legOutcome === "LOSS") anyLegLoss = true;
+              if (legOutcome === "PUSH") anyLegVoid = true;
+
+              updatedLegs.push({
+                ...leg,
+                status: legOutcome === "WIN" ? "win" : legOutcome === "LOSS" ? "loss" : "void",
+                finalScore: `${legHit.awayScore}-${legHit.homeScore}`,
+              });
+            } else {
+              const inPlayHit = liveScores.find(
+                (s) =>
+                  s.inPlay &&
+                  ((leg.home && leg.away && teamsMatch(s.home, leg.home) && teamsMatch(s.away, leg.away)) ||
+                   teamsMatch(s.home, leg.selection) || teamsMatch(s.away, leg.selection))
+              );
+              if (inPlayHit) {
+                liveUpdates.push({
+                  id: t.id,
+                  homeScore: inPlayHit.homeScore,
+                  awayScore: inPlayHit.awayScore,
+                  statusText: inPlayHit.statusText,
+                });
+              }
+              allLegsFinished = false;
+              updatedLegs.push(leg);
+            }
+          }
+
+          if (anyLegLoss) {
+            settled.push({
+              id: t.id,
+              result: "loss",
+              settledLegs: updatedLegs,
+            });
+          } else if (allLegsFinished) {
+            settled.push({
+              id: t.id,
+              result: anyLegVoid ? "void" : "win",
+              settledLegs: updatedLegs,
+            });
+          }
+          continue;
+        }
+
+        // Single-leg ticket
+        const tapeMatch = gradedTape.find((gt) => {
+          if (t.gameIds?.includes(gt.event_id)) return true;
+          if (t.home && t.away && teamsMatch(gt.home, t.home) && teamsMatch(gt.away, t.away)) return true;
+          return false;
+        });
+
+        const scoreHit = allScores.find((s) => {
+          if (t.home && t.away && teamsMatch(s.home, t.home) && teamsMatch(s.away, t.away)) return true;
+          if (teamsMatch(s.home, t.description) || teamsMatch(s.away, t.description)) return true;
+          return false;
+        });
+
+        if (scoreHit?.inPlay && !scoreHit.complete) {
+          liveUpdates.push({
+            id: t.id,
+            homeScore: scoreHit.homeScore,
+            awayScore: scoreHit.awayScore,
+            statusText: scoreHit.statusText,
+          });
+        }
+
+        const isFinal = scoreHit?.complete || tapeMatch != null;
+        if (!isFinal) continue;
+
+        const homeScore = scoreHit?.homeScore ?? tapeMatch?.result_home ?? 0;
+        const awayScore = scoreHit?.awayScore ?? tapeMatch?.result_away ?? 0;
+        const homeName = scoreHit?.home ?? tapeMatch?.home ?? t.home ?? "";
+        const awayName = scoreHit?.away ?? tapeMatch?.away ?? t.away ?? "";
+
+        let mkt = t.marketType || (t.description?.toLowerCase().includes("spread") ? "spread" : t.description?.toLowerCase().includes("total") ? "total" : "ml");
+        let line = t.point != null ? Number(t.point) : (tapeMatch?.line != null ? Number(tapeMatch.line) : null);
+
+        if (line == null && mkt === "spread") {
+          const lineMatch = t.description.match(/([+-]\d+(?:\.\d+)?)/);
+          if (lineMatch) {
+            line = Number(lineMatch[1]);
+          } else {
+            // MLB runline heuristic: favorite getting plus value or underdog
+            const isHeavyFav = t.price != null && t.price < -180;
+            line = isHeavyFav ? 1.5 : -1.5;
+          }
+        }
+
+        const outcome = gradeMarket({
+          marketType: mkt,
+          side: teamsMatch(t.description, homeName) ? "home" : teamsMatch(t.description, awayName) ? "away" : null,
+          selection: t.description,
+          line,
+          home: homeName,
+          away: awayName,
+          homeScore,
+          awayScore,
+        });
+
+        if (outcome) {
+          settled.push({
+            id: t.id,
+            result: outcome === "WIN" ? "win" : outcome === "LOSS" ? "loss" : "void",
+            finalScore: `${awayName} ${awayScore} - ${homeName} ${homeScore}`,
+            homeScore,
+            awayScore,
+          });
+        }
+      }
+
+      return { ok: true, settled, liveUpdates };
+    } catch (e: any) {
+      return { ok: false, settled: [], liveUpdates: [], error: String(e) };
     }
   });

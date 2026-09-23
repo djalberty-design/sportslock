@@ -36,8 +36,12 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
   const home = (ticket.home || "").toLowerCase();
   const away = (ticket.away || "").toLowerCase();
 
-  // Resolve the line: prefer ticket.point, then try the quote's point/line
-  const ticketLine = ticket.point ?? (q as any).point ?? (q as any).line;
+  // Resolve the line: prefer ticket.point, then try quote's point/line, or parse from description
+  let ticketLine = ticket.point ?? (q as any).point ?? (q as any).line;
+  if (ticketLine == null) {
+    const lineMatch = ticket.description.match(/([+-]\d+(?:\.\d+)?)/);
+    if (lineMatch) ticketLine = Number(lineMatch[1]);
+  }
 
   // --- TOTALS: Over/Under ---
   if (desc.includes("total") || desc.includes("over") || desc.includes("under")) {
@@ -65,7 +69,11 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
 
   // --- SPREADS ---
   if (desc.includes("spread")) {
-    if (ticketLine == null) return "void"; // No line stored — can't grade
+    if (ticketLine == null) {
+      // MLB runline fallback
+      const isFav = ticket.price != null && ticket.price < -180;
+      ticketLine = isFav ? 1.5 : -1.5;
+    }
     const margin = pickedHome ? (hs - as) : (as - hs);
     const covered = margin + Number(ticketLine);
     if (covered === 0) return "void"; // push
@@ -111,8 +119,8 @@ function findMatchingQuote(ticket: PaperTicket, quotes: QuoteLine[]): QuoteLine 
 
 /**
  * Hook that auto-grades open paper tickets when games go final.
- * Uses the existing snapshot data (free ESPN scores).
- * Keeps manual Hit/Miss/Push buttons as override.
+ * Uses both live snapshot data AND the server settlePaperTicketsFn
+ * (which queries ESPN live + historical scores and graded market_tape).
  */
 export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
   const paperTickets = useDeskStore((s) => s.paperTickets);
@@ -120,6 +128,64 @@ export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
   const [notifications, setNotifications] = useState<GradeNotification[]>([]);
   const gradedRef = useRef<Set<string>>(new Set());
 
+  // 1. Server-backed 100% automated settlement
+  useEffect(() => {
+    const open = paperTickets.filter((t) => t.status === "open");
+    if (!open.length) return;
+
+    let cancelled = false;
+
+    const runServerSettle = async () => {
+      try {
+        const { settlePaperTicketsFn } = await import("@/lib/market/server");
+        const res = await settlePaperTicketsFn({ data: { tickets: open } });
+        if (cancelled || !res?.ok || !res.settled?.length) return;
+
+        const newNotifs: GradeNotification[] = [];
+
+        for (const item of res.settled) {
+          if (gradedRef.current.has(item.id)) continue;
+          gradedRef.current.add(item.id);
+
+          const ticket = open.find((t) => t.id === item.id);
+          grade(item.id, item.result, item.closePrice, {
+            finalScore: item.finalScore,
+            legs: item.settledLegs,
+          });
+
+          if (ticket) {
+            const dec = ticket.price != null
+              ? (ticket.price >= 0 ? ticket.price / 100 + 1 : 100 / Math.abs(ticket.price) + 1)
+              : 2;
+            const pnl = item.result === "win" ? ticket.stake * dec - ticket.stake : item.result === "void" ? 0 : -ticket.stake;
+
+            newNotifs.push({
+              id: item.id,
+              ticketDesc: ticket.description,
+              result: item.result,
+              pnl,
+              ts: Date.now(),
+            });
+          }
+        }
+
+        if (newNotifs.length) {
+          setNotifications((prev) => [...newNotifs, ...prev].slice(0, 10));
+        }
+      } catch (e) {
+        console.error("Auto settle error:", e);
+      }
+    };
+
+    runServerSettle();
+    const timer = setInterval(runServerSettle, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [paperTickets, grade]);
+
+  // 2. Client-side instant settlement for in-memory board snapshot
   useEffect(() => {
     if (!snapshot?.quotes?.length) return;
 
@@ -129,26 +195,21 @@ export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
     const newNotifs: GradeNotification[] = [];
 
     for (const ticket of open) {
-      // Skip if already auto-graded this session
       if (gradedRef.current.has(ticket.id)) continue;
 
       const quote = findMatchingQuote(ticket, snapshot.quotes);
       if (!quote) continue;
 
-      // Only grade if game is final
       if (!isGameFinal(quote)) continue;
 
-      // Try to determine result
       const result = gradeMoneyline(ticket, quote);
-
-      // Only auto-grade clear win/loss — leave pushes and uncertain for manual
       if (result === "void") continue;
 
-      // Grade it!
-      grade(ticket.id, result, quote.homeScore != null ? undefined : undefined);
+      grade(ticket.id, result, quote.homeScore != null ? undefined : undefined, {
+        finalScore: quote.homeScore != null && quote.awayScore != null ? `${quote.away || "Away"} ${quote.awayScore} - ${quote.home || "Home"} ${quote.homeScore}` : undefined,
+      });
       gradedRef.current.add(ticket.id);
 
-      // Calculate P/L for notification
       const dec = ticket.price != null
         ? (ticket.price >= 0 ? ticket.price / 100 + 1 : 100 / Math.abs(ticket.price) + 1)
         : 2;
