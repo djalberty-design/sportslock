@@ -106,11 +106,12 @@ export function sportLabel(sport: string): string {
   }
 }
 
-export function formatChancePct(p?: number | null, digits = 0): string | null {
-  if (p == null || !Number.isFinite(p)) return null;
+export function formatChancePct(p?: number | null, digits?: number): string | null {
+  if (p == null || !Number.isFinite(p) || p <= 0) return null;
   const clipped = Math.min(0.99, Math.max(0, p));
-  const pct = Math.round(clipped * 100 * 10 ** digits) / 10 ** digits;
-  return digits ? `${pct.toFixed(digits)}%` : `${pct}%`;
+  const effectiveDigits = digits ?? (clipped < 0.1 ? 1 : 0);
+  const pct = Math.round(clipped * 100 * 10 ** effectiveDigits) / 10 ** effectiveDigits;
+  return effectiveDigits ? `${pct.toFixed(effectiveDigits)}%` : `${pct}%`;
 }
 
 export function formatBetUsd(n: number): string {
@@ -131,7 +132,11 @@ export function profitOnStake(stake: number, american: number): { profit: number
 
 export function shortPick(selection: string, marketType?: MarketType | string): string {
   if (!selection) return "Pick";
-  return selection.replace(/\s+/g, " ").trim();
+  const s = selection.replace(/\s+/g, " ").trim();
+  if (marketType === "ml") {
+    return s.replace(/\s+ML$/i, " to win");
+  }
+  return s;
 }
 
 export function marketInEnglish(t?: MarketType | string): string {

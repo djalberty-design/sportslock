@@ -17,6 +17,7 @@ export type GameLatent = {
   marketHome?: number;
   ran: boolean;
   note: string;
+  thin?: boolean;
 };
 
 export type GameSimResult = {

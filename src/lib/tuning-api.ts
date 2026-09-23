@@ -8,9 +8,9 @@ export type TuningConfig = {
 };
 
 export const DEFAULT_TUNING: TuningConfig = {
-  minEdge: 3.5, // CHANGED TO 3.5 AS A DIAGNOSTIC FLAG
+  minEdge: 2.5,
   kellyMultiplier: 0.25,
-  maxLegs: 3,
+  maxLegs: 4,
   activeFeeds: ["espn", "kalshi", "polymarket"]
 };
 

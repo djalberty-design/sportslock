@@ -65,6 +65,7 @@ export function twoWayNoVig(oddsHome: number, oddsAway: number) {
     return { fairHome: NaN, fairAway: NaN, hold: NaN };
   }
   if (sum === 1) return { fairHome: pHome, fairAway: pAway, hold: 0 };
+  if (pHome === pAway) return { fairHome: 0.5, fairAway: 0.5, hold: sum - 1 };
 
   let low = 0.5;
   let high = 2.0;
@@ -549,6 +550,7 @@ export function evaluateParlay(
     side: l.side,
     price: l.price,
     fairProb: l.fairProb,
+    simFair: l.simFair,
     start: l.start,
     home: l.home,
     away: l.away,
@@ -1065,7 +1067,7 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
 export async function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings?: RankSettings): Promise<ScanBundle> {
   const tuning = await getTuning();
   activeKelly = tuning.kellyMultiplier;
-  activeComboCap = tuning.maxLegs;
+  activeComboCap = Math.min(24, Math.max(8, settings?.comboLegCap ?? COMBO_SEED_CAP));
   dynamicFloor = tuning.minEdge / 100;
   const scored = scoreQuotes(snapshot);
   const stamped = stampRows(scored, snapshot.publicSplits ?? []);
@@ -1074,14 +1076,15 @@ export async function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings
     rows = rows.filter((r) => (tuning.activeFeeds as any)?.[r.sport] !== false);
   }
   const missingBoard = snapshot.quotes.length === 0;
+  const maxLegs = Math.max(2, tuning.maxLegs || 4);
   const bestMain = missingBoard ? null : pickAnyMain(rows);
   const bestTwo = missingBoard ? null : pickBestTwo(rows);
   const bestSpicy = missingBoard ? null : pickBestSpicy(rows);
   const bestFlip = missingBoard ? null : pickCoinFlip(rows, bestMain ? [bestMain.eventId] : []);
   const topSingles = missingBoard ? [] : pickTopSingles(rows, 3);
-  const topTwos = missingBoard ? [] : enumerateCrossParlays(rows, 2, 16);
-  const topThrees = missingBoard ? [] : enumerateCrossParlays(rows, 3, 12);
-  const topFours = missingBoard ? [] : enumerateCrossParlays(rows, 4, 8);
+  const topTwos = missingBoard || maxLegs < 2 ? [] : enumerateCrossParlays(rows, 2, 16);
+  const topThrees = missingBoard || maxLegs < 3 ? [] : enumerateCrossParlays(rows, 3, 12);
+  const topFours = missingBoard || maxLegs < 4 ? [] : enumerateCrossParlays(rows, 4, 8);
   const topSgp = missingBoard ? [] : enumerateSgp(rows, 10);
   if (missingBoard) {
     for (const r of rows) {

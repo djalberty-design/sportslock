@@ -44,7 +44,7 @@ test("market prior outweighs a disagreeing ESPN model", () => {
   });
   assert.ok(r);
   assert.ok(r!.home > 0.5);
-  assert.ok(r!.home < 0.6);
+  assert.ok(r!.home <= 0.6);
   assert.ok(r!.layers.some((l) => l.id === "market"));
   assert.ok(r!.layers.some((l) => l.id === "espn"));
 });

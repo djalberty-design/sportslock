@@ -168,6 +168,7 @@ export type ParlayLeg = {
   side: string;
   price: number;
   fairProb: number;
+  simFair?: number;
   start: string;
   home: string;
   away: string;

@@ -213,9 +213,18 @@ import type { GameLatent } from "./sim.ts";
 
 export function applyLiveRemaining(
   g: GameLatent,
-  live: { inPlay?: boolean; homeScore?: number; awayScore?: number; period?: string; clock?: string }
+  live: { inPlay?: boolean; homeScore?: number; awayScore?: number; period?: string; clock?: string; start?: string }
 ): GameLatent {
-  if (!live.inPlay || live.homeScore == null || live.awayScore == null) return g;
+  const isStarted = Boolean(live.inPlay || (live.start && new Date(live.start).getTime() <= Date.now()));
+  if (!isStarted) return g;
+  
+  if (live.homeScore == null || live.awayScore == null) {
+    return {
+      ...g,
+      thin: true,
+      note: `${g.note} · Score missing · thin.`.trim(),
+    };
+  }
   
   const frac = clockFractionLeft(g.sport, live.period, live.clock);
   
@@ -227,7 +236,7 @@ export function applyLiveRemaining(
   const newSigT = Math.max(0.25, g.sigT * Math.sqrt(timeScale));
   
   const z = (newMuH - newMuA) / newSigM;
-  const pWinH = 1 - normalCdf(z); 
+  const pWinH = normalCdf(z); 
 
   return {
     ...g,
@@ -236,7 +245,7 @@ export function applyLiveRemaining(
     sigM: newSigM,
     sigT: newSigT,
     pWinH,
-    note: `${g.note} | Live remaining points applied.`.trim(),
+    note: `${g.note} · Live remaining G applied.`.trim(),
   };
 }
 

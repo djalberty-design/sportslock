@@ -507,6 +507,7 @@ export function shownParlayFromStoreLegs(
     selection?: string;
     price?: number;
     fairProb?: number;
+    simFair?: number;
     sport?: string;
     start?: string;
     home?: string;
@@ -521,6 +522,7 @@ export function shownParlayFromStoreLegs(
     marketType: (l.marketType as string) || "ml",
     side: l.side,
     fairProb: Number.isFinite(l.fairProb) ? (l.fairProb as number) : 0.5,
+    simFair: Number.isFinite(l.simFair) ? (l.simFair as number) : undefined,
     sport: l.sport ?? "",
     isProp: false,
     selection: l.selection,
@@ -536,6 +538,7 @@ export function shownParlayFromStoreLegs(
       side: l.side,
       price: l.price ?? -110,
       fairProb: l.fairProb ?? 0.5,
+      simFair: l.simFair,
       start: l.start ?? "",
       home: l.home ?? "",
       away: l.away ?? "",

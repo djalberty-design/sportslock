@@ -4,7 +4,7 @@ import { applyHoopsVarianceToMeans } from "./hoops-variance.ts";
 
 test("Hoops Var: Tired team facing elite perimeter defense experiences scoring suppression and variance bump", () => {
   const result = applyHoopsVarianceToMeans({
-    sport: "NBA",
+    sport: "NCAAB",
     homeThreePointRate: 0.35, // Average volume
     awayThreePointRate: 0.45, // High volume (Boston Celtics style)
     homeOppThreePtAllowed: 0.32, // Elite perimeter defense

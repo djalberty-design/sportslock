@@ -255,13 +255,14 @@ test("ribbon is 2- or 3-leg mains only — no 4-leg gold badge", async () => {
 });
 
 test("closed-form quality is capped at 0.64 when sim does not emit", async () => {
-  const r = await bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair == null);
+  const b = await bag();
+  const r = b.scan.rows.find((x) => x.marketType === "ml" && x.simFair == null);
   if (!r) {
-    const withSim = await bag().scan.rows.find((x) => x.marketType === "ml" && x.simFair != null);
+    const withSim = b.scan.rows.find((x) => x.marketType === "ml" && x.simFair != null);
     assert.ok(withSim, "sample board should emit sim on mains when latent.ran");
     return;
   }
-  const p = await bag().picks.popular.find((x) => x.row?.eventId === r.eventId);
+  const p = b.picks.popular.find((x) => x.row?.eventId === r.eventId);
   if (p) assert.ok(p.infoQuality <= 0.64);
 });
 

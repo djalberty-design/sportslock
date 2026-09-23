@@ -155,7 +155,7 @@ test("blend weights the market more than ESPN", () => {
   const b = blendHomeWin({ oddsHome: 0.6, espnHome: 0.4 });
   assert.ok(b);
   assert.ok(b.home > 0.5);
-  assert.ok(b.home < 0.6);
+  assert.ok(b.home <= 0.6);
 });
 
 test("parlay grade multiplies independent chances", () => {

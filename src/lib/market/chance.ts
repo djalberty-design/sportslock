@@ -794,7 +794,13 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
     agreement,
     layers,
     posteriorVar: pooled.posteriorVar,
-    because: "Apex Engine evaluation complete.",
+    crowdHome: layers.filter((l) => l.family === "crowd" && !l.empty).length ? layers.filter((l) => l.family === "crowd" && !l.empty).reduce((s, l) => s + l.home, 0) / layers.filter((l) => l.family === "crowd" && !l.empty).length : undefined,
+    because: (() => {
+      const crowdLayers = layers.filter((l) => l.family === "crowd" && !l.empty);
+      const crowdNames = crowdLayers.map((l) => l.id === "kalshi" ? "Kalshi" : l.id === "polymarket" ? "Polymarket" : l.label);
+      const crowdNote = crowdNames.length ? `Prediction markets (${crowdNames.join(", ")}) evaluated as research. ` : "";
+      return `${crowdNote}Apex Engine evaluation complete — probability model, not a lock.`;
+    })(),
   };
 }
 

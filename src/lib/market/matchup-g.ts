@@ -247,7 +247,7 @@ export function applyMatchupToMeans(snap: MatchupSnap, muH: number, muA: number)
   if (homeVs?.k9 != null && homeVs.k9 > 9.5) hChaos += 0.01;
   if (awayVs?.k9 != null && awayVs.k9 > 9.5) aChaos += 0.01;
 
-  chaosAdd = clip(hChaos + aChaos, 0, 0.05);
+  chaosAdd = clip(chaosAdd + hChaos + aChaos, 0, 0.05);
 
   return {
     muH: nextH,
