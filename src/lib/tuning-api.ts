@@ -27,7 +27,7 @@ export async function getTuning(): Promise<TuningConfig> {
     minEdge: Number(row.min_edge),
     kellyMultiplier: Number(row.kelly),
     maxLegs: Number(row.max_legs),
-    activeFeeds: row.feeds ? JSON.parse(row.feeds) : ["espn", "kalshi", "polymarket"]
+    activeFeeds: typeof row.feeds === "string" ? JSON.parse(row.feeds) : (Array.isArray(row.feeds) ? row.feeds : ["espn", "kalshi", "polymarket"])
   };
 }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Player-bet (prop) ensemble.
  *

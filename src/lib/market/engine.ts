@@ -28,6 +28,7 @@ import { parlayInfoQuality, shownCombinedChance } from "./calibrate.ts";
 import { formatChancePct } from "../copy.ts";
 import { DEFAULT_COMBO_LEG_CAP, type RankSettings } from "../desk-settings.ts";
 import { getTuning } from "../tuning-api.ts";
+import { getDynamicWeightsSync } from "./dynamic-weights.ts";
 
 export const COMBO_SEED_CAP = DEFAULT_COMBO_LEG_CAP;
 
@@ -189,7 +190,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       // A clock inference would corrupt The Call with stale pre-game picks.
       const inPlay = Boolean(line.inPlay);
       // Completed games (phase = "post" | "final") are dropped from the active board.
-      if (line.phase === "post" || line.phase === "final") continue;
+      if ((line.phase as any) === "post" || (line.phase as any) === "final") continue;
       const base = {
         eventId: line.eventId,
         sport: line.sport,
@@ -269,7 +270,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
   for (const line of snapshot.quotes) {
     if (paired.has(line)) continue;
     // inPlay strictly from API feed; completed games dropped. (BIBLE live-board rules)
-    if (line.phase === "post" || line.phase === "final") continue;
+    if ((line.phase as any) === "post" || (line.phase as any) === "final") continue;
     const inPlay = Boolean(line.inPlay);
     const book = line.hardRockPrice ?? (line.source === "hardrock_fl" ? line.price : undefined);
     const price = book ?? line.price;
@@ -784,13 +785,16 @@ function dynamicBlend(
   market: number | undefined, 
   startIso: string, 
   ticketPct?: number, 
-  handlePct?: number
+  handlePct?: number,
+  sport?: string
 ): number {
   // Market-first: the consensus line reflects millions in sharp money.
   // Model sim/pool add edge only where they have real, non-duplicated data.
-  let wSim = 0.10;
-  let wPool = 0.10;
-  let wMarket = 0.80;
+  // Dynamic weights engine anchors to baseline 60% formula (0.10 / 0.10 / 0.80) or sport-specific calibrated weights
+  const dyn = getDynamicWeightsSync(sport);
+  let wSim = dyn.wSim;
+  let wPool = dyn.wPool;
+  let wMarket = dyn.wMarket;
   
   // Near game time: market becomes even more reliable as lines sharpen
   if (startIso) {
@@ -903,7 +907,7 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
       inPlay: Boolean(row.inPlay),
       homeScore: row.homeScore,
       awayScore: row.awayScore,
-      period: row.period,
+      period: row.period != null ? String(row.period) : undefined,
       clock: row.clock,
     });
     const report = built.layers;
@@ -945,7 +949,7 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
           sport: r.sport,
           postedTotal: line,
           already: r.homeScore! + r.awayScore!,
-          period: r.period,
+          period: r.period != null ? String(r.period) : undefined,
           clock: r.clock,
         });
         const isOver = r.side === "over" || /\bover\b/i.test(r.selection);
@@ -960,7 +964,7 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
       if (hPct == null && chanceInput.handleHome != null) {
         hPct = r.side === "home" ? chanceInput.handleHome : 1 - chanceInput.handleHome;
       }
-      const fairProb = dynamicBlend(simFair, poolFair, marketFair, r.start, tPct, hPct);
+      const fairProb = dynamicBlend(simFair, poolFair, marketFair, r.start, tPct, hPct, r.sport);
       
       let tapeLean = r.tapeLean;
       if (hPct != null && tPct != null) {
@@ -1017,7 +1021,7 @@ export async function buildScan(snapshot: DeskSnapshot, _halt: boolean, settings
   const stamped = stampRows(scored, snapshot.publicSplits ?? []);
   let rows = applyEnsemble(stamped, snapshot);
   if (tuning.activeFeeds) {
-    rows = rows.filter((r) => tuning.activeFeeds[r.sport as keyof typeof tuning.activeFeeds] !== false);
+    rows = rows.filter((r) => (tuning.activeFeeds as any)?.[r.sport] !== false);
   }
   const missingBoard = snapshot.quotes.length === 0;
   const bestMain = missingBoard ? null : pickAnyMain(rows);

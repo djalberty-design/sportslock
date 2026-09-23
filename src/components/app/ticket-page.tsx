@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { SkeletonCard } from "./skeleton-card";

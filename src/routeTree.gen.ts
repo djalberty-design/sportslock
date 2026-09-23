@@ -11,27 +11,34 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AdminTerminalRouteImport } from './routes/admin/terminal'
-import { Route as AdminArchitectRouteImport } from './routes/admin/architect'
-import { Route as AdminBrainRouteImport } from './routes/admin/brain'
-import { Route as AlertsRouteImport } from './routes/alerts'
-import { Route as BoardRouteImport } from './routes/board'
 import { Route as DeskRouteImport } from './routes/desk'
-import { Route as GamedayRouteImport } from './routes/gameday'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as LearnRouteImport } from './routes/learn'
-import { Route as LiveRouteImport } from './routes/live'
+import { Route as GamesRouteImport } from './routes/games'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MoreRouteImport } from './routes/more'
-import { Route as OptionsRouteImport } from './routes/options'
-import { Route as ParlayRouteImport } from './routes/parlay'
-import { Route as PathRouteImport } from './routes/path'
-import { Route as SlateRouteImport } from './routes/slate'
+import { Route as PicksRouteImport } from './routes/picks'
+import { Route as ResultsRouteImport } from './routes/results'
 import { Route as TicketRouteImport } from './routes/ticket'
-import { Route as TodayRouteImport } from './routes/today'
+import { Route as AdminActivityRouteImport } from './routes/admin/activity'
+import { Route as AdminAnalysisRouteImport } from './routes/admin/analysis'
+import { Route as AdminApprovalsRouteImport } from './routes/admin/approvals'
+import { Route as AdminAutopsyRouteImport } from './routes/admin/autopsy'
+import { Route as AdminBrainRouteImport } from './routes/admin/brain'
+import { Route as AdminBrainIntelRouteImport } from './routes/admin/brain-intel'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminEngineRouteImport } from './routes/admin/engine'
+import { Route as AdminOverridesRouteImport } from './routes/admin/overrides'
+import { Route as AdminPredictionsRouteImport } from './routes/admin/predictions'
+import { Route as AdminSuggestionsRouteImport } from './routes/admin/suggestions'
+import { Route as AdminTerminalRouteImport } from './routes/admin/terminal'
 import { Route as GameEventIdRouteImport } from './routes/game.$eventId'
-import { Route as OptionKindRouteImport } from './routes/option.$kind'
+import { Route as ApiAdminStrategyRouteImport } from './routes/api/admin/strategy'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCronAutopsyRouteImport } from './routes/api/cron/autopsy'
+import { Route as ApiCronBrainLearnRouteImport } from './routes/api/cron/brain-learn'
+import { Route as ApiCronGradeRouteImport } from './routes/api/cron/grade'
+import { Route as ApiCronGradePropsRouteImport } from './routes/api/cron/grade-props'
+import { Route as ApiCronMorningPullRouteImport } from './routes/api/cron/morning-pull'
+import { Route as ApiCronSweepRouteImport } from './routes/api/cron/sweep'
+import { Route as ApiCronSweepLedgerRouteImport } from './routes/api/cron/sweep-ledger'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,54 +50,14 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminTerminalRoute = AdminTerminalRouteImport.update({
-  id: '/terminal',
-  path: '/terminal',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminArchitectRoute = AdminArchitectRouteImport.update({
-  id: '/architect',
-  path: '/architect',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminBrainRoute = AdminBrainRouteImport.update({
-  id: '/brain',
-  path: '/brain',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AlertsRoute = AlertsRouteImport.update({
-  id: '/alerts',
-  path: '/alerts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BoardRoute = BoardRouteImport.update({
-  id: '/board',
-  path: '/board',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DeskRoute = DeskRouteImport.update({
   id: '/desk',
   path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GamedayRoute = GamedayRouteImport.update({
-  id: '/gameday',
-  path: '/gameday',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LearnRoute = LearnRouteImport.update({
-  id: '/learn',
-  path: '/learn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LiveRoute = LiveRouteImport.update({
-  id: '/live',
-  path: '/live',
+const GamesRoute = GamesRouteImport.update({
+  id: '/games',
+  path: '/games',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -98,29 +65,14 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MoreRoute = MoreRouteImport.update({
-  id: '/more',
-  path: '/more',
+const PicksRoute = PicksRouteImport.update({
+  id: '/picks',
+  path: '/picks',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OptionsRoute = OptionsRouteImport.update({
-  id: '/options',
-  path: '/options',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ParlayRoute = ParlayRouteImport.update({
-  id: '/parlay',
-  path: '/parlay',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PathRoute = PathRouteImport.update({
-  id: '/path',
-  path: '/path',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SlateRoute = SlateRouteImport.update({
-  id: '/slate',
-  path: '/slate',
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TicketRoute = TicketRouteImport.update({
@@ -128,19 +80,74 @@ const TicketRoute = TicketRouteImport.update({
   path: '/ticket',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TodayRoute = TodayRouteImport.update({
-  id: '/today',
-  path: '/today',
-  getParentRoute: () => rootRouteImport,
+const AdminActivityRoute = AdminActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalysisRoute = AdminAnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApprovalsRoute = AdminApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAutopsyRoute = AdminAutopsyRouteImport.update({
+  id: '/autopsy',
+  path: '/autopsy',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBrainRoute = AdminBrainRouteImport.update({
+  id: '/brain',
+  path: '/brain',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBrainIntelRoute = AdminBrainIntelRouteImport.update({
+  id: '/brain-intel',
+  path: '/brain-intel',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEngineRoute = AdminEngineRouteImport.update({
+  id: '/engine',
+  path: '/engine',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOverridesRoute = AdminOverridesRouteImport.update({
+  id: '/overrides',
+  path: '/overrides',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPredictionsRoute = AdminPredictionsRouteImport.update({
+  id: '/predictions',
+  path: '/predictions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
+  id: '/suggestions',
+  path: '/suggestions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTerminalRoute = AdminTerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => AdminRoute,
 } as any)
 const GameEventIdRoute = GameEventIdRouteImport.update({
   id: '/game/$eventId',
   path: '/game/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OptionKindRoute = OptionKindRouteImport.update({
-  id: '/option/$kind',
-  path: '/option/$kind',
+const ApiAdminStrategyRoute = ApiAdminStrategyRouteImport.update({
+  id: '/api/admin/strategy',
+  path: '/api/admin/strategy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -148,182 +155,257 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronAutopsyRoute = ApiCronAutopsyRouteImport.update({
+  id: '/api/cron/autopsy',
+  path: '/api/cron/autopsy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronBrainLearnRoute = ApiCronBrainLearnRouteImport.update({
+  id: '/api/cron/brain-learn',
+  path: '/api/cron/brain-learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronGradeRoute = ApiCronGradeRouteImport.update({
+  id: '/api/cron/grade',
+  path: '/api/cron/grade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronGradePropsRoute = ApiCronGradePropsRouteImport.update({
+  id: '/api/cron/grade-props',
+  path: '/api/cron/grade-props',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronMorningPullRoute = ApiCronMorningPullRouteImport.update({
+  id: '/api/cron/morning-pull',
+  path: '/api/cron/morning-pull',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronSweepRoute = ApiCronSweepRouteImport.update({
+  id: '/api/cron/sweep',
+  path: '/api/cron/sweep',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronSweepLedgerRoute = ApiCronSweepLedgerRouteImport.update({
+  id: '/api/cron/sweep-ledger',
+  path: '/api/cron/sweep-ledger',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-    '/admin/architect': typeof AdminArchitectRoute
-    '/admin/terminal': typeof AdminTerminalRoute
-    '/admin/brain': typeof AdminBrainRoute
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/alerts': typeof AlertsRoute
-  '/board': typeof BoardRoute
+  '/admin': typeof AdminRouteWithChildren
   '/desk': typeof DeskRoute
-  '/gameday': typeof GamedayRoute
-  '/guide': typeof GuideRoute
-  '/learn': typeof LearnRoute
-  '/live': typeof LiveRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
-  '/more': typeof MoreRoute
-  '/options': typeof OptionsRoute
-  '/parlay': typeof ParlayRoute
-  '/path': typeof PathRoute
-  '/slate': typeof SlateRoute
+  '/picks': typeof PicksRoute
+  '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
-  '/today': typeof TodayRoute
+  '/admin/activity': typeof AdminActivityRoute
+  '/admin/analysis': typeof AdminAnalysisRoute
+  '/admin/approvals': typeof AdminApprovalsRoute
+  '/admin/autopsy': typeof AdminAutopsyRoute
+  '/admin/brain': typeof AdminBrainRoute
+  '/admin/brain-intel': typeof AdminBrainIntelRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/engine': typeof AdminEngineRoute
+  '/admin/overrides': typeof AdminOverridesRoute
+  '/admin/predictions': typeof AdminPredictionsRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/admin/terminal': typeof AdminTerminalRoute
   '/game/$eventId': typeof GameEventIdRoute
-  '/option/$kind': typeof OptionKindRoute
+  '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/autopsy': typeof ApiCronAutopsyRoute
+  '/api/cron/brain-learn': typeof ApiCronBrainLearnRoute
+  '/api/cron/grade': typeof ApiCronGradeRoute
+  '/api/cron/grade-props': typeof ApiCronGradePropsRoute
+  '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
+  '/api/cron/sweep': typeof ApiCronSweepRoute
+  '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
 }
 export interface FileRoutesByTo {
-    '/admin/architect': typeof AdminArchitectRoute
-    '/admin/terminal': typeof AdminTerminalRoute
-    '/admin/brain': typeof AdminBrainRoute
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/alerts': typeof AlertsRoute
-  '/board': typeof BoardRoute
+  '/admin': typeof AdminRouteWithChildren
   '/desk': typeof DeskRoute
-  '/gameday': typeof GamedayRoute
-  '/guide': typeof GuideRoute
-  '/learn': typeof LearnRoute
-  '/live': typeof LiveRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
-  '/more': typeof MoreRoute
-  '/options': typeof OptionsRoute
-  '/parlay': typeof ParlayRoute
-  '/path': typeof PathRoute
-  '/slate': typeof SlateRoute
+  '/picks': typeof PicksRoute
+  '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
-  '/today': typeof TodayRoute
+  '/admin/activity': typeof AdminActivityRoute
+  '/admin/analysis': typeof AdminAnalysisRoute
+  '/admin/approvals': typeof AdminApprovalsRoute
+  '/admin/autopsy': typeof AdminAutopsyRoute
+  '/admin/brain': typeof AdminBrainRoute
+  '/admin/brain-intel': typeof AdminBrainIntelRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/engine': typeof AdminEngineRoute
+  '/admin/overrides': typeof AdminOverridesRoute
+  '/admin/predictions': typeof AdminPredictionsRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/admin/terminal': typeof AdminTerminalRoute
   '/game/$eventId': typeof GameEventIdRoute
-  '/option/$kind': typeof OptionKindRoute
+  '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/autopsy': typeof ApiCronAutopsyRoute
+  '/api/cron/brain-learn': typeof ApiCronBrainLearnRoute
+  '/api/cron/grade': typeof ApiCronGradeRoute
+  '/api/cron/grade-props': typeof ApiCronGradePropsRoute
+  '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
+  '/api/cron/sweep': typeof ApiCronSweepRoute
+  '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
 }
 export interface FileRoutesById {
-    '/admin/architect': typeof AdminArchitectRoute
-    '/admin/terminal': typeof AdminTerminalRoute
-    '/admin/brain': typeof AdminBrainRoute
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/alerts': typeof AlertsRoute
-  '/board': typeof BoardRoute
+  '/admin': typeof AdminRouteWithChildren
   '/desk': typeof DeskRoute
-  '/gameday': typeof GamedayRoute
-  '/guide': typeof GuideRoute
-  '/learn': typeof LearnRoute
-  '/live': typeof LiveRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
-  '/more': typeof MoreRoute
-  '/options': typeof OptionsRoute
-  '/parlay': typeof ParlayRoute
-  '/path': typeof PathRoute
-  '/slate': typeof SlateRoute
+  '/picks': typeof PicksRoute
+  '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
-  '/today': typeof TodayRoute
+  '/admin/activity': typeof AdminActivityRoute
+  '/admin/analysis': typeof AdminAnalysisRoute
+  '/admin/approvals': typeof AdminApprovalsRoute
+  '/admin/autopsy': typeof AdminAutopsyRoute
+  '/admin/brain': typeof AdminBrainRoute
+  '/admin/brain-intel': typeof AdminBrainIntelRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/engine': typeof AdminEngineRoute
+  '/admin/overrides': typeof AdminOverridesRoute
+  '/admin/predictions': typeof AdminPredictionsRoute
+  '/admin/suggestions': typeof AdminSuggestionsRoute
+  '/admin/terminal': typeof AdminTerminalRoute
   '/game/$eventId': typeof GameEventIdRoute
-  '/option/$kind': typeof OptionKindRoute
+  '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/autopsy': typeof ApiCronAutopsyRoute
+  '/api/cron/brain-learn': typeof ApiCronBrainLearnRoute
+  '/api/cron/grade': typeof ApiCronGradeRoute
+  '/api/cron/grade-props': typeof ApiCronGradePropsRoute
+  '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
+  '/api/cron/sweep': typeof ApiCronSweepRoute
+  '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-    fullPaths:
-      | '/'
-      | '/admin/architect'
-      | '/admin/brain'
-      | '/admin/terminal'
+  fullPaths:
+    | '/'
     | '/admin'
-    | '/alerts'
-    | '/board'
     | '/desk'
-    | '/gameday'
-    | '/guide'
-    | '/learn'
-    | '/live'
+    | '/games'
     | '/login'
-    | '/more'
-    | '/options'
-    | '/parlay'
-    | '/path'
-    | '/slate'
+    | '/picks'
+    | '/results'
     | '/ticket'
-    | '/today'
+    | '/admin/activity'
+    | '/admin/analysis'
+    | '/admin/approvals'
+    | '/admin/autopsy'
+    | '/admin/brain'
+    | '/admin/brain-intel'
+    | '/admin/dashboard'
+    | '/admin/engine'
+    | '/admin/overrides'
+    | '/admin/predictions'
+    | '/admin/suggestions'
+    | '/admin/terminal'
     | '/game/$eventId'
-    | '/option/$kind'
+    | '/api/admin/strategy'
     | '/api/auth/$'
+    | '/api/cron/autopsy'
+    | '/api/cron/brain-learn'
+    | '/api/cron/grade'
+    | '/api/cron/grade-props'
+    | '/api/cron/morning-pull'
+    | '/api/cron/sweep'
+    | '/api/cron/sweep-ledger'
   fileRoutesByTo: FileRoutesByTo
-    to:
-      | '/'
-      | '/admin/architect'
-      | '/admin/brain'
-      | '/admin/terminal'
+  to:
+    | '/'
     | '/admin'
-    | '/alerts'
-    | '/board'
     | '/desk'
-    | '/gameday'
-    | '/guide'
-    | '/learn'
-    | '/live'
+    | '/games'
     | '/login'
-    | '/more'
-    | '/options'
-    | '/parlay'
-    | '/path'
-    | '/slate'
+    | '/picks'
+    | '/results'
     | '/ticket'
-    | '/today'
+    | '/admin/activity'
+    | '/admin/analysis'
+    | '/admin/approvals'
+    | '/admin/autopsy'
+    | '/admin/brain'
+    | '/admin/brain-intel'
+    | '/admin/dashboard'
+    | '/admin/engine'
+    | '/admin/overrides'
+    | '/admin/predictions'
+    | '/admin/suggestions'
+    | '/admin/terminal'
     | '/game/$eventId'
-    | '/option/$kind'
+    | '/api/admin/strategy'
     | '/api/auth/$'
-    id:
-      | '__root__'
-      | '/'
-      | '/admin/architect'
-      | '/admin/brain'
-      | '/admin/terminal'
+    | '/api/cron/autopsy'
+    | '/api/cron/brain-learn'
+    | '/api/cron/grade'
+    | '/api/cron/grade-props'
+    | '/api/cron/morning-pull'
+    | '/api/cron/sweep'
+    | '/api/cron/sweep-ledger'
+  id:
+    | '__root__'
+    | '/'
     | '/admin'
-    | '/alerts'
-    | '/board'
     | '/desk'
-    | '/gameday'
-    | '/guide'
-    | '/learn'
-    | '/live'
+    | '/games'
     | '/login'
-    | '/more'
-    | '/options'
-    | '/parlay'
-    | '/path'
-    | '/slate'
+    | '/picks'
+    | '/results'
     | '/ticket'
-    | '/today'
+    | '/admin/activity'
+    | '/admin/analysis'
+    | '/admin/approvals'
+    | '/admin/autopsy'
+    | '/admin/brain'
+    | '/admin/brain-intel'
+    | '/admin/dashboard'
+    | '/admin/engine'
+    | '/admin/overrides'
+    | '/admin/predictions'
+    | '/admin/suggestions'
+    | '/admin/terminal'
     | '/game/$eventId'
-    | '/option/$kind'
+    | '/api/admin/strategy'
     | '/api/auth/$'
+    | '/api/cron/autopsy'
+    | '/api/cron/brain-learn'
+    | '/api/cron/grade'
+    | '/api/cron/grade-props'
+    | '/api/cron/morning-pull'
+    | '/api/cron/sweep'
+    | '/api/cron/sweep-ledger'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  AlertsRoute: typeof AlertsRoute
-  BoardRoute: typeof BoardRoute
   DeskRoute: typeof DeskRoute
-  GamedayRoute: typeof GamedayRoute
-  GuideRoute: typeof GuideRoute
-  LearnRoute: typeof LearnRoute
-  LiveRoute: typeof LiveRoute
+  GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
-  MoreRoute: typeof MoreRoute
-  OptionsRoute: typeof OptionsRoute
-  ParlayRoute: typeof ParlayRoute
-  PathRoute: typeof PathRoute
-  SlateRoute: typeof SlateRoute
+  PicksRoute: typeof PicksRoute
+  ResultsRoute: typeof ResultsRoute
   TicketRoute: typeof TicketRoute
-  TodayRoute: typeof TodayRoute
   GameEventIdRoute: typeof GameEventIdRoute
-  OptionKindRoute: typeof OptionKindRoute
+  ApiAdminStrategyRoute: typeof ApiAdminStrategyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCronAutopsyRoute: typeof ApiCronAutopsyRoute
+  ApiCronBrainLearnRoute: typeof ApiCronBrainLearnRoute
+  ApiCronGradeRoute: typeof ApiCronGradeRoute
+  ApiCronGradePropsRoute: typeof ApiCronGradePropsRoute
+  ApiCronMorningPullRoute: typeof ApiCronMorningPullRoute
+  ApiCronSweepRoute: typeof ApiCronSweepRoute
+  ApiCronSweepLedgerRoute: typeof ApiCronSweepLedgerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -335,46 +417,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-      '/admin': {
-        id: '/admin'
-        path: '/admin'
-        fullPath: '/admin'
-        preLoaderRoute: typeof AdminRouteImport
-        parentRoute: typeof rootRouteImport
-      }
-      '/admin/architect': {
-        id: '/admin/architect'
-        path: '/architect'
-        fullPath: '/admin/architect'
-        preLoaderRoute: typeof AdminArchitectRouteImport
-        parentRoute: typeof AdminRouteImport
-      }
-      '/admin/terminal': {
-        id: '/admin/terminal'
-        path: '/terminal'
-        fullPath: '/admin/terminal'
-        preLoaderRoute: typeof AdminTerminalRouteImport
-                parentRoute: typeof AdminRouteImport
-      }
-      '/admin/brain': {
-        id: '/admin/brain'
-        path: '/brain'
-        fullPath: '/admin/brain'
-        preLoaderRoute: typeof AdminBrainRouteImport
-        parentRoute: typeof AdminRouteImport
-      }
-      '/alerts': {
-      id: '/alerts'
-      path: '/alerts'
-      fullPath: '/alerts'
-      preLoaderRoute: typeof AlertsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/board': {
-      id: '/board'
-      path: '/board'
-      fullPath: '/board'
-      preLoaderRoute: typeof BoardRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desk': {
@@ -384,32 +431,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/gameday': {
-      id: '/gameday'
-      path: '/gameday'
-      fullPath: '/gameday'
-      preLoaderRoute: typeof GamedayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/learn': {
-      id: '/learn'
-      path: '/learn'
-      fullPath: '/learn'
-      preLoaderRoute: typeof LearnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/live': {
-      id: '/live'
-      path: '/live'
-      fullPath: '/live'
-      preLoaderRoute: typeof LiveRouteImport
+    '/games': {
+      id: '/games'
+      path: '/games'
+      fullPath: '/games'
+      preLoaderRoute: typeof GamesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -419,39 +445,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/more': {
-      id: '/more'
-      path: '/more'
-      fullPath: '/more'
-      preLoaderRoute: typeof MoreRouteImport
+    '/picks': {
+      id: '/picks'
+      path: '/picks'
+      fullPath: '/picks'
+      preLoaderRoute: typeof PicksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/options': {
-      id: '/options'
-      path: '/options'
-      fullPath: '/options'
-      preLoaderRoute: typeof OptionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/parlay': {
-      id: '/parlay'
-      path: '/parlay'
-      fullPath: '/parlay'
-      preLoaderRoute: typeof ParlayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/path': {
-      id: '/path'
-      path: '/path'
-      fullPath: '/path'
-      preLoaderRoute: typeof PathRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/slate': {
-      id: '/slate'
-      path: '/slate'
-      fullPath: '/slate'
-      preLoaderRoute: typeof SlateRouteImport
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ticket': {
@@ -461,12 +466,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TicketRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/today': {
-      id: '/today'
-      path: '/today'
-      fullPath: '/today'
-      preLoaderRoute: typeof TodayRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/activity': {
+      id: '/admin/activity'
+      path: '/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AdminActivityRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analysis': {
+      id: '/admin/analysis'
+      path: '/analysis'
+      fullPath: '/admin/analysis'
+      preLoaderRoute: typeof AdminAnalysisRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/approvals': {
+      id: '/admin/approvals'
+      path: '/approvals'
+      fullPath: '/admin/approvals'
+      preLoaderRoute: typeof AdminApprovalsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/autopsy': {
+      id: '/admin/autopsy'
+      path: '/autopsy'
+      fullPath: '/admin/autopsy'
+      preLoaderRoute: typeof AdminAutopsyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/brain': {
+      id: '/admin/brain'
+      path: '/brain'
+      fullPath: '/admin/brain'
+      preLoaderRoute: typeof AdminBrainRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/brain-intel': {
+      id: '/admin/brain-intel'
+      path: '/brain-intel'
+      fullPath: '/admin/brain-intel'
+      preLoaderRoute: typeof AdminBrainIntelRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/engine': {
+      id: '/admin/engine'
+      path: '/engine'
+      fullPath: '/admin/engine'
+      preLoaderRoute: typeof AdminEngineRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/overrides': {
+      id: '/admin/overrides'
+      path: '/overrides'
+      fullPath: '/admin/overrides'
+      preLoaderRoute: typeof AdminOverridesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/predictions': {
+      id: '/admin/predictions'
+      path: '/predictions'
+      fullPath: '/admin/predictions'
+      preLoaderRoute: typeof AdminPredictionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/suggestions': {
+      id: '/admin/suggestions'
+      path: '/suggestions'
+      fullPath: '/admin/suggestions'
+      preLoaderRoute: typeof AdminSuggestionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/terminal': {
+      id: '/admin/terminal'
+      path: '/terminal'
+      fullPath: '/admin/terminal'
+      preLoaderRoute: typeof AdminTerminalRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/game/$eventId': {
       id: '/game/$eventId'
@@ -475,11 +557,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GameEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/option/$kind': {
-      id: '/option/$kind'
-      path: '/option/$kind'
-      fullPath: '/option/$kind'
-      preLoaderRoute: typeof OptionKindRouteImport
+    '/api/admin/strategy': {
+      id: '/api/admin/strategy'
+      path: '/api/admin/strategy'
+      fullPath: '/api/admin/strategy'
+      preLoaderRoute: typeof ApiAdminStrategyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -489,36 +571,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/autopsy': {
+      id: '/api/cron/autopsy'
+      path: '/api/cron/autopsy'
+      fullPath: '/api/cron/autopsy'
+      preLoaderRoute: typeof ApiCronAutopsyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/brain-learn': {
+      id: '/api/cron/brain-learn'
+      path: '/api/cron/brain-learn'
+      fullPath: '/api/cron/brain-learn'
+      preLoaderRoute: typeof ApiCronBrainLearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/grade': {
+      id: '/api/cron/grade'
+      path: '/api/cron/grade'
+      fullPath: '/api/cron/grade'
+      preLoaderRoute: typeof ApiCronGradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/grade-props': {
+      id: '/api/cron/grade-props'
+      path: '/api/cron/grade-props'
+      fullPath: '/api/cron/grade-props'
+      preLoaderRoute: typeof ApiCronGradePropsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/morning-pull': {
+      id: '/api/cron/morning-pull'
+      path: '/api/cron/morning-pull'
+      fullPath: '/api/cron/morning-pull'
+      preLoaderRoute: typeof ApiCronMorningPullRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/sweep': {
+      id: '/api/cron/sweep'
+      path: '/api/cron/sweep'
+      fullPath: '/api/cron/sweep'
+      preLoaderRoute: typeof ApiCronSweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/sweep-ledger': {
+      id: '/api/cron/sweep-ledger'
+      path: '/api/cron/sweep-ledger'
+      fullPath: '/api/cron/sweep-ledger'
+      preLoaderRoute: typeof ApiCronSweepLedgerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
-const AdminRouteWithChildren = AdminRoute._addFileChildren({
-  AdminArchitectRoute: AdminArchitectRoute,
+interface AdminRouteChildren {
+  AdminActivityRoute: typeof AdminActivityRoute
+  AdminAnalysisRoute: typeof AdminAnalysisRoute
+  AdminApprovalsRoute: typeof AdminApprovalsRoute
+  AdminAutopsyRoute: typeof AdminAutopsyRoute
+  AdminBrainRoute: typeof AdminBrainRoute
+  AdminBrainIntelRoute: typeof AdminBrainIntelRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminEngineRoute: typeof AdminEngineRoute
+  AdminOverridesRoute: typeof AdminOverridesRoute
+  AdminPredictionsRoute: typeof AdminPredictionsRoute
+  AdminSuggestionsRoute: typeof AdminSuggestionsRoute
+  AdminTerminalRoute: typeof AdminTerminalRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminActivityRoute: AdminActivityRoute,
+  AdminAnalysisRoute: AdminAnalysisRoute,
+  AdminApprovalsRoute: AdminApprovalsRoute,
+  AdminAutopsyRoute: AdminAutopsyRoute,
   AdminBrainRoute: AdminBrainRoute,
+  AdminBrainIntelRoute: AdminBrainIntelRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminEngineRoute: AdminEngineRoute,
+  AdminOverridesRoute: AdminOverridesRoute,
+  AdminPredictionsRoute: AdminPredictionsRoute,
+  AdminSuggestionsRoute: AdminSuggestionsRoute,
   AdminTerminalRoute: AdminTerminalRoute,
-})
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  AlertsRoute: AlertsRoute,
-  BoardRoute: BoardRoute,
   DeskRoute: DeskRoute,
-  GamedayRoute: GamedayRoute,
-  GuideRoute: GuideRoute,
-  LearnRoute: LearnRoute,
-  LiveRoute: LiveRoute,
+  GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
-  MoreRoute: MoreRoute,
-  OptionsRoute: OptionsRoute,
-  ParlayRoute: ParlayRoute,
-  PathRoute: PathRoute,
-  SlateRoute: SlateRoute,
+  PicksRoute: PicksRoute,
+  ResultsRoute: ResultsRoute,
   TicketRoute: TicketRoute,
-  TodayRoute: TodayRoute,
   GameEventIdRoute: GameEventIdRoute,
-  OptionKindRoute: OptionKindRoute,
+  ApiAdminStrategyRoute: ApiAdminStrategyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCronAutopsyRoute: ApiCronAutopsyRoute,
+  ApiCronBrainLearnRoute: ApiCronBrainLearnRoute,
+  ApiCronGradeRoute: ApiCronGradeRoute,
+  ApiCronGradePropsRoute: ApiCronGradePropsRoute,
+  ApiCronMorningPullRoute: ApiCronMorningPullRoute,
+  ApiCronSweepRoute: ApiCronSweepRoute,
+  ApiCronSweepLedgerRoute: ApiCronSweepLedgerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -274,3 +274,5 @@ export async function gradeProps() {
 
   return { graded, unmatched, skipped, expired: expiredResult.length };
 }
+
+export const gradePlayerProps = gradeProps;

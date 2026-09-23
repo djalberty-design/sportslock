@@ -23,7 +23,22 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
       ORDER BY graded_at DESC
       LIMIT 500
     `;
-    return { ok: true, rows };
+    const mapped = (rows as any[]).map((r) => ({
+      sport: String(r.sport || ""),
+      market: String(r.market || ""),
+      selection: String(r.selection || ""),
+      home: String(r.home || ""),
+      away: String(r.away || ""),
+      model_prob: r.model_prob != null ? Number(r.model_prob) : null,
+      edge: r.edge != null ? Number(r.edge) : null,
+      status: String(r.status || ""),
+      graded_at: r.graded_at ? String(r.graded_at) : null,
+      snapped_at: r.snapped_at ? String(r.snapped_at) : null,
+      line: r.line != null ? Number(r.line) : null,
+      result_home: r.result_home != null ? Number(r.result_home) : null,
+      result_away: r.result_away != null ? Number(r.result_away) : null,
+    }));
+    return { ok: true, rows: mapped };
   });
 
 export const Route = createFileRoute("/results")({

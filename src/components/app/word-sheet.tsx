@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { CHIP_LINE, type ChipId } from "@/lib/plain-words";

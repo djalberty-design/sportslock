@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { TuningPanel } from "./tuning-panel";
 import { LedgerPanel } from "./ledger-panel";

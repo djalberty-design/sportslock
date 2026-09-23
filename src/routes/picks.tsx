@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Star, TrendingUp, Plus, Check, Clock, Zap } from "lucide-react";
+import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
@@ -9,7 +9,7 @@ import { getAllEnrichedPropsFn } from "@/lib/market/server";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { labScore, type LabScore } from "@/lib/market/ev-score";
 import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
-import { resolveTeamLogo } from "@/lib/market/logos";
+import { resolveTeamLogo, resolveLegTeam } from "@/lib/market/logos";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/picks")({
 /* ── Tab / sort / filter constants ──────────────────────── */
 
 type BetTab = "all" | "lines" | "props" | "periods";
-type SortMode = "ev" | "hit" | "payout" | "time";
+type ModelFilter = "all" | "sim" | "prop" | "sharp" | "period";
+type SortMode = "ev" | "edge" | "hit" | "payout" | "time";
 
 const TAB_LABELS: { key: BetTab; label: string }[] = [
   { key: "all", label: "All Bets" },
@@ -27,10 +28,19 @@ const TAB_LABELS: { key: BetTab; label: string }[] = [
   { key: "periods", label: "Periods" },
 ];
 
+const MODEL_FILTERS: { key: ModelFilter; label: string; icon: string }[] = [
+  { key: "all", label: "All Models", icon: "🧠" },
+  { key: "sim", label: "SIM (10k Sim)", icon: "⚡" },
+  { key: "prop", label: "PROP (Player Labs)", icon: "👤" },
+  { key: "sharp", label: "SHARP (Steam/RLM)", icon: "📈" },
+  { key: "period", label: "PERIOD (1H/1P)", icon: "⏱️" },
+];
+
 const SORT_OPTIONS: { key: SortMode; label: string; icon: any }[] = [
   { key: "ev", label: "EV Score", icon: TrendingUp },
-  { key: "hit", label: "Hit %", icon: Target },
-  { key: "payout", label: "Payout", icon: Zap },
+  { key: "edge", label: "Edge %", icon: Target },
+  { key: "hit", label: "Hit %", icon: Zap },
+  { key: "payout", label: "Payout", icon: Flame },
   { key: "time", label: "Game Time", icon: Clock },
 ];
 
@@ -66,6 +76,7 @@ interface LabBet {
   isGameLine: boolean;
   isProp: boolean;
   isPeriod: boolean;
+  modelType: "sim" | "prop" | "sharp" | "period";
   homeLogo?: string;
   awayLogo?: string;
   homeAbbr?: string;
@@ -95,6 +106,50 @@ function renderStars(n: number) {
   ));
 }
 
+/* ── Fallback Avatar Component ──────────────────────────── */
+
+function BetAvatar({
+  headshot,
+  logoUrl,
+  initials,
+}: {
+  headshot?: string;
+  logoUrl?: string | null;
+  initials?: string;
+}) {
+  const [error, setError] = useState(false);
+  const src = !error ? (headshot || logoUrl) : null;
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        onError={() => setError(true)}
+        className={cn(
+          "size-10 rounded-full ring-2 ring-line bg-obsidian transition-opacity",
+          headshot ? "object-cover" : "object-contain p-1"
+        )}
+        alt=""
+        loading="lazy"
+      />
+    );
+  }
+
+  if (initials) {
+    return (
+      <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
+        <span className="text-[10px] font-bold text-muted">{initials}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="size-10 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center">
+      <Target className="size-4 text-primary" />
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────── */
 
 function TheLab() {
@@ -114,6 +169,7 @@ function TheLab() {
 
   // Filter & sort state
   const [tab, setTab] = useState<BetTab>("all");
+  const [modelFilter, setModelFilter] = useState<ModelFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("ev");
   const [minStars, setMinStars] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,13 +181,14 @@ function TheLab() {
 
     const dedupKey = (b: any) => `${b.eventId || ""}|${b.marketType || ""}|${b.selection || ""}|${b.side || ""}`;
 
-    // Build a map of eventId → start time and a set of known-live events from the scan
+    // Build map of eventId -> start time and live events
     const now = Date.now();
     const eventStartMap = new Map<string, string>();
-    const matchupStartMap = new Map<string, string>(); // "away|home" -> start time
+    const matchupStartMap = new Map<string, string>();
     const liveEventIds = new Set<string>();
-    const liveMatchups = new Set<string>(); // "away|home" for cross-format matching
+    const liveMatchups = new Set<string>();
     const rows = scan?.rows || [];
+
     for (const r of rows) {
       if (r.eventId && r.start && !eventStartMap.has(r.eventId)) {
         eventStartMap.set(r.eventId, r.start);
@@ -140,23 +197,19 @@ function TheLab() {
         const mKey = `${r.away.toLowerCase()}|${r.home.toLowerCase()}`;
         if (!matchupStartMap.has(mKey)) matchupStartMap.set(mKey, r.start);
       }
-      // Mark event as live if inPlay OR start is in the past
       if (r.eventId) {
         const started = r.inPlay || (r.start && new Date(r.start).getTime() < now);
         if (started) {
           liveEventIds.add(r.eventId);
-          // Also track by matchup names for cross-format matching
           if (r.home && r.away) liveMatchups.add(`${r.away.toLowerCase()}|${r.home.toLowerCase()}`);
         }
       }
     }
 
-    // A bet is "live" if inPlay, start is in the past, event is live, or matchup is live
     const isLive = (b: any) => {
       if (b.inPlay) return true;
       if (b.eventId && liveEventIds.has(b.eventId)) return true;
       const mKey = b.home && b.away ? `${b.away.toLowerCase()}|${b.home.toLowerCase()}` : "";
-      // Cross-format: match by team names
       if (mKey && liveMatchups.has(mKey)) return true;
       const startStr = b.start || eventStartMap.get(b.eventId || "") || (mKey ? matchupStartMap.get(mKey) : "");
       if (startStr) {
@@ -166,17 +219,31 @@ function TheLab() {
       return false;
     };
 
-    // 1. Scan rows (game lines + period + any props from the scan)
+    // 1. Scan rows (game lines + period + any props from scan)
     for (const r of rows) {
-      if (isLive(r)) continue; // pregame only
+      if (isLive(r)) continue;
       const key = dedupKey(r);
       if (seen.has(key)) continue;
       seen.add(key);
+
       const chance = r.fairProb ?? r.chance ?? 0.5;
       const price = r.price || -110;
       const isProp = !!(r.isProp || r.marketType === "prop" || (r.marketType || "").startsWith("player_"));
       const isPeriod = !isProp && /^(1st|2nd|3rd|first|second|third)/i.test(r.selection || "");
       const lab = labScore({ chance, fairProb: r.fairProb ?? chance, price });
+      const edgeNum = Math.abs(parseFloat(lab.edgePct || "0"));
+
+      let modelType: "sim" | "prop" | "sharp" | "period" = "sim";
+      if (isProp) {
+        modelType = "prop";
+      } else if (isPeriod) {
+        modelType = "period";
+      } else if (edgeNum >= 3.5 || lab.ev >= 6) {
+        modelType = "sharp";
+      } else {
+        modelType = "sim";
+      }
+
       result.push({
         id: key,
         selection: r.selection || "",
@@ -200,6 +267,7 @@ function TheLab() {
         isGameLine: !isProp && !isPeriod,
         isProp,
         isPeriod,
+        modelType,
         homeLogo: r.homeLogo,
         awayLogo: r.awayLogo,
         homeAbbr: r.homeAbbr,
@@ -208,15 +276,17 @@ function TheLab() {
       });
     }
 
-    // 2. Cached enriched props (from admin pulls) — filter out live events
+    // 2. Cached enriched props
     for (const p of cachedProps) {
-      if (isLive(p)) continue; // pregame only (cross-references scan for start times)
+      if (isLive(p)) continue;
       const key = dedupKey(p);
       if (seen.has(key)) continue;
       seen.add(key);
+
       const chance = p.aiProb ?? p.fairProb ?? p.chance ?? 0.5;
       const price = p.price || -110;
       const lab = labScore({ chance, fairProb: p.fairProb ?? chance, price });
+
       result.push({
         id: key,
         selection: p.selection || "",
@@ -240,6 +310,7 @@ function TheLab() {
         isGameLine: false,
         isProp: true,
         isPeriod: false,
+        modelType: "prop",
         source: "cache",
       });
     }
@@ -247,7 +318,7 @@ function TheLab() {
     return result;
   }, [scan?.rows, cachedProps]);
 
-  // Apply sport filter (handles "ALL" correctly)
+  // Apply sport filter
   const sportFiltered = useMemo(() => {
     return applySportFilter(allBets, sportFilter);
   }, [allBets, sportFilter]);
@@ -278,6 +349,11 @@ function TheLab() {
       items = items.filter(b => betCategory(b) === tab);
     }
 
+    // Model filter
+    if (modelFilter !== "all") {
+      items = items.filter(b => b.modelType === modelFilter);
+    }
+
     // Star filter
     if (minStars > 0) {
       items = items.filter(b => b.lab.stars >= minStars);
@@ -298,6 +374,7 @@ function TheLab() {
     const sorted = [...items].sort((a, b) => {
       switch (sortMode) {
         case "ev": return b.lab.ev - a.lab.ev || b.lab.hitPct - a.lab.hitPct;
+        case "edge": return parseFloat(b.lab.edgePct) - parseFloat(a.lab.edgePct) || b.lab.ev - a.lab.ev;
         case "hit": return b.lab.hitPct - a.lab.hitPct || b.lab.ev - a.lab.ev;
         case "payout": {
           const aDec = a.price >= 100 ? a.price / 100 + 1 : 100 / Math.abs(a.price) + 1;
@@ -310,7 +387,7 @@ function TheLab() {
     });
 
     return sorted;
-  }, [sportFiltered, tab, minStars, searchQuery, sortMode]);
+  }, [sportFiltered, tab, modelFilter, minStars, searchQuery, sortMode]);
 
   // Add-to-parlay handler
   const toggleLeg = useCallback((b: LabBet) => {
@@ -341,10 +418,10 @@ function TheLab() {
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
         <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">Build Your Parlay</span>
+          The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">Multi-Model Parlay Builder</span>
         </h1>
         <p className="text-sm text-muted">
-          Every pregame bet ranked by Expected Value. Higher EV = AI thinks it has better value vs the book.
+          Every pregame bet ranked by Expected Value and Edge %. Filter by AI Model: 10k Monte Carlo Simulation, Player Prop Labs, Sharp Steam, or Periods.
           {allBets.length > 0 && <span className="text-primary font-bold ml-1">{allBets.length} bets analyzed</span>}
         </p>
       </div>
@@ -358,7 +435,7 @@ function TheLab() {
       {loading && (
         <div className="text-center p-10 text-muted">
           <div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-          Analyzing all bets...
+          Analyzing all bets across models...
         </div>
       )}
 
@@ -381,7 +458,26 @@ function TheLab() {
               ))}
             </div>
 
-            {/* Row 2: Star filter + Sort + Search */}
+            {/* Row 2: AI Model Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider mr-1">Engine:</span>
+              {MODEL_FILTERS.map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setModelFilter(key)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[10px] font-bold font-mono transition-colors border shrink-0 flex items-center gap-1",
+                    modelFilter === key
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-panel border-line text-muted hover:border-primary/40 hover:text-ink"
+                  )}
+                >
+                  <span>{icon}</span> {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Row 3: Star filter + Sort + Search */}
             <div className="flex items-center gap-2 flex-wrap">
               {/* Star filter */}
               <div className="flex rounded-lg border border-line overflow-hidden shrink-0">
@@ -443,12 +539,26 @@ function TheLab() {
               const startTime = b.start ? new Date(b.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "";
               const sportLabel = (b.sport || "").replace("americanfootball_", "").replace("icehockey_", "").replace("baseball_", "").replace("basketball_", "").toUpperCase();
 
-              // For game lines, show team name. For props, show player.
               const displayName = playerName || b.selection;
               const subtitle = playerName
                 ? b.selection.replace(playerName, "").replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "").trim()
                 : isGameLine ? marketLabel(b.marketType) : "";
+
               const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
+
+              // Resolve team logo accurately using resolveLegTeam
+              const legTeam = resolveLegTeam({
+                sport: b.sport,
+                home: b.home,
+                away: b.away,
+                homeAbbr: b.homeAbbr,
+                awayAbbr: b.awayAbbr,
+                homeLogo: b.homeLogo,
+                awayLogo: b.awayLogo,
+                selection: b.selection,
+                side: b.side,
+              });
+              const logoUrl = legTeam.selectionLogo || legTeam.homeLogo || legTeam.awayLogo;
 
               return (
                 <div key={b.id} className={cn(
@@ -460,44 +570,46 @@ function TheLab() {
                   <div className="flex items-center gap-3">
                     {/* Stars + Avatar */}
                     <div className="flex flex-col items-center gap-1 shrink-0">
-                      {(() => {
-                        // 1. Player headshot (props)
-                        if (b.headshot) return <img src={b.headshot} className="size-10 rounded-full object-cover ring-2 ring-line bg-obsidian" alt="" />;
-                        // 2. Team logo (game lines) — figure out which team is selected
-                        if (!playerName) {
-                          const sel = (b.selection || "").toLowerCase();
-                          const isHome = b.home && sel.includes(b.home.toLowerCase().split(" ").pop() || "");
-                          const isAway = !isHome && b.away && sel.includes(b.away.toLowerCase().split(" ").pop() || "");
-                          const logoUrl = isHome
-                            ? (b.homeLogo || resolveTeamLogo(b.sport, { abbr: b.homeAbbr, name: b.home }))
-                            : isAway
-                            ? (b.awayLogo || resolveTeamLogo(b.sport, { abbr: b.awayAbbr, name: b.away }))
-                            : (b.homeLogo || resolveTeamLogo(b.sport, { abbr: b.homeAbbr, name: b.home }));
-                          if (logoUrl) return <img src={logoUrl} className="size-10 rounded-full object-contain bg-obsidian ring-2 ring-line p-1" alt="" />;
-                        }
-                        // 3. Initials fallback (props without headshot)
-                        if (initials) return (
-                          <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-muted">{initials}</span>
-                          </div>
-                        );
-                        // 4. Icon fallback
-                        return (
-                          <div className="size-10 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center">
-                            <Target className="size-4 text-primary" />
-                          </div>
-                        );
-                      })()}
+                      <BetAvatar
+                        headshot={b.headshot}
+                        logoUrl={!b.headshot ? logoUrl : undefined}
+                        initials={initials}
+                      />
                       <div className="flex gap-px">{renderStars(stars)}</div>
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-bold text-ink truncate">{displayName}</span>
-                        {b.isProp && <span className="text-[8px] bg-violet-500/20 text-violet-400 rounded px-1 font-bold shrink-0">PROP</span>}
-                        {b.isPeriod && <span className="text-[8px] bg-sky-500/20 text-sky-400 rounded px-1 font-bold shrink-0">PERIOD</span>}
-                        {isGameLine && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 rounded px-1 font-bold shrink-0">{marketLabel(b.marketType).toUpperCase()}</span>}
+
+                        {/* Model Badge */}
+                        {b.modelType === "prop" && (
+                          <span className="text-[8px] font-mono bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded px-1.5 py-0.5 font-bold shrink-0">
+                            👤 PROP LAB
+                          </span>
+                        )}
+                        {b.modelType === "sharp" && (
+                          <span className="text-[8px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded px-1.5 py-0.5 font-bold shrink-0">
+                            📈 SHARP STEAM
+                          </span>
+                        )}
+                        {b.modelType === "period" && (
+                          <span className="text-[8px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 font-bold shrink-0">
+                            ⏱️ PERIOD
+                          </span>
+                        )}
+                        {b.modelType === "sim" && (
+                          <span className="text-[8px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5 font-bold shrink-0">
+                            ⚡ 10K SIM
+                          </span>
+                        )}
+
+                        {isGameLine && (
+                          <span className="text-[8px] bg-line text-muted rounded px-1 font-bold shrink-0">
+                            {marketLabel(b.marketType).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       {subtitle && <span className="text-xs text-muted truncate block">{subtitle}</span>}
                       <span className="text-[10px] text-muted/40">{matchup} · {sportLabel} · {startTime}</span>
@@ -521,7 +633,7 @@ function TheLab() {
                     </div>
                   </div>
 
-                  {/* Hit bar + EV */}
+                  {/* Hit bar + EV + Edge */}
                   <div className="mt-2 mx-1">
                     <div className="flex items-center gap-2 mb-0.5">
                       <div className="flex-1 h-1.5 bg-line/40 rounded-full overflow-hidden">
@@ -535,7 +647,7 @@ function TheLab() {
                         EV {b.lab.evPct}
                       </span>
                       {parseFloat(b.lab.edgePct) !== 0 && (
-                        <span className={cn("text-[9px] font-mono px-1 rounded", parseFloat(b.lab.edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+                        <span className={cn("text-[9px] font-mono px-1 rounded font-bold", parseFloat(b.lab.edgePct) > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
                           {b.lab.edgePct} edge
                         </span>
                       )}
@@ -551,7 +663,7 @@ function TheLab() {
 
           {displayBets.length === 0 && (
             <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
-              No bets match your filters. Try adjusting tabs, stars, or search.
+              No bets match your filters. Try adjusting tabs, models, stars, or search.
             </div>
           )}
         </div>

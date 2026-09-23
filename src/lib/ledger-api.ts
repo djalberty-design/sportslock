@@ -42,5 +42,5 @@ export async function getLedgerTickets() {
   await ensureLedgerTable(sql);
 
   const result = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC`;
-  return result.rows || result;
+  return (result as any).rows || result;
 }

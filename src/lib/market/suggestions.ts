@@ -8,8 +8,8 @@ export type BrainSuggestion = {
   title: string;
   body: string;
   knob: string;
-  proposed: Record<string, unknown> | null;
-  evidence: Record<string, unknown>;
+  proposed: Record<string, any> | null;
+  evidence: Record<string, any>;
   status: SuggestionStatus;
   createdAt: string;
   decidedAt: string | null;
@@ -41,8 +41,8 @@ function mapRow(r: Record<string, unknown>): BrainSuggestion {
     title: String(r.title),
     body: String(r.body),
     knob: String(r.knob || "none"),
-    proposed: (r.proposed as Record<string, unknown>) || null,
-    evidence: (r.evidence as Record<string, unknown>) || {},
+    proposed: (r.proposed as Record<string, any>) || null,
+    evidence: (r.evidence as Record<string, any>) || {},
     status: String(r.status) as SuggestionStatus,
     createdAt: String(r.created_at || ""),
     decidedAt: r.decided_at ? String(r.decided_at) : null,

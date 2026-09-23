@@ -13,6 +13,7 @@ export type LiveScore = {
   awayScore: number;
   inPlay: boolean;
   complete: boolean;
+  scheduled?: boolean;
   period?: string;
   clock?: string;
   statusText?: string;

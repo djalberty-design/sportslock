@@ -523,8 +523,7 @@ export function shownParlayFromStoreLegs(
     fairProb: Number.isFinite(l.fairProb) ? (l.fairProb as number) : 0.5,
     sport: l.sport ?? "",
     isProp: false,
-      selection: l.selection,
-      sport: l.sport,
+    selection: l.selection,
   }));
   const combinedFair = Math.min(0.97, combineParlayFair(normLegs as Parameters<typeof combineParlayFair>[0]).combinedFair);
   const decimalPayout = product(legs.map((l) => americanToDecimal(Number.isFinite(l.price) ? (l.price as number) : -110)));
@@ -1141,14 +1140,14 @@ export function buildDeskPicks(scan: ScanBundle, snapshot: DeskSnapshot): DeskPi
     .map(stamp);
 
   // Real sportsbook props have source = bookmaker key (draftkings, fanduel, etc.), not "research" or "sheet"
-  const internalSources = new Set(["research", "sheet", "scan"]);
-  const realPropEventIds = new Set(propRows.filter(r => !internalSources.has(r.source)).map(r => r.eventId));
+  const internalSources = new Set<string>(["research", "sheet", "scan"]);
+  const realPropEventIds = new Set<string>(propRows.filter(r => Boolean(r.source) && !internalSources.has(r.source!) && Boolean(r.eventId)).map(r => String(r.eventId)));
   const finalPropRows = propRows.filter(r => {
     // If we have real sportsbook props for this event, drop internal props for that event
-    if (internalSources.has(r.source) && realPropEventIds.has(r.eventId)) return false;
+    if (r.source && internalSources.has(r.source) && r.eventId && realPropEventIds.has(String(r.eventId))) return false;
     return true;
   });
-  const allProps = finalPropRows.filter(legalRow).filter(onHorizon).map(r => fromRow(r, "prop", propWhy(r)));
+  const allProps = finalPropRows.filter(legalRow).filter(r => onHorizon(r)).map(r => fromRow(r, "prop", propWhy(r)));
 
   return {
     hero: hero ? stamp(hero) : null,

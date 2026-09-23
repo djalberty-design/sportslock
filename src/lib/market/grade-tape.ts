@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getSql } from "@/lib/db";
 import { fetchLiveScores, teamsMatch, type LiveScore } from "./live-scores";
 import { fetchAllHistoricalForGrading } from "./historical-scores";

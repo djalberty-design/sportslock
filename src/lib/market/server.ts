@@ -29,7 +29,7 @@ export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async 
       asOf: new Date().toISOString(),
       delayed: false,
       sample: false,
-      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: `CRASH IN BUILDLIVESNAPSHOT: ${String(err.stack || err)}` },
+      hours: { preGameOpen: false, etStamp: "", etDate: "", nextLock: null, label: "ERROR", note: `CRASH IN BUILDLIVESNAPSHOT: ${String(err.stack || err)}` },
       quotes: [],
       news: [],
       publicSplits: [],
@@ -45,7 +45,7 @@ export const getEventResearch = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<{ ok: true; research: EventResearch } | { ok: false; error: string }> => {
     const parsed = parseInternalEventId(data.eventId);
     if (!parsed) return { ok: false, error: "That game id is not on the live ESPN board." };
-    const path = ESPN_PATH[parsed.sport];
+    const path = ESPN_PATH[parsed.sport as keyof typeof ESPN_PATH];
     if (!path) return { ok: false, error: `No research feed for ${parsed.sport}.` };
     try {
       const res = await fetch(
@@ -57,7 +57,7 @@ export const getEventResearch = createServerFn({ method: "GET" })
       );
       if (!res.ok) return { ok: false, error: "ESPN research did not load. Try again in a minute." };
       const json: unknown = await res.json();
-      let research = parseEspnSummary(json, data.eventId, parsed.sport, parsed.espnId);
+      let research: EventResearch = parseEspnSummary(json, data.eventId, parsed.sport, parsed.espnId);
       if (research.homeTeamId || research.awayTeamId) {
         const college = parsed.sport === "NCAAF" || parsed.sport === "NCAAB";
         const [homeR, awayR, homeL, awayL] = await Promise.all([
@@ -215,12 +215,12 @@ Rules: ticket = Hard Rock / DraftKings odds. slate = player salary list. contest
 
 export const getPredictionLogs = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<any[]> => {
   try {
     await assertAdmin(context.userId);
     const sql = await getSql();
-    const logs = await sql`SELECT * FROM prediction_logs ORDER BY created_at DESC LIMIT 200`;
-    return logs;
+    const logs = await sql<any>`SELECT * FROM prediction_logs ORDER BY created_at DESC LIMIT 200`;
+    return logs.map((r: any) => ({ ...r, id: String(r.id), created_at: String(r.created_at) }));
   } catch (err) {
     console.error("Failed to fetch prediction logs:", err);
     return [];
@@ -271,7 +271,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
 
       // Build player lookup: name → { headshot, team, position, homeAway, stats }
       const playerMap = new Map<string, { headshot?: string; team: string; position: string; homeAway: string; stats?: Record<string, number>; recentStats?: Record<string, number>; recentN?: number; usageMin?: number }>();
-      for (const p of [...homeRoster, ...awayRoster]) {
+      for (const p of [...homeRoster, ...awayRoster] as any[]) {
         const key = (p.name || "").toLowerCase();
         if (key) playerMap.set(key, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats, recentStats: p.recentStats, recentN: p.recentN, usageMin: p.usageMin });
         // Also index by last name for fuzzy matching
@@ -679,7 +679,7 @@ export const getTuningFn = createServerFn({ method: "GET" })
       const sql = await getSql();
       const rows = await sql`SELECT kelly, max_legs, min_edge FROM desk_tuning_raw WHERE id = 1`;
       if (rows.length > 0) {
-        return { kelly: rows[0].kelly ?? 0.25, maxLegs: rows[0].max_legs ?? 3, minEdge: rows[0].min_edge ?? 2.5 };
+        return { kelly: Number((rows[0] as any)?.kelly ?? 0.25), maxLegs: Number((rows[0] as any)?.max_legs ?? 3), minEdge: Number((rows[0] as any)?.min_edge ?? 2.5) };
       }
       return { kelly: 0.25, maxLegs: 3, minEdge: 2.5 };
     } catch {
@@ -730,6 +730,15 @@ export type BrainStats = {
   }[];
   autopsySummary: { highVariance: number; modelError: number; unreviewed: number };
   streakData: { currentStreak: number; streakType: string; longestWin: number; longestLoss: number };
+  dailyDigest?: {
+    todayWins: number;
+    todayLosses: number;
+    bestHit: { sport: string; selection: string; home: string; away: string; edge: number } | null;
+    worstMiss: { sport: string; selection: string; home: string; away: string; edge: number } | null;
+    week: { wins: number; losses: number; pct: number };
+    month: { wins: number; losses: number; pct: number };
+    allTime: { wins: number; losses: number; pct: number };
+  };
 };
 
 export const getBrainStatsFn = createServerFn({ method: "GET" })
@@ -741,7 +750,7 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
       const sql = await getSql();
 
       // Overall stats
-      const totals = await sql`
+      const totals = await sql<any>`
         SELECT 
           count(*)::int as total,
           count(*) filter (where status = 'WIN')::int as wins,
@@ -750,12 +759,12 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
           count(*) filter (where status = 'PENDING')::int as pending
         FROM prediction_logs
       `;
-      const t = totals[0] || { total: 0, wins: 0, losses: 0, pushes: 0, pending: 0 };
-      const decided = t.wins + t.losses;
-      const winRate = decided > 0 ? Math.round((t.wins / decided) * 1000) / 10 : 0;
+      const t = (totals[0] || { total: 0, wins: 0, losses: 0, pushes: 0, pending: 0 }) as any;
+      const decided = Number(t.wins) + Number(t.losses);
+      const winRate = decided > 0 ? Math.round((Number(t.wins) / decided) * 1000) / 10 : 0;
 
       // By market type
-      const byMarketRaw = await sql`
+      const byMarketRaw = await sql<any>`
         SELECT market_type as market,
           count(*)::int as total,
           count(*) filter (where status = 'WIN')::int as wins
@@ -763,15 +772,15 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         WHERE status IN ('WIN', 'LOSS')
         GROUP BY market_type ORDER BY total DESC
       `;
-      const byMarket = byMarketRaw.map((r) => ({
-        market: r.market || "unknown",
-        total: r.total,
-        wins: r.wins,
-        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      const byMarket = byMarketRaw.map((r: any) => ({
+        market: String(r.market || "unknown"),
+        total: Number(r.total) || 0,
+        wins: Number(r.wins) || 0,
+        winRate: Number(r.total) > 0 ? Math.round((Number(r.wins) / Number(r.total)) * 1000) / 10 : 0,
       }));
 
       // By sport (extracted from event_id prefix)
-      const bySportRaw = await sql`
+      const bySportRaw = await sql<any>`
         SELECT 
           split_part(event_id, '-', 2) as sport,
           count(*)::int as total,
@@ -780,15 +789,15 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         WHERE status IN ('WIN', 'LOSS')
         GROUP BY split_part(event_id, '-', 2) ORDER BY total DESC
       `;
-      const bySport = bySportRaw.map((r) => ({
-        sport: r.sport || "unknown",
-        total: r.total,
-        wins: r.wins,
-        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      const bySport = bySportRaw.map((r: any) => ({
+        sport: String(r.sport || "unknown"),
+        total: Number(r.total) || 0,
+        wins: Number(r.wins) || 0,
+        winRate: Number(r.total) > 0 ? Math.round((Number(r.wins) / Number(r.total)) * 1000) / 10 : 0,
       }));
 
       // By edge tier
-      const byEdgeRaw = await sql`
+      const byEdgeRaw = await sql<any>`
         SELECT 
           CASE 
             WHEN edge >= 0.10 THEN 'HIGH (10%+)'
@@ -802,45 +811,45 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         WHERE status IN ('WIN', 'LOSS')
         GROUP BY tier ORDER BY total DESC
       `;
-      const byEdgeTier = byEdgeRaw.map((r) => ({
-        tier: r.tier,
-        total: r.total,
-        wins: r.wins,
-        winRate: r.total > 0 ? Math.round((r.wins / r.total) * 1000) / 10 : 0,
+      const byEdgeTier = byEdgeRaw.map((r: any) => ({
+        tier: String(r.tier || "UNKNOWN"),
+        total: Number(r.total) || 0,
+        wins: Number(r.wins) || 0,
+        winRate: Number(r.total) > 0 ? Math.round((Number(r.wins) / Number(r.total)) * 1000) / 10 : 0,
       }));
 
       // Recent logs (last 50)
-      const recentRaw = await sql`
+      const recentRaw = await sql<any>`
         SELECT id, event_id, selection, market_type, model_probability, edge, status, ai_autopsy, created_at
         FROM prediction_logs
         ORDER BY created_at DESC
         LIMIT 50
       `;
-      const recentLogs = recentRaw.map((r) => ({
-        id: r.id,
-        eventId: r.event_id,
-        selection: r.selection,
-        marketType: r.market_type,
+      const recentLogs = recentRaw.map((r: any) => ({
+        id: String(r.id),
+        eventId: String(r.event_id),
+        selection: String(r.selection),
+        marketType: String(r.market_type),
         modelProb: Number(r.model_probability) || 0,
         edge: Number(r.edge) || 0,
-        status: r.status,
-        autopsy: r.ai_autopsy,
-        createdAt: r.created_at,
+        status: String(r.status),
+        autopsy: r.ai_autopsy ? String(r.ai_autopsy) : null,
+        createdAt: String(r.created_at),
       }));
 
       // Autopsy summary
-      const autopsyRaw = await sql`
+      const autopsyRaw = await sql<any>`
         SELECT 
           count(*) filter (where ai_autopsy ILIKE '%HIGH VARIANCE%')::int as high_variance,
           count(*) filter (where ai_autopsy ILIKE '%MODEL ERROR%')::int as model_error,
           count(*) filter (where status = 'LOSS' AND ai_autopsy IS NULL)::int as unreviewed
         FROM prediction_logs
       `;
-      const a = autopsyRaw[0] || { high_variance: 0, model_error: 0, unreviewed: 0 };
-      const autopsySummary = { highVariance: a.high_variance, modelError: a.model_error, unreviewed: a.unreviewed };
+      const a = (autopsyRaw[0] || { high_variance: 0, model_error: 0, unreviewed: 0 }) as any;
+      const autopsySummary = { highVariance: Number(a.high_variance) || 0, modelError: Number(a.model_error) || 0, unreviewed: Number(a.unreviewed) || 0 };
 
       // Streak calculation
-      const streakRaw = await sql`
+      const streakRaw = await sql<any>`
         SELECT status FROM prediction_logs
         WHERE status IN ('WIN', 'LOSS')
         ORDER BY created_at DESC
@@ -858,7 +867,7 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
       }
       // Current streak from most recent
       if (streakRaw.length > 0) {
-        streakType = streakRaw[0].status;
+        streakType = String(streakRaw[0].status || "NONE");
         currentStreak = 1;
         for (let i = 1; i < streakRaw.length; i++) {
           if (streakRaw[i].status === streakType) currentStreak++;
@@ -867,7 +876,7 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
       }
 
       // Daily digest — today's performance from market_tape
-      const todayRaw = await sql`
+      const todayRaw = await sql<any>`
         SELECT sport, market_type, selection, home, away, model_probability, edge, status, graded_at
         FROM market_tape
         WHERE recommended = true
@@ -875,13 +884,13 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
           AND graded_at >= current_date
         ORDER BY graded_at DESC
       `;
-      const todayWins = todayRaw.filter(r => r.status === 'WIN').length;
-      const todayLosses = todayRaw.filter(r => r.status === 'LOSS').length;
-      const bestHit = todayRaw.find(r => r.status === 'WIN');
-      const worstMiss = todayRaw.find(r => r.status === 'LOSS');
+      const todayWins = todayRaw.filter((r: any) => r.status === 'WIN').length;
+      const todayLosses = todayRaw.filter((r: any) => r.status === 'LOSS').length;
+      const bestHit = todayRaw.find((r: any) => r.status === 'WIN');
+      const worstMiss = todayRaw.find((r: any) => r.status === 'LOSS');
 
       // 7-day and 30-day rolling records from market_tape
-      const rollingRaw = await sql`
+      const rollingRaw = await sql<any>`
         SELECT
           count(*) filter (where status = 'WIN' AND graded_at >= current_date - interval '7 days')::int as w7,
           count(*) filter (where status = 'LOSS' AND graded_at >= current_date - interval '7 days')::int as l7,
@@ -892,18 +901,28 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         FROM market_tape
         WHERE recommended = true AND status IN ('WIN', 'LOSS')
       `;
-      const roll = rollingRaw[0] || { w7: 0, l7: 0, w30: 0, l30: 0, wall: 0, lall: 0 };
+      const roll = (rollingRaw[0] || { w7: 0, l7: 0, w30: 0, l30: 0, wall: 0, lall: 0 }) as any;
+      const w7 = Number(roll.w7) || 0;
+      const l7 = Number(roll.l7) || 0;
+      const w30 = Number(roll.w30) || 0;
+      const l30 = Number(roll.l30) || 0;
+      const wall = Number(roll.wall) || 0;
+      const lall = Number(roll.lall) || 0;
       const dailyDigest = {
         todayWins, todayLosses,
-        bestHit: bestHit ? { sport: bestHit.sport, selection: bestHit.selection, home: bestHit.home, away: bestHit.away, edge: Number(bestHit.edge) || 0 } : null,
-        worstMiss: worstMiss ? { sport: worstMiss.sport, selection: worstMiss.selection, home: worstMiss.home, away: worstMiss.away, edge: Number(worstMiss.edge) || 0 } : null,
-        week: { wins: roll.w7, losses: roll.l7, pct: (roll.w7 + roll.l7) > 0 ? Math.round(roll.w7 / (roll.w7 + roll.l7) * 1000) / 10 : 0 },
-        month: { wins: roll.w30, losses: roll.l30, pct: (roll.w30 + roll.l30) > 0 ? Math.round(roll.w30 / (roll.w30 + roll.l30) * 1000) / 10 : 0 },
-        allTime: { wins: roll.wall, losses: roll.lall, pct: (roll.wall + roll.lall) > 0 ? Math.round(roll.wall / (roll.wall + roll.lall) * 1000) / 10 : 0 },
+        bestHit: bestHit ? { sport: String(bestHit.sport), selection: String(bestHit.selection), home: String(bestHit.home), away: String(bestHit.away), edge: Number(bestHit.edge) || 0 } : null,
+        worstMiss: worstMiss ? { sport: String(worstMiss.sport), selection: String(worstMiss.selection), home: String(worstMiss.home), away: String(worstMiss.away), edge: Number(worstMiss.edge) || 0 } : null,
+        week: { wins: w7, losses: l7, pct: (w7 + l7) > 0 ? Math.round(w7 / (w7 + l7) * 1000) / 10 : 0 },
+        month: { wins: w30, losses: l30, pct: (w30 + l30) > 0 ? Math.round(w30 / (w30 + l30) * 1000) / 10 : 0 },
+        allTime: { wins: wall, losses: lall, pct: (wall + lall) > 0 ? Math.round(wall / (wall + lall) * 1000) / 10 : 0 },
       };
 
       return {
-        total: t.total, wins: t.wins, losses: t.losses, pushes: t.pushes, pending: t.pending,
+        total: Number(t.total) || 0,
+        wins: Number(t.wins) || 0,
+        losses: Number(t.losses) || 0,
+        pushes: Number(t.pushes) || 0,
+        pending: Number(t.pending) || 0,
         winRate, byMarket, bySport, byEdgeTier, recentLogs, autopsySummary,
         streakData: { currentStreak, streakType, longestWin, longestLoss },
         dailyDigest,
@@ -927,7 +946,7 @@ export type BrainInsight = {
   marketType: string | null;
   metricName: string;
   metricValue: number;
-  details: Record<string, unknown>;
+  details: Record<string, any>;
   period: string;
   computedAt: string;
 };
@@ -1078,6 +1097,17 @@ export const applySuggestionFn = createServerFn({ method: "POST" })
     }
   });
 
+export type AnalysisDataResult = {
+  ok: boolean;
+  aggregates: Record<string, any>;
+  calibration: Record<string, any>[];
+  sportBreakdown: Record<string, any>[];
+  marketBreakdown: Record<string, any>[];
+  autopsyBreakdown?: Record<string, number>;
+  rows: any[];
+  error?: string;
+};
+
 /** Analysis Workbench: Get filtered prediction tape with aggregates */
 export const getAnalysisDataFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -1085,12 +1115,13 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
     sport?: string;
     marketType?: string;
     status?: string;
+    bucket?: string;
     dateFrom?: string;
     dateTo?: string;
     edgeTier?: string;
     page?: number;
   }) => d)
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<AnalysisDataResult> => {
     try {
       await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
@@ -1119,6 +1150,10 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
           conditions.push(`status = $${pIdx++}`);
           params.push(data.status);
         }
+      }
+      if (data.bucket) {
+        conditions.push(`bucket = $${pIdx++}`);
+        params.push(data.bucket);
       }
       if (data.dateFrom) {
         conditions.push(`snapped_at >= $${pIdx++}::timestamptz`);
@@ -1217,12 +1252,30 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
         GROUP BY market_type ORDER BY total DESC
       `, params);
 
+      // Get breakdown of autopsy buckets
+      const autopsyBreakdownRows = await sql.query<{ bucket: string; count: number }>(`
+        SELECT bucket, count(*)::int AS count
+        FROM market_tape
+        WHERE recommended = true AND bucket IS NOT NULL
+        GROUP BY bucket
+      `);
+      const autopsyBreakdown: Record<string, number> = {
+        model_miss: 0,
+        echoed_book: 0,
+        high_variance: 0,
+        settled: 0,
+      };
+      for (const ab of autopsyBreakdownRows) {
+        if (ab.bucket) autopsyBreakdown[ab.bucket] = Number(ab.count || 0);
+      }
+
       return {
         ok: true,
         aggregates: agg[0] || {},
         calibration: calBuckets,
         sportBreakdown,
         marketBreakdown,
+        autopsyBreakdown,
         rows: rows.map((r: any) => ({
           id: r.id,
           selection: r.selection,
@@ -1258,7 +1311,7 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
 /** Get the latest post-grade analysis results for the Dashboard */
 export const getLatestAnalysisFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<{ ok: boolean; data: any; lastRun: string | null }> => {
     try {
       await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");

@@ -16,8 +16,8 @@ test("same seed yields the same path stream", () => {
   const a = drawPaths(g, "snap-1", 400);
   const b = drawPaths(g, "snap-1", 400);
   assert.equal(a.length, b.length);
-  assert.equal(a[0]!.h, b[0]!.h);
-  assert.equal(a[0]!.a, b[0]!.a);
+  assert.equal(a[0]!.muH, b[0]!.muH);
+  assert.equal(a[0]!.muA, b[0]!.muA);
   assert.equal(simWin(a).p, simWin(b).p);
 });
 
@@ -39,7 +39,7 @@ test("NFL paths put extra mass on 3 and 7", () => {
   const g = latentFromScores({ eventId: "nfl-x", sport: "NFL", homeWin: 0.5, total: 44.5 });
   const paths = drawPaths(g, "snap", 4000);
   const key = paths.filter((p) => {
-    const m = Math.round(p.h - p.a);
+    const m = Math.round(p.muH - p.muA);
     return m === 3 || m === -3 || m === 7 || m === -7;
   }).length;
   assert.ok(key > 100, `expected 3/7 spike, got ${key}`);

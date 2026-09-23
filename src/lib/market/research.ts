@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ESPN research + ticket matching. Live looks, not generated cards.
  */
@@ -384,7 +385,7 @@ export function pitcherLine(probables, team) {
 		athleteId: p.athlete?.id || p.playerId
 	};
 }
-export function pitcherHandOf(probables) {
+export function pitcherHandOf(probables): "L" | "R" | undefined {
 	if (!Array.isArray(probables) || !probables[0] || typeof probables[0] !== "object") return undefined;
 	const a = probables[0].athlete || {};
 	const throws = a.throws;

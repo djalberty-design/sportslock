@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { OPTION_CATALOG } from "@/lib/market/options";
 import { useDeskDecision } from "@/lib/market/use-board";

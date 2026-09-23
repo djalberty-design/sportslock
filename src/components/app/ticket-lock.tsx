@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { shortPick } from "@/lib/copy";

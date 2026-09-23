@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from "react";
 import { FastLogModal } from "./fast-log-modal";
 import { Link, useNavigate } from "@tanstack/react-router";

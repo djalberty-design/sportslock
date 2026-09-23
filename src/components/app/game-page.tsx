@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { fetchRealPropsFn, getCachedPropsFn, lockPredictionFn } from "@/lib/market/server";

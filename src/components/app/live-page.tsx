@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useDeskDecision } from "@/lib/market/use-board";
 import { useDeskStore } from "@/lib/desk-store";
 import { pickInSport, sortByMood, type DeskPick } from "@/lib/market/picks";

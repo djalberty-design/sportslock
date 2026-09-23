@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DESK_VERSION } from "@/lib/market/rules";

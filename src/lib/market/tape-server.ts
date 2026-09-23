@@ -79,3 +79,33 @@ export const decideSuggestionFn = createServerFn({ method: "POST" })
     } catch {}
     return res;
   });
+
+export const getDynamicWeightsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { getAllSportsWeights } = await import("./dynamic-weights");
+  return getAllSportsWeights();
+});
+
+export const calibrateWeightsFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { calibrateWeights } = await import("./dynamic-weights");
+  return calibrateWeights();
+});
+
+export const updateSportWeightsFn = createServerFn({ method: "POST" })
+  .validator((d: { sport: string; wSim: number; wPool: number; wMarket: number; notes?: string }) => d)
+  .handler(async ({ data }) => {
+    const { updateSportWeights } = await import("./dynamic-weights");
+    return updateSportWeights(data);
+  });
+
+export const listHypothesesFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { listHypotheses } = await import("./hypotheses");
+  return listHypotheses();
+});
+
+export const submitHypothesisFn = createServerFn({ method: "POST" })
+  .validator((d: { query: string; notes?: string }) => d)
+  .handler(async ({ data }) => {
+    const { submitHypothesis } = await import("./hypotheses");
+    return submitHypothesis(data.query, data.notes);
+  });
+

@@ -12,7 +12,7 @@ export const getLiveBoardSnapshot = createServerFn({ method: "GET" }).handler(as
       asOf: new Date().toISOString(),
       delayed: false,
       sample: false,
-      hours: { preGameOpen: false, etStamp: 0, etDate: "", nextLock: null, label: "ERROR", note: `CRASH IN SNAPSHOT: ${String(err.stack || err)}` },
+      hours: { preGameOpen: false, etStamp: "", etDate: "", nextLock: null, label: "ERROR", note: `CRASH IN SNAPSHOT: ${String(err.stack || err)}` },
       quotes: [],
       news: [],
       publicSplits: [],

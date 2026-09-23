@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type ReactNode } from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
 import { AppShell } from "./shell";

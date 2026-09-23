@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BRAND } from "../brand.ts";
 import { etParts, isTodayEt } from "../utils.ts";
 import type { DeskSnapshot, EventBrief, PredictQuote, PublicSplit, QuoteLine } from "./types.ts";

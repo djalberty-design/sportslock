@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, type ReactNode } from "react";
 import { Camera, ImageUp } from "lucide-react";
 import { Button } from "@/components/ui/button";

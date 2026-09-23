@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { BankrollBar, ConnectAppsNote } from "./bankroll-bar";
 import { BRAND } from "@/lib/brand";

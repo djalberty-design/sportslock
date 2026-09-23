@@ -52,8 +52,8 @@ function TheMatrix() {
     if (!isAdmin || !snapshot?.briefs?.length) return;
     const checkCache = async () => {
       const found = new Set<string>();
-      for (const b of snapshot.briefs.slice(0, 20)) {
-        const sportKey = SPORT_KEY[b.sport];
+      for (const b of (snapshot.briefs || []).slice(0, 20)) {
+        const sportKey = b.sport ? SPORT_KEY[b.sport] : undefined;
         if (!sportKey) continue;
         try {
           const res = await getCachedPropsFn({ data: { sportKey, eventId: b.eventId } });

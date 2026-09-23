@@ -5,7 +5,7 @@ import { buildScan } from "@/lib/market/engine";
 import { logPrediction } from "@/lib/market/ledger";
 import { rowToPick } from "@/lib/market/research";
 import { logActivity } from "@/lib/market/activity";
-import type { ScanRow } from "@/lib/market/engine";
+import type { ScanRow } from "@/lib/market/types";
 
 export const Route = createFileRoute("/api/cron/sweep")({
   server: {

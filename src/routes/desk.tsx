@@ -5,5 +5,5 @@ export const Route = createFileRoute("/desk")({
 });
 
 function DeskRedirect() {
-  return <Navigate to="/ticket" />;
+  return <Navigate to="/ticket" search={{ id: "" }} />;
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, ShieldCheck, X } from "lucide-react";

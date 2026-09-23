@@ -148,7 +148,7 @@ export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
           gradedRef.current.add(item.id);
 
           const ticket = open.find((t) => t.id === item.id);
-          grade(item.id, item.result, item.closePrice, {
+          grade(item.id, item.result, (item as any).closePrice, {
             finalScore: item.finalScore,
             legs: item.settledLegs,
           });

@@ -150,6 +150,11 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
     }
 
     if (o.strikeZoneWidth != null && Number.isFinite(o.strikeZoneWidth)) {
+      let effectiveZone = o.strikeZoneWidth;
+      if (o.isFatigued) {
+        effectiveZone += 0.03; // Artificially widen the zone
+      }
+
       // Step 4.1: Umpire Zone Compounding (Diamond Alpha)
       if (snap.sport === "MLB") {
         const homeK = snap.homeK9 ?? 8.5; // Average K/9 is ~8.5
@@ -157,13 +162,6 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
         
         const homeKEdge = clip((homeK - 8.5) / 3, -0.5, 1.0);
         const awayKEdge = clip((awayK - 8.5) / 3, -0.5, 1.0);
-
-        // Step 6.2: Umpire Fatigue
-        // Tired umpires widen their strike zone (to end the game faster and go home)
-        let effectiveZone = o.strikeZoneWidth;
-        if (o.isFatigued) {
-          effectiveZone += 0.03; // Artificially widen the zone
-        }
 
         if (effectiveZone > 0) {
           // Wide zone (pitcher-friendly): 
@@ -215,7 +213,7 @@ export function applyOfficialsToMeans(snap: OfficialSnap, muH: number, muA: numb
 }
 
 
-import type { PropLayer } from "./types.ts";
+import type { PropLayer } from "./props.ts";
 
 /**
  * Step 6.2: Referee Grudges
@@ -236,7 +234,7 @@ export function applyRefereeGrudgeToProps(
           label: "Referee Grudge",
           p: 0.35, // Skews heavily towards UNDER (Foul trouble risk)
           precision: 4.5,
-          family: "alpha",
+          family: "context",
           note: `[ALPHA] Foul trouble risk: Officiated by ${o.name} (Antagonistic History).`,
         };
       }

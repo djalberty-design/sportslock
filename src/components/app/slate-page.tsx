@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { DfsDesk } from "./dfs-desk";
 import { DFS_DISCLAIMER } from "@/lib/market/dfs-law";

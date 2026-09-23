@@ -43,19 +43,20 @@ async function handleStrategyReport(request: Request) {
     const marketStats: Record<string, { wins: number, total: number }> = {};
     const autopsies: string[] = [];
 
-    for (const log of logs) {
+    for (const log of (logs as any[])) {
+      const price = Number(log.price || 0);
       if (log.status === 'WIN') {
         wins++;
-        cumulativeProfit += log.price < 0 ? (100 / Math.abs(log.price)) : (log.price / 100);
+        cumulativeProfit += price < 0 ? (100 / Math.abs(price)) : (price / 100);
       } else if (log.status === 'LOSS') {
         cumulativeProfit -= 1;
         if (log.ai_autopsy && autopsies.length < 10) {
-          autopsies.push(log.ai_autopsy);
+          autopsies.push(String(log.ai_autopsy));
         }
       }
 
       if (log.status === 'WIN' || log.status === 'LOSS') {
-        const mType = log.market_type || 'unknown';
+        const mType = String(log.market_type || 'unknown');
         if (!marketStats[mType]) marketStats[mType] = { wins: 0, total: 0 };
         marketStats[mType].total++;
         if (log.status === 'WIN') marketStats[mType].wins++;

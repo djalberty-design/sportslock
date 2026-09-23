@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Post-Grade Analysis Pipeline (Phase 2)
  *

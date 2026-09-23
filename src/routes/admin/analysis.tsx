@@ -5,7 +5,8 @@ import { getAnalysisDataFn, batchGradeFn } from "@/lib/market/server";
 import { cn } from "@/lib/utils";
 import {
   Brain, BarChart2, Filter, RefreshCw, Download, ChevronDown, ChevronRight,
-  TrendingUp, TrendingDown, Target, AlertTriangle, Zap, CheckCircle2, XCircle, Clock, Info
+  TrendingUp, TrendingDown, Target, AlertTriangle, Zap, CheckCircle2, XCircle, Clock, Info,
+  Search, ShieldAlert, Check, X
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/analysis")({ component: AnalysisWorkbench });
@@ -14,6 +15,7 @@ type Filters = {
   sport: string;
   marketType: string;
   status: string;
+  bucket: string;
   dateFrom: string;
   dateTo: string;
   edgeTier: string;
@@ -21,7 +23,7 @@ type Filters = {
 };
 
 const INITIAL_FILTERS: Filters = {
-  sport: "", marketType: "", status: "", dateFrom: "", dateTo: "", edgeTier: "", page: 1,
+  sport: "", marketType: "", status: "", bucket: "", dateFrom: "", dateTo: "", edgeTier: "", page: 1,
 };
 
 function AnalysisWorkbench() {
@@ -46,70 +48,153 @@ function AnalysisWorkbench() {
     },
   });
 
-  const agg = data?.aggregates || {} as any;
-  const cal = data?.calibration || [];
-  const rows = data?.rows || [];
-  const sportBreak = data?.sportBreakdown || [];
-  const marketBreak = data?.marketBreakdown || [];
+  const d = data as any;
+  const agg = d?.aggregates || {};
+  const cal = d?.calibration || [];
+  const rows = d?.rows || [];
+  const sportBreak = d?.sportBreakdown || [];
+  const marketBreak = d?.marketBreakdown || [];
+  const autopsy = d?.autopsyBreakdown || {
+    model_miss: 0,
+    echoed_book: 0,
+    high_variance: 0,
+    settled: 0,
+  };
 
   const setFilter = (key: keyof Filters, value: string | number) => {
     setFilters((f) => ({ ...f, [key]: value, page: key === "page" ? (value as number) : 1 }));
   };
 
+  const totalAutopsied = (autopsy.model_miss || 0) + (autopsy.echoed_book || 0) + (autopsy.high_variance || 0) + (autopsy.settled || 0);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <header>
-        <p className="text-sm text-emerald-500 flex items-center gap-1.5">
-          <BarChart2 className="size-4" /> ANALYSIS WORKBENCH
-        </p>
-        <h1 className="font-display text-3xl text-ink mt-1">Deep-Dive Analysis</h1>
-        <p className="text-sm text-muted mt-1">
-          Filter, slice, and drill into every prediction the brain has ever made. Find where the model is right, wrong, and why.
-        </p>
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-4">
+        <div>
+          <p className="text-sm text-emerald-500 flex items-center gap-1.5">
+            <BarChart2 className="size-4" /> ANALYSIS WORKBENCH
+          </p>
+          <h1 className="font-display text-3xl text-ink mt-1">Deep-Dive Analysis & Loss Forensics</h1>
+          <p className="text-sm text-muted mt-1">
+            Filter, slice, and audit every prediction the brain has ever made. Inspect calibration drift and root-cause loss autopsies.
+          </p>
+        </div>
+
+        {/* Admin Actions Bar */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => gradeMut.mutate()}
+            disabled={gradeMut.isPending}
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={cn("size-3.5", gradeMut.isPending && "animate-spin")} />
+            {gradeMut.isPending ? "Grading..." : "Grade All Pending"}
+          </button>
+          <Tooltip text="Fetches historical ESPN scores for every past date with ungraded predictions. Grades ML, spread, and total. Marks predictions >14 days old as expired." />
+        </div>
       </header>
 
-      {/* Admin Actions Bar */}
-      <div className="flex flex-wrap gap-3">
-        <button
-          onClick={() => gradeMut.mutate()}
-          disabled={gradeMut.isPending}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 text-sm font-bold rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={cn("size-4", gradeMut.isPending && "animate-spin")} />
-          {gradeMut.isPending ? "Grading..." : "Grade All Pending"}
-        </button>
-        <Tooltip text="Fetches historical ESPN scores for every past date with ungraded predictions. Grades ML, spread, and total. Marks predictions >14 days old as expired." />
-      </div>
+      {/* ── SECTION: FORENSIC 4-BUCKET LOSS AUTOPSY MATRIX ── */}
+      <section className="bg-panel border border-line rounded-xl p-4 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <SectionHeader
+            icon={<Brain className="size-4 text-emerald-400" />}
+            title="Forensic 4-Bucket Loss Autopsy Matrix"
+            description="The Brain investigates every decided pick and classifies losses into 4 root-cause categories. Click any card to filter the prediction table below."
+          />
+          {filters.bucket && (
+            <button
+              onClick={() => setFilter("bucket", "")}
+              className="text-xs text-primary font-bold hover:underline shrink-0"
+            >
+              Clear Bucket Filter ({filters.bucket.replace(/_/g, " ")}) ✕
+            </button>
+          )}
+        </div>
 
-      {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <AutopsyCard
+            title="Model Miss"
+            bucket="model_miss"
+            active={filters.bucket === "model_miss"}
+            count={autopsy.model_miss || 0}
+            total={totalAutopsied}
+            color="border-red-500/50 bg-red-500/10 text-red-400"
+            badgeColor="bg-red-500/20 text-red-400"
+            tag="Overconfidence"
+            description="Model assigned high probability/edge to a side that lost convincingly. Trigger for chance haircuts and feature tuning."
+            onClick={() => setFilter("bucket", filters.bucket === "model_miss" ? "" : "model_miss")}
+          />
+          <AutopsyCard
+            title="Echoed Book"
+            bucket="echoed_book"
+            active={filters.bucket === "echoed_book"}
+            count={autopsy.echoed_book || 0}
+            total={totalAutopsied}
+            color="border-amber-500/50 bg-amber-500/10 text-amber-400"
+            badgeColor="bg-amber-500/20 text-amber-400"
+            tag="Market Trap"
+            description="Model followed consensus lines into public traps without detecting asymmetric sharp book resistance. Zero true alpha."
+            onClick={() => setFilter("bucket", filters.bucket === "echoed_book" ? "" : "echoed_book")}
+          />
+          <AutopsyCard
+            title="High Variance"
+            bucket="high_variance"
+            active={filters.bucket === "high_variance"}
+            count={autopsy.high_variance || 0}
+            total={totalAutopsied}
+            color="border-zinc-500/50 bg-zinc-500/10 text-zinc-300"
+            badgeColor="bg-zinc-500/20 text-zinc-300"
+            tag="Bad Beat / Coin-Flip"
+            description="Loss decided by 1 possession, overtime, or bad-beat garbage time. Model math was sound; variance struck."
+            onClick={() => setFilter("bucket", filters.bucket === "high_variance" ? "" : "high_variance")}
+          />
+          <AutopsyCard
+            title="Settled / Alpha Hit"
+            bucket="settled"
+            active={filters.bucket === "settled"}
+            count={autopsy.settled || 0}
+            total={totalAutopsied}
+            color="border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+            badgeColor="bg-emerald-500/20 text-emerald-400"
+            tag="Alpha Confirmed"
+            description="Model accurately spotted closing line inefficiency, beat the closing line value (CLV), and generated profit."
+            onClick={() => setFilter("bucket", filters.bucket === "settled" ? "" : "settled")}
+          />
+        </div>
+      </section>
+
+      {/* Filters Bar */}
       <div className="bg-panel border border-line rounded-xl p-4">
         <div className="flex items-center gap-2 text-sm font-bold text-ink mb-3">
-          <Filter className="size-4" /> Filters
+          <Filter className="size-4" /> Filters & Segmentation
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <FilterSelect label="Sport" value={filters.sport} onChange={(v) => setFilter("sport", v)}
-            options={[["", "All Sports"], ["NFL", "NFL"], ["NCAAF", "NCAAF"], ["MLB", "MLB"], ["NBA", "NBA"], ["NHL", "NHL"]]} />
+            options={[["", "All Sports"], ["NFL", "NFL"], ["NCAAF", "NCAAF"], ["MLB", "MLB"], ["NBA", "NBA"], ["NHL", "NHL"], ["NCAAB", "NCAAB"]]} />
           <FilterSelect label="Market" value={filters.marketType} onChange={(v) => setFilter("marketType", v)}
-            options={[["", "All Markets"], ["ml", "Moneyline"], ["spread", "Spread"], ["total", "Total"]]} />
+            options={[["", "All Markets"], ["ml", "Moneyline"], ["spread", "Spread"], ["total", "Total"], ["prop", "Player Prop"]]} />
           <FilterSelect label="Status" value={filters.status} onChange={(v) => setFilter("status", v)}
             options={[["", "All Statuses"], ["WIN", "Won ✅"], ["LOSS", "Lost ❌"], ["PUSH", "Push ➡️"], ["PENDING", "Pending ⏳"], ["EXPIRED", "Expired 💀"]]} />
+          <FilterSelect label="Autopsy Bucket" value={filters.bucket} onChange={(v) => setFilter("bucket", v)}
+            options={[["", "All Buckets"], ["model_miss", "🔴 Model Miss"], ["echoed_book", "🟡 Echoed Book"], ["high_variance", "⚪ High Variance"], ["settled", "🟢 Settled"]]} />
           <FilterSelect label="Edge Tier" value={filters.edgeTier} onChange={(v) => setFilter("edgeTier", v)}
             options={[["", "All Edges"], ["HIGH", "High (≥5%)"], ["LOW", "Low (2-5%)"], ["MICRO", "Micro (<2%)"]]} />
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-muted font-bold">From</label>
+            <label className="text-[10px] uppercase tracking-wider text-muted font-bold">From Date</label>
             <input type="date" value={filters.dateFrom} onChange={(e) => setFilter("dateFrom", e.target.value)}
               className="w-full mt-0.5 px-2 py-1.5 bg-obsidian border border-line rounded text-sm text-ink" />
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-muted font-bold">To</label>
+            <label className="text-[10px] uppercase tracking-wider text-muted font-bold">To Date</label>
             <input type="date" value={filters.dateTo} onChange={(e) => setFilter("dateTo", e.target.value)}
               className="w-full mt-0.5 px-2 py-1.5 bg-obsidian border border-line rounded text-sm text-ink" />
           </div>
         </div>
-        {(filters.sport || filters.marketType || filters.status || filters.edgeTier || filters.dateFrom || filters.dateTo) && (
-          <button onClick={() => setFilters(INITIAL_FILTERS)} className="mt-2 text-xs text-primary hover:underline">
-            Clear all filters
+        {(filters.sport || filters.marketType || filters.status || filters.bucket || filters.edgeTier || filters.dateFrom || filters.dateTo) && (
+          <button onClick={() => setFilters(INITIAL_FILTERS)} className="mt-2.5 text-xs text-primary font-bold hover:underline">
+            Reset all filters
           </button>
         )}
       </div>
@@ -117,7 +202,7 @@ function AnalysisWorkbench() {
       {/* Section A: Performance Summary */}
       <section className="bg-panel border border-line rounded-xl p-4 sm:p-6">
         <SectionHeader icon={<Target className="size-4" />} title="Performance Summary"
-          description="Win/loss counts and key metrics for the current filter. Brier Score measures prediction accuracy (lower = better). A Brier of 0.25 = random guessing." />
+          description="Win/loss counts and key metrics for the current filter. Brier Score measures probabilistic precision (lower = better, 0.25 = coin flip)." />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3 mt-4">
           <StatCard label="Total" value={agg.total || 0} color="text-blue-400" />
           <StatCard label="Won" value={agg.wins || 0} color="text-emerald-400" />
@@ -136,8 +221,8 @@ function AnalysisWorkbench() {
 
       {/* Section B: Calibration Curve */}
       <section className="bg-panel border border-line rounded-xl p-4 sm:p-6">
-        <SectionHeader icon={<TrendingUp className="size-4" />} title="Calibration Curve"
-          description="Compares predicted probability to actual hit rate. Perfect calibration = each bucket matches. If the 60% bucket hits 60% of the time, the model is well-calibrated there. Bars above the line = underconfident (good). Below = overconfident (bad)." />
+        <SectionHeader icon={<TrendingUp className="size-4" />} title="Calibration Reliability Curve"
+          description="Compares predicted probability to actual empirical hit rate. A 60% prediction hitting 60% of the time represents perfect calibration. Bars reaching dashed lines are calibrated." />
         {cal.length > 0 ? (
           <div className="mt-4 space-y-2">
             <div className="grid grid-cols-[80px_1fr_80px_80px_60px] gap-2 text-[10px] uppercase tracking-wider text-muted font-bold px-2">
@@ -198,8 +283,15 @@ function AnalysisWorkbench() {
 
       {/* Section D: Prediction Table */}
       <section className="bg-panel border border-line rounded-xl p-4 sm:p-6">
-        <SectionHeader icon={<Brain className="size-4" />} title="Prediction Table"
-          description="Every prediction matching your filters. Click a row to see the detailed breakdown. Sort by any column." />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <SectionHeader icon={<Brain className="size-4" />} title="Prediction Forensics Table"
+            description="Every prediction matching your filters. Click any row to expand root-cause autopsy notes and raw snapshots." />
+          {filters.bucket && (
+            <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+              Filtered by: {filters.bucket.replace(/_/g, " ").toUpperCase()}
+            </span>
+          )}
+        </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -210,8 +302,9 @@ function AnalysisWorkbench() {
                 <th className="text-right py-2 px-2">Model %</th>
                 <th className="text-right py-2 px-2">Edge</th>
                 <th className="text-center py-2 px-2">Status</th>
+                <th className="text-center py-2 px-2">Autopsy Bucket</th>
                 <th className="text-center py-2 px-2 hidden md:table-cell">Score</th>
-                <th className="text-right py-2 px-2 hidden lg:table-cell" title="Scheduled game date (snapshot date shown below)">Game Date</th>
+                <th className="text-right py-2 px-2 hidden lg:table-cell" title="Scheduled game date">Game Date</th>
               </tr>
             </thead>
             <tbody>
@@ -238,6 +331,16 @@ function AnalysisWorkbench() {
                   <td className="py-2 px-2 text-center">
                     <StatusBadge status={r.status} />
                   </td>
+                  <td className="py-2 px-2 text-center">
+                    {r.bucket ? (
+                      <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-bold uppercase", {
+                        "bg-red-500/15 text-red-400 border border-red-500/20": r.bucket === "model_miss",
+                        "bg-amber-500/15 text-amber-400 border border-amber-500/20": r.bucket === "echoed_book",
+                        "bg-zinc-500/15 text-zinc-400 border border-zinc-500/20": r.bucket === "high_variance",
+                        "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20": r.bucket === "settled",
+                      })}>{r.bucket.replace(/_/g, " ")}</span>
+                    ) : <span className="text-muted text-xs">—</span>}
+                  </td>
                   <td className="py-2 px-2 text-center hidden md:table-cell font-mono text-muted">
                     {r.resultHome != null ? `${r.resultAway}-${r.resultHome}` : "—"}
                   </td>
@@ -247,17 +350,12 @@ function AnalysisWorkbench() {
                         ? new Date(r.start).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" })
                         : (r.snappedAt ? new Date(r.snappedAt).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" }) : "—")}
                     </div>
-                    {r.snappedAt && (
-                      <div className="text-[10px] text-muted">
-                        snapped {new Date(r.snappedAt).toLocaleDateString(undefined, { month: "numeric", day: "numeric" })}
-                      </div>
-                    )}
                   </td>
                 </tr>
                 {expandedRow === r.id && (
                   <tr className="bg-obsidian/50">
-                    <td colSpan={8} className="px-4 py-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                    <td colSpan={9} className="px-4 py-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         {/* Column 1: Game Details */}
                         <div className="space-y-1.5">
                           <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">Game Details</div>
@@ -265,8 +363,6 @@ function AnalysisWorkbench() {
                           <div><span className="text-muted">Odds Price:</span> <span className="text-ink font-mono">{r.price != null ? (r.price > 0 ? `+${r.price}` : r.price) : "—"}</span></div>
                           <div><span className="text-muted">Line:</span> <span className="text-ink font-mono">{r.line != null ? r.line : "—"}</span></div>
                           <div><span className="text-muted">Side:</span> <span className="text-ink">{r.side || "—"}</span></div>
-                          <div><span className="text-muted">Phase:</span> <span className="text-ink">{r.phase || "—"}</span></div>
-                          <div><span className="text-muted">In-Play:</span> <span className="text-ink">{r.inPlay ? "Yes" : "No"}</span></div>
                         </div>
                         {/* Column 2: Timing & IDs */}
                         <div className="space-y-1.5">
@@ -274,12 +370,11 @@ function AnalysisWorkbench() {
                           <div><span className="text-muted">Snapped:</span> <span className="text-ink">{r.snappedAt ? new Date(r.snappedAt).toLocaleString() : "—"}</span></div>
                           <div><span className="text-muted">Game Start:</span> <span className="text-ink">{r.start ? new Date(r.start).toLocaleString() : "—"}</span></div>
                           <div><span className="text-muted">Graded:</span> <span className="text-ink">{r.gradedAt ? new Date(r.gradedAt).toLocaleString() : "Not graded"}</span></div>
-                          <div><span className="text-muted">Event ID:</span> <span className="text-ink font-mono text-[10px] break-all">{r.eventId || "—"}</span></div>
                         </div>
-                        {/* Column 3: AI Analysis */}
+                        {/* Column 3: AI Autopsy */}
                         <div className="space-y-1.5">
-                          <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">AI Analysis</div>
-                          <div><span className="text-muted">Autopsy Bucket:</span>{" "}
+                          <div className="text-[10px] uppercase tracking-wider text-muted font-bold mb-1">AI Autopsy Assessment</div>
+                          <div><span className="text-muted">Bucket:</span>{" "}
                             {r.bucket ? (
                               <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", {
                                 "bg-red-500/15 text-red-400": r.bucket === "model_miss",
@@ -290,7 +385,7 @@ function AnalysisWorkbench() {
                             ) : <span className="text-muted">—</span>}
                           </div>
                           {r.autopsyNote && (
-                            <div className="bg-line/20 rounded p-2 text-muted italic">{r.autopsyNote}</div>
+                            <div className="bg-line/20 rounded p-2 text-ink/80 italic leading-relaxed">{r.autopsyNote}</div>
                           )}
                         </div>
                       </div>
@@ -311,7 +406,7 @@ function AnalysisWorkbench() {
                 </React.Fragment>
               ))}
               {!rows.length && (
-                <tr><td colSpan={8} className="py-8 text-center text-muted">No predictions match the current filter.</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted">No predictions match the current filter.</td></tr>
               )}
             </tbody>
           </table>
@@ -335,13 +430,58 @@ function AnalysisWorkbench() {
   );
 }
 
-// ── Helpers ──
+// ── Components ──
+
+function AutopsyCard({
+  title, bucket, active, count, total, color, badgeColor, tag, description, onClick
+}: {
+  title: string;
+  bucket: string;
+  active: boolean;
+  count: number;
+  total: number;
+  color: string;
+  badgeColor: string;
+  tag: string;
+  description: string;
+  onClick: () => void;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 relative group",
+        active ? `${color} ring-2 ring-primary shadow-lg` : "bg-obsidian border-line hover:border-primary/40"
+      )}
+    >
+      <div>
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span className="text-sm font-bold text-ink group-hover:text-primary transition-colors">{title}</span>
+          <span className={cn("text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase", badgeColor)}>
+            {tag}
+          </span>
+        </div>
+        <p className="text-[10px] text-muted leading-relaxed line-clamp-3">{description}</p>
+      </div>
+
+      <div className="pt-2 border-t border-line/40 flex items-center justify-between">
+        <span className="text-xl font-display font-bold text-ink">
+          {count} <span className="text-xs text-muted font-normal">({pct}%)</span>
+        </span>
+        <span className="text-[10px] font-mono font-bold text-primary">
+          {active ? "Active Filter ✕" : "Filter ▸"}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Tooltip({ text }: { text: string }) {
   return (
     <div className="relative group inline-flex items-center">
       <Info className="size-4 text-muted cursor-help" />
-      <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-obsidian border border-line rounded-lg text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+      <div className="absolute bottom-full right-0 mb-2 w-64 p-2 bg-obsidian border border-line rounded-lg text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
         {text}
       </div>
     </div>

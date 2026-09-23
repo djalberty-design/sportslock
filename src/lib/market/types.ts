@@ -62,7 +62,7 @@ export type QuoteLine = {
   homeScore?: number;
   awayScore?: number;
   clock?: string;
-  period?: number;
+  period?: string | number;
   homeLogo?: string;
   awayLogo?: string;
   homeSpread?: number;
@@ -71,10 +71,6 @@ export type QuoteLine = {
   phase?: SeasonPhase;
   espnId?: string;
   sportPath?: string;
-  homeScore?: number;
-  awayScore?: number;
-  clock?: string;
-  period?: string;
   situation?: string;
 };
 
@@ -113,7 +109,7 @@ export type ScanRow = {
   homeScore?: number;
   awayScore?: number;
   clock?: string;
-  period?: number;
+  period?: string | number;
   homeLogo?: string;
   awayLogo?: string;
   homeSpread?: number;
@@ -135,11 +131,11 @@ export type ScanRow = {
   leftover?: boolean;
   processLooked?: boolean;
   processSource?: string;
-  homeScore?: number;
-  awayScore?: number;
-  clock?: string;
-  period?: string;
   situation?: string;
+  chance?: number;
+  team?: string;
+  position?: string;
+  edge?: number;
 };
 
 export type ParlayLeg = {
@@ -221,6 +217,7 @@ export type PredictQuote = {
 
 export type EventBrief = {
   eventId: string;
+  sport?: string;
   espnHomeWin?: number;
   espnAwayWin?: number;
   homeRecord?: string;

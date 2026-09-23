@@ -100,10 +100,10 @@ export function DeskDecisionProvider({ children }: { children: ReactNode }) {
 
     const runFallback = () => {
       if (cancelled || id !== job.current) return;
-      fallbackTimer = setTimeout(() => {
+      fallbackTimer = setTimeout(async () => {
         if (cancelled || id !== job.current) return;
         const t0 = Date.now();
-        const ranked = rankDesk(snap, halt, rankSettings);
+        const ranked = await rankDesk(snap, halt, rankSettings);
         apply(ranked.scan, ranked.picks, Date.now() - t0);
       }, 0);
     };
