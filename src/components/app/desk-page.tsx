@@ -178,14 +178,23 @@ export function DeskPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {displayedTickets.map((t) => {
               // Match live quote from board snapshot if available
-              const matchQuote = snapshot?.quotes.find((q) =>
-                (t.gameIds || []).includes(q.eventId) ||
-                (t.home && t.away && q.home?.toLowerCase().includes(t.home.toLowerCase()) && q.away?.toLowerCase().includes(t.away.toLowerCase()))
-              );
-              const isLive = Boolean(matchQuote?.inPlay);
+              // ONLY match if the ticket is actively OPEN, RECENT (today), and a single game
+              const isTicketOpen = t.status === "open";
+              const isRecent = t.createdAt ? (Date.now() - new Date(t.createdAt).getTime() < 16 * 3600 * 1000) : true;
+              const isSingle = !t.description.toLowerCase().includes("parlay") && (!t.legs || t.legs.length <= 1);
+
+              let matchQuote = null;
+              if (isTicketOpen && isRecent && isSingle) {
+                matchQuote = snapshot?.quotes.find((q) =>
+                  (t.gameIds || []).includes(q.eventId) ||
+                  (t.home && t.away && q.home?.toLowerCase().includes(t.home.toLowerCase()) && q.away?.toLowerCase().includes(t.away.toLowerCase()))
+                );
+              }
+
+              const isLive = isTicketOpen && Boolean(matchQuote?.inPlay);
               const isFinal = Boolean(matchQuote?.statusText?.toLowerCase().includes("final") || (matchQuote as any)?.complete);
-              const liveScore = matchQuote && matchQuote.homeScore != null ? `${matchQuote.awayScore} - ${matchQuote.homeScore}` : null;
-              const liveStatus = matchQuote?.statusText || null;
+              const liveScore = isLive && matchQuote && matchQuote.homeScore != null ? `${matchQuote.awayScore} - ${matchQuote.homeScore}` : null;
+              const liveStatus = isLive ? matchQuote?.statusText || null : null;
 
               return (
                 <HardRockTicketCard
@@ -275,8 +284,21 @@ function HardRockTicketCard({
   const isVoid = ticket.status === "void";
   const isOpen = ticket.status === "open";
 
-  const isParlay = ticket.kind === "parlay" || (ticket.legs && ticket.legs.length > 1);
-  const legs = ticket.legs || [];
+  const rawDesc = ticket.description || "";
+  const isParlay = ticket.kind === "parlay" || (ticket.legs && ticket.legs.length > 1) || rawDesc.toLowerCase().includes("parlay");
+
+  // Synthesize legs for legacy parlays where ticket.legs array wasn't attached
+  let legs = ticket.legs || [];
+  if (legs.length === 0 && rawDesc.toLowerCase().includes("parlay")) {
+    const parts = rawDesc.includes(":") ? rawDesc.split(/:\s*/)[1] : rawDesc;
+    if (parts) {
+      legs = parts.split(/\s*\+\s*/).map((s) => ({
+        selection: s.trim(),
+        status: ticket.status === "win" ? "win" : ticket.status === "loss" ? "loss" : "open",
+      }));
+    }
+  }
+
   const isSgp = isParlay && legs.length > 1 && legs.some((l, i) => legs.slice(i + 1).some((l2) => l.eventId && l.eventId === l2.eventId));
 
   const hardRockLink = getHardRockUrl(ticket.sport || legs[0]?.sport);
@@ -396,7 +418,7 @@ function HardRockTicketCard({
                 <h3 className="font-display text-lg font-bold text-ink leading-snug">
                   {ticket.description}
                 </h3>
-                {ticket.home && ticket.away && (
+                {ticket.home && ticket.away && !isParlay && (
                   <p className="text-xs text-muted">
                     {ticket.away} at {ticket.home}
                   </p>
@@ -407,19 +429,18 @@ function HardRockTicketCard({
               </span>
             </div>
 
-            {/* Score / Live info banner */}
-            {(isLive || ticket.finalScore || liveScore) && (
+            {/* Score / Live info banner - NEVER show Live on settled tickets */}
+            {isOpen && isLive && liveScore && (
               <div className="flex items-center gap-2 text-xs font-mono pt-1">
-                {isLive ? (
-                  <span className="text-red-400 font-bold flex items-center gap-1">
-                    <span className="size-1.5 rounded-full bg-red-400 animate-ping" />
-                    Live: {liveScore || "In Progress"} {liveStatus ? `(${liveStatus})` : ""}
-                  </span>
-                ) : (
-                  <span className="text-muted">
-                    Final Score: <span className="text-ink font-bold">{ticket.finalScore || liveScore}</span>
-                  </span>
-                )}
+                <span className="text-red-400 font-bold flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-red-400 animate-ping" />
+                  Live: {liveScore} {liveStatus ? `(${liveStatus})` : ""}
+                </span>
+              </div>
+            )}
+            {!isLive && (ticket.finalScore || (isFinal && liveScore)) && (
+              <div className="flex items-center gap-2 text-xs font-mono pt-1 text-muted">
+                Final Score: <span className="text-ink font-bold">{ticket.finalScore || liveScore}</span>
               </div>
             )}
 
