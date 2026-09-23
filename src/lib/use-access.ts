@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAccess, type AccessState } from "@/lib/desk-api";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { isAdminEmail } from "@/lib/admin";
 
 /**
  * Required auth. No guest access. Unauthenticated → login wall.
@@ -10,6 +11,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 export function useAccess() {
   const { user, isPending } = useCurrentUserState();
   const signedIn = Boolean(user && !user.isDevFallback);
+  const isSuperAdmin = isAdminEmail(user?.primaryEmail);
   const q = useQuery({
     queryKey: ["access", user?.id],
     queryFn: () => getAccess(),
@@ -20,14 +22,14 @@ export function useAccess() {
     refetchOnWindowFocus: false,
   });
   const access: AccessState | null = signedIn && q.data ? q.data : null;
-  const isApproved = access?.status === "approved";
+  const isApproved = isSuperAdmin || access?.status === "approved";
   return {
     user,
     sessionPending: isPending,
     accessPending: signedIn && q.isLoading,
     accessError: signedIn && q.isError,
     access,
-    isAdmin: isApproved && access?.role === "admin",
+    isAdmin: isSuperAdmin || (isApproved && access?.role === "admin"),
     isApproved,
     signedIn,
     refetch: q.refetch,

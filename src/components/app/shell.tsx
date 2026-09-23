@@ -157,25 +157,54 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Main Content Area */}
       <main className="flex-1 bg-background relative mt-7 w-full max-w-full overflow-x-hidden" id="main">
         {/* Top Header for Mobile */}
-        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden w-full max-w-full">
-          <div className="flex items-center gap-2 shrink-0">
-            <Hexagon className="size-5 text-primary" />
-            <span className="font-display font-bold tracking-tight">SportsLock AI</span>
+        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/95 px-3 backdrop-blur-md md:hidden w-full max-w-full gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/" className="flex items-center gap-1.5 shrink-0 text-ink">
+              <Hexagon className="size-5 text-primary shrink-0" />
+              <span className="font-display font-bold tracking-tight text-sm">SportsLock</span>
+            </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border transition-colors shrink-0 shadow-sm",
+                  isActive(pathname, "/admin")
+                    ? "bg-primary text-black border-primary font-extrabold"
+                    : "bg-primary/15 text-primary border-primary/40 hover:bg-primary/25"
+                )}
+                title="The Overseer"
+              >
+                <Settings className="size-3.5" />
+                <span>Overseer</span>
+              </Link>
+            )}
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
              <ThemeToggleIcon />
              <TicketChip />
-             <UserButton />
-             {isAdmin && (
-               <Link to="/admin" className="text-muted hover:text-primary">
-                 <Settings className="size-5" />
-               </Link>
-             )}
+             <UserButton compact />
           </div>
         </header>
 
         <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
           {children}
+          {isAdmin && (
+            <div className="md:hidden mt-8 mb-16 pt-4 border-t border-line/40 flex items-center justify-between px-2 text-xs text-muted">
+              <span>Overseer Management</span>
+              <Link
+                to="/admin"
+                className={cn(
+                  "flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-lg border transition-colors",
+                  isActive(pathname, "/admin")
+                    ? "bg-primary text-black border-primary"
+                    : "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20"
+                )}
+              >
+                <Settings className="size-3.5" />
+                <span>Open The Overseer</span>
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     </div>

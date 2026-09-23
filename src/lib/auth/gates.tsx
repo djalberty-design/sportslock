@@ -56,7 +56,7 @@ export function SignInButtons() {
   );
 }
 
-export function UserButton() {
+export function UserButton({ compact }: { compact?: boolean } = {}) {
   const user = useCurrentUser();
   const [signingOut, setSigningOut] = useState(false);
   const gateSession = useSyncExternalStore(
@@ -73,16 +73,16 @@ export function UserButton() {
   }
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 shrink-0">
       {user.profileImageUrl ? (
-        <img src={user.profileImageUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+        <img src={user.profileImageUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
       ) : (
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20">
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20 shrink-0">
           {label.charAt(0).toUpperCase()}
         </span>
       )}
-      <span className="text-sm font-medium">{label}</span>
-      {authEnabled && !gateSession && (
+      {!compact && <span className="text-sm font-medium hidden sm:inline max-w-[120px] truncate">{label}</span>}
+      {authEnabled && !gateSession && !compact && (
         <button
           type="button"
           disabled={signingOut}
@@ -90,7 +90,7 @@ export function UserButton() {
             setSigningOut(true);
             void signOut().catch(() => setSigningOut(false));
           }}
-          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline disabled:cursor-wait disabled:no-underline"
+          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline disabled:cursor-wait disabled:no-underline hidden sm:inline"
         >
           {signingOut ? "Signing out…" : "Sign out"}
         </button>

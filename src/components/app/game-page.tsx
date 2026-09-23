@@ -357,10 +357,40 @@ export function GamePage({ eventId }: { eventId: string }) {
     const rawAi = q.aiProb ?? q.fairProb ?? null;
     const probPct = ticketHitPct({ chance: q.chance ?? rawAi, fairProb: q.fairProb ?? rawAi, price: q.hardRockPrice || q.consensusPrice || q.price || q.row?.hardRockPrice }) ?? Math.round((rawAi ?? 0.5) * 100);
     const hasAi = q.aiProb != null;
-    const rawLabel = q.player || q.row?.player ? q.selection.replace(q.player || q.row?.player, "").trim() : q.selection;
-    // Strip stat label suffix (added for AI parsing, not for display)
-    const label = rawLabel.replace(/\s*(passing yards|rushing yards|receiving yards|receptions|passing touchdowns|rushing attempts|anytime touchdown|2\+ touchdowns|points|rebounds|assists|threes made|points \+ rebounds \+ assists|steals|blocks|hits|total bases|home run|rbi|strikeouts|walks|stolen bases|shots on goal|goals|saves|blocked shots|pass yds|rush yds|rec yds|pass tds?|rush att)$/i, "").trim();
     const playerName = q.player || q.row?.player;
+    const mTypeLower = String(q.marketType || q.row?.marketType || "").toLowerCase();
+    const rawSel = String(q.selection || "");
+
+    // Intelligent prop label formatting
+    let label = "";
+    if (mTypeLower.includes("anytime_td") || mTypeLower.includes("touchdown") || /anytime\s*touchdown/i.test(rawSel) || /to score a touchdown/i.test(rawSel)) {
+      label = "Anytime Touchdown";
+    } else if (mTypeLower.includes("2_or_more_td") || /2\+\s*touchdowns/i.test(rawSel)) {
+      label = "2+ Touchdowns";
+    } else if (mTypeLower.includes("first_td") || /first\s*touchdown/i.test(rawSel)) {
+      label = "First Touchdown";
+    } else {
+      let clean = rawSel;
+      if (playerName && clean.toLowerCase().includes(playerName.toLowerCase())) {
+        clean = clean.replace(new RegExp(playerName, "i"), "").trim();
+      }
+      clean = clean.replace(/^(yes|no)\s+/i, "").trim();
+      const readableMarket = PROP_LABEL[mTypeLower]?.replace(/^[^\s]+\s/, "") || mTypeLower.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      
+      if (/^(over|under)\s+\d+(\.\d+)?\s+[a-z]/i.test(clean)) {
+        label = clean.replace(/\b\w/g, c => c.toUpperCase());
+      } else if (/^(over|under)\s+\d+(\.\d+)?$/i.test(clean)) {
+        label = `${clean} ${readableMarket}`;
+      } else if (q.side && q.point != null) {
+        const side = q.side.charAt(0).toUpperCase() + q.side.slice(1).toLowerCase();
+        label = `${side} ${q.point} ${readableMarket}`;
+      } else if (clean && clean.toLowerCase() !== "yes" && clean.toLowerCase() !== "no") {
+        label = clean;
+      } else {
+        label = readableMarket || "Player Prop";
+      }
+    }
+
     const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
     // Use enriched headshot from ESPN roster, fallback to brief map
     const headshotUrl = q.headshot

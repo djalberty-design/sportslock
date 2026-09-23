@@ -61,6 +61,73 @@ const TEAM_ABBR: Record<string, string> = {
   "LA Chargers": "lac", "LA Rams": "lar", "LA Kings": "la",
 };
 
+const SPORT_BY_TEAM: Record<string, "NFL" | "MLB" | "NBA" | "NHL"> = {
+  // NFL
+  "Arizona Cardinals": "NFL", "Atlanta Falcons": "NFL", "Baltimore Ravens": "NFL",
+  "Buffalo Bills": "NFL", "Carolina Panthers": "NFL", "Chicago Bears": "NFL",
+  "Cincinnati Bengals": "NFL", "Cleveland Browns": "NFL", "Dallas Cowboys": "NFL",
+  "Denver Broncos": "NFL", "Detroit Lions": "NFL", "Green Bay Packers": "NFL",
+  "Houston Texans": "NFL", "Indianapolis Colts": "NFL", "Jacksonville Jaguars": "NFL",
+  "Kansas City Chiefs": "NFL", "Las Vegas Raiders": "NFL", "Los Angeles Chargers": "NFL",
+  "Los Angeles Rams": "NFL", "Miami Dolphins": "NFL", "Minnesota Vikings": "NFL",
+  "New England Patriots": "NFL", "New Orleans Saints": "NFL", "New York Giants": "NFL",
+  "New York Jets": "NFL", "Philadelphia Eagles": "NFL", "Pittsburgh Steelers": "NFL",
+  "San Francisco 49ers": "NFL", "Seattle Seahawks": "NFL", "Tampa Bay Buccaneers": "NFL",
+  "Tennessee Titans": "NFL", "Washington Commanders": "NFL", "LA Chargers": "NFL", "LA Rams": "NFL",
+
+  // MLB
+  "Arizona Diamondbacks": "MLB", "Atlanta Braves": "MLB", "Baltimore Orioles": "MLB",
+  "Boston Red Sox": "MLB", "Chicago Cubs": "MLB", "Chicago White Sox": "MLB",
+  "Cincinnati Reds": "MLB", "Cleveland Guardians": "MLB", "Colorado Rockies": "MLB",
+  "Detroit Tigers": "MLB", "Houston Astros": "MLB", "Kansas City Royals": "MLB",
+  "Los Angeles Angels": "MLB", "Los Angeles Dodgers": "MLB", "Miami Marlins": "MLB",
+  "Milwaukee Brewers": "MLB", "Minnesota Twins": "MLB", "New York Mets": "MLB",
+  "New York Yankees": "MLB", "Oakland Athletics": "MLB", "Philadelphia Phillies": "MLB",
+  "Pittsburgh Pirates": "MLB", "San Diego Padres": "MLB", "San Francisco Giants": "MLB",
+  "Seattle Mariners": "MLB", "St. Louis Cardinals": "MLB", "Tampa Bay Rays": "MLB",
+  "Texas Rangers": "MLB", "Toronto Blue Jays": "MLB", "Washington Nationals": "MLB",
+  "LA Angels": "MLB", "LA Dodgers": "MLB",
+
+  // NBA
+  "Atlanta Hawks": "NBA", "Boston Celtics": "NBA", "Brooklyn Nets": "NBA",
+  "Charlotte Hornets": "NBA", "Chicago Bulls": "NBA", "Cleveland Cavaliers": "NBA",
+  "Dallas Mavericks": "NBA", "Denver Nuggets": "NBA", "Detroit Pistons": "NBA",
+  "Golden State Warriors": "NBA", "Houston Rockets": "NBA", "Indiana Pacers": "NBA",
+  "Los Angeles Clippers": "NBA", "Los Angeles Lakers": "NBA", "Memphis Grizzlies": "NBA",
+  "Miami Heat": "NBA", "Milwaukee Bucks": "NBA", "Minnesota Timberwolves": "NBA",
+  "New Orleans Pelicans": "NBA", "New York Knicks": "NBA", "Oklahoma City Thunder": "NBA",
+  "Orlando Magic": "NBA", "Philadelphia 76ers": "NBA", "Phoenix Suns": "NBA",
+  "Portland Trail Blazers": "NBA", "Sacramento Kings": "NBA", "San Antonio Spurs": "NBA",
+  "Toronto Raptors": "NBA", "Utah Jazz": "NBA", "Washington Wizards": "NBA",
+  "LA Clippers": "NBA", "LA Lakers": "NBA",
+
+  // NHL
+  "Anaheim Ducks": "NHL", "Arizona Coyotes": "NHL", "Boston Bruins": "NHL",
+  "Buffalo Sabres": "NHL", "Calgary Flames": "NHL", "Carolina Hurricanes": "NHL",
+  "Chicago Blackhawks": "NHL", "Colorado Avalanche": "NHL", "Columbus Blue Jackets": "NHL",
+  "Dallas Stars": "NHL", "Detroit Red Wings": "NHL", "Edmonton Oilers": "NHL",
+  "Florida Panthers": "NHL", "Los Angeles Kings": "NHL", "Minnesota Wild": "NHL",
+  "Montreal Canadiens": "NHL", "Nashville Predators": "NHL", "New Jersey Devils": "NHL",
+  "New York Islanders": "NHL", "New York Rangers": "NHL", "Ottawa Senators": "NHL",
+  "Philadelphia Flyers": "NHL", "Pittsburgh Penguins": "NHL", "San Jose Sharks": "NHL",
+  "Seattle Kraken": "NHL", "St. Louis Blues": "NHL", "Tampa Bay Lightning": "NHL",
+  "Toronto Maple Leafs": "NHL", "Utah Hockey Club": "NHL", "Vancouver Canucks": "NHL",
+  "Vegas Golden Knights": "NHL", "Washington Capitals": "NHL", "Winnipeg Jets": "NHL",
+  "LA Kings": "NHL",
+};
+
+export function inferSportFromTeam(str?: string | null): string | null {
+  if (!str) return null;
+  const clean = str.trim().replace(/\s*\((spread|ml|moneyline|total|over|under)\)$/i, "").toLowerCase();
+  for (const [team, s] of Object.entries(SPORT_BY_TEAM)) {
+    const tLow = team.toLowerCase();
+    if (clean === tLow || clean.includes(tLow) || tLow.includes(clean)) {
+      return s;
+    }
+  }
+  return null;
+}
+
 export function teamAbbrFromName(fullName: string): string {
   const mapped = TEAM_ABBR[fullName];
   if (mapped) return mapped;
@@ -278,10 +345,13 @@ export function matchSnapshotEvent(snapshot: any, leg: any) {
 }
 
 export function resolveLegTeam(leg: any, quote?: any) {
-  const sport = String(leg?.sport || quote?.sport || "");
+  let sport = String(leg?.sport || quote?.sport || "").trim();
   const rawHome = String(leg?.home || quote?.home || "");
   const rawAway = String(leg?.away || quote?.away || "");
   const sel = String(leg?.selection || "");
+  if (!sport || sport === "SYS") {
+    sport = inferSportFromTeam(sel) || inferSportFromTeam(rawHome) || inferSportFromTeam(rawAway) || "";
+  }
   const homeName = officialTeamName(sport, rawHome || quote?.home, sel);
   const awayName = officialTeamName(sport, rawAway || quote?.away, "");
   const homeAbbr = TEAM_ABBR[homeName] || quote?.homeAbbr || (homeName ? teamAbbrFromName(homeName) : undefined);

@@ -354,5 +354,40 @@ This file documents every change made to the codebase in sequential order, detai
     - In `sportslock-parlay-card.tsx`, added responsive dark/light utility classes (`text-amber-800 dark:text-amber-300`, `text-amber-900 dark:text-amber-200`, `border-amber-600/40 dark:border-amber-400/35`) ensuring all text and callouts remain sharp and readable on both desktop and mobile in both modes.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
 
+---
+
+## Change 23: Matchup Prop Labels, Overseer Text Wrapping, My Action Logos, Single Plays Times, & Mobile Overseer Access
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/components/app/game-page.tsx`
+  - `src/routes/admin/dashboard.tsx`
+  - `src/lib/market/logos.ts`
+  - `src/components/app/ticket-leg-avatar.tsx`
+  - `src/components/app/desk-page.tsx`
+  - `src/components/app/ai-top-singles.tsx`
+  - `src/components/app/shell.tsx`
+  - `src/lib/use-access.ts`
+  - `src/lib/auth/gates.tsx`
+* **Rationale**:
+  - Matchup Player Props "Yes" bug fix (`game-page.tsx`):
+    - Replaced buggy regex in the Matchups tab game drawer that previously stripped prop suffixes and left only bare `"Yes"`.
+    - Implemented intelligent prop formatting distinguishing touchdown props (`Anytime Touchdown`, `2+ Touchdowns`, `First Touchdown`), yardage/stats lines (`Over/Under <Point> <Stat>`), and stripping redundant athlete name or "Yes"/"No" prefixes while maintaining full prop names.
+  - Overseer Dynamic Blend Weights Notes Truncation Fix (`dashboard.tsx`):
+    - Removed `truncate` class on sport model weight notes (`w.notes`) in the "Live Dynamic Blend Weights by Sport" section.
+    - Added `leading-snug break-words` so detailed model explanations and rationale wrap properly and can be fully read without cutoff.
+  - My Action Team Logos & Player Headshots Fix (`logos.ts`, `ticket-leg-avatar.tsx`, `desk-page.tsx`):
+    - Added `SPORT_BY_TEAM` mapping and `inferSportFromTeam()` in `logos.ts` to automatically deduce league (MLB, NFL, NBA, NHL) even when stored tickets or legs omit the `sport` attribute.
+    - Updated `resolveLegTeam()` to fall back to `inferSportFromTeam()`, allowing ESPN CDN team logos to load instead of falling back to text monograms (`NYY`, `PHI`, `LAR`).
+    - Upgraded `TicketLegAvatar` with regex parsing to detect player props from raw selection strings (e.g. `Kyren Williams Yes anytime touchdown`), correctly resolving player headshots instead of 3-letter team monograms (`TOU`).
+    - Cleaned up dummy `"Away @ Home"` labels on straight bets in `desk-page.tsx`.
+  - Top AI Single Bets Time & Date Display (`ai-top-singles.tsx`):
+    - Added game start time and date callout (`Clock` icon + `dateFormatted · timeFormatted`) under the pick selection on every Top AI Single Bet card, matching the timestamp styling used across parlay cards and matchups.
+  - Mobile Overseer Button Visibility & Access (`shell.tsx`, `use-access.ts`, `gates.tsx`):
+    - In `shell.tsx`, added a prominent, high-contrast `[⚙️ Overseer]` pill button in the sticky mobile header directly beside the `SportsLock` logo, ensuring it remains visible and pinned at the top of mobile screens.
+    - Added a dedicated "Open The Overseer" card at the bottom of mobile pages for quick thumb access.
+    - In `gates.tsx`, added compact mode support for `UserButton` to prevent the user email and sign-out button from overflowing the mobile top bar.
+    - In `use-access.ts`, granted instant admin detection for the owner admin email without waiting on async query latency, preventing the Overseer button from disappearing during page transitions.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
 
 

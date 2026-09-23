@@ -15,6 +15,7 @@ import {
   Activity,
   ArrowUpRight,
   ShieldCheck,
+  Clock,
 } from "lucide-react";
 
 interface AiTopSinglesProps {
@@ -313,6 +314,16 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
               ? `${r.away} @ ${r.home}`
               : r.sport;
 
+          const dateObj = r.start ? new Date(r.start) : null;
+          const isValidDate = Boolean(dateObj && !isNaN(dateObj.getTime()));
+          const dateFormatted = isValidDate
+            ? dateObj!.toLocaleDateString([], { month: "short", day: "numeric" })
+            : null;
+          const timeFormatted = isValidDate
+            ? dateObj!.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            : null;
+          const startFormatted = isValidDate ? `${dateFormatted} · ${timeFormatted}` : null;
+
           const handleToggleSlip = () => {
             if (inSlip) {
               removeLeg(r.selection, r.marketType);
@@ -360,6 +371,12 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                     <div className="text-sm font-bold text-ink leading-snug line-clamp-2 min-h-[38px] flex items-center">
                       {r.selection}
                     </div>
+                    {startFormatted ? (
+                      <div className="text-[10px] text-muted font-mono flex items-center gap-1 mt-1">
+                        <Clock className="size-3 text-muted/70 shrink-0" />
+                        <span>{startFormatted}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 

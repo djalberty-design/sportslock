@@ -23,13 +23,26 @@ export function TicketLegAvatar({
   };
   size?: "sm" | "md";
 }) {
-  const isProp = Boolean(
+  let playerName = leg?.player;
+  const rawSel = String(leg?.selection || "");
+  const isPropCandidate = Boolean(
     leg?.isProp ||
-    leg?.player ||
+    playerName ||
     leg?.marketType === "prop" ||
-    String(leg?.marketType || "").startsWith("player_")
+    String(leg?.marketType || "").startsWith("player_") ||
+    /anytime\s*touchdown/i.test(rawSel) ||
+    /to score a touchdown/i.test(rawSel) ||
+    /\b(passing|rushing|receiving|receptions|strikeouts|hits|points|rebounds|assists)\b/i.test(rawSel)
   );
-  const playerName = leg?.player;
+
+  if (!playerName && isPropCandidate && rawSel) {
+    const propMatch = rawSel.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\.'-]+)+)\s+(?:yes|no|over|under|anytime|\d)/i);
+    if (propMatch) {
+      playerName = propMatch[1];
+    }
+  }
+
+  const isProp = Boolean(isPropCandidate || playerName);
   const [headshot, setHeadshot] = useState<string | null>(
     leg?.headshot || (playerName ? resolvePlayerHeadshotSync(playerName) : null)
   );

@@ -384,33 +384,48 @@ function HardRockTicketCard({
 
             {expandedLegs && (
               <div className="divide-y divide-line/40 rounded-lg border border-line/50 bg-obsidian/40 overflow-hidden">
-                {legs.map((leg, idx) => (
-                  <div key={idx} className="p-2.5 flex items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className="text-[10px] bg-primary/20 text-primary font-bold px-1 rounded shrink-0">
-                        {idx + 1}
-                      </span>
-                      <TicketLegAvatar leg={leg} size="sm" />
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="font-bold text-ink truncate">{leg.selection}</div>
-                        <div className="text-[11px] text-muted truncate">
-                          {leg.marketType?.toUpperCase()} · {leg.away || "Away"} @ {leg.home || "Home"}
-                          {leg.finalScore ? ` (${leg.finalScore})` : ""}
+                {legs.map((leg, idx) => {
+                  const isPropLeg = Boolean(
+                    leg.isProp ||
+                    leg.player ||
+                    /anytime\s*touchdown/i.test(leg.selection || "") ||
+                    /\b(passing|rushing|receiving|receptions|strikeouts|hits)\b/i.test(leg.selection || "")
+                  );
+                  const hasRealMatchup = leg.away && leg.home && leg.away !== "Away" && leg.home !== "Home";
+                  const matchupSub = isPropLeg
+                    ? (leg.sport ? `Player Prop · ${leg.sport}` : "Player Prop")
+                    : hasRealMatchup
+                      ? `${leg.away} @ ${leg.home}`
+                      : (leg.sport || "Game Line");
+
+                  return (
+                    <div key={idx} className="p-2.5 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="text-[10px] bg-primary/20 text-primary font-bold px-1 rounded shrink-0">
+                          {idx + 1}
+                        </span>
+                        <TicketLegAvatar leg={leg} size="sm" />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="font-bold text-ink truncate">{leg.selection}</div>
+                          <div className="text-[11px] text-muted truncate">
+                            {leg.marketType?.toUpperCase() || "LINE"} · {matchupSub}
+                            {leg.finalScore ? ` (${leg.finalScore})` : ""}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono font-bold text-ink">
+                          {leg.price ? (leg.price > 0 ? `+${leg.price}` : leg.price) : "—"}
+                        </span>
+                        {leg.status === "win" ? (
+                          <CheckCircle2 className="size-3.5 text-emerald-400" />
+                        ) : leg.status === "loss" ? (
+                          <XCircle className="size-3.5 text-red-400" />
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono font-bold text-ink">
-                        {leg.price ? (leg.price > 0 ? `+${leg.price}` : leg.price) : "—"}
-                      </span>
-                      {leg.status === "win" ? (
-                        <CheckCircle2 className="size-3.5 text-emerald-400" />
-                      ) : leg.status === "loss" ? (
-                        <XCircle className="size-3.5 text-red-400" />
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

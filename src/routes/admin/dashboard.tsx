@@ -498,7 +498,7 @@ function Dashboard() {
                 </div>
 
                 {w.notes && (
-                  <p className="text-[10px] text-muted italic border-t border-line/30 pt-1.5 truncate" title={w.notes}>
+                  <p className="text-[10px] text-muted italic border-t border-line/30 pt-1.5 leading-snug break-words">
                     {w.notes}
                   </p>
                 )}
