@@ -154,8 +154,8 @@ function tagFor(ev: number, hold: number, row: Omit<ScanRow, "tag" | "action" | 
   if (row.isProp && isCollegeSport(row.sport)) return "illegal_fl";
   if (row.isProp && !isKnownMarket(row.selection, row.marketType)) return "unknown_market";
   if (row.inPlay) return "in_play";
-  if (Number.isFinite(ev) && ev >= dynamicFloor && ev <= 0.15 && row.hardRockPrice != null) return "fair_or_better";
-  if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev <= 0.15 && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
+  if (Number.isFinite(ev) && ev >= dynamicFloor && ev <= 0.50 && (row.hardRockPrice != null || row.consensusPrice != null || row.price != null)) return "fair_or_better";
+  if (Number.isFinite(ev) && ev >= DEFAULTS.closeEnoughEv && ev <= 0.50 && ev < 0 && isMainMarket(row.marketType) && (isPlayCore(row.sport) || isCollegeSport(row.sport))) {
     return "close_enough";
   }
   if (Number.isFinite(ev) && ev < DEFAULTS.closeEnoughEv) return "juiced";
@@ -529,9 +529,13 @@ export function evaluateParlay(
   // cross-game independence, and fallback haircut in one place (BIBLE §sgp rule).
   const combinedFair = Math.min(0.97, combineParlayFair(legs).combinedFair);
   const juice = typicalParlayJuice(legs.length);
+  const decimalPayout = product(legs.map((l) => americanToDecimal(l.price)));
   const ev =
     combinedEv ??
     (() => {
+      if (Number.isFinite(decimalPayout) && decimalPayout > 1) {
+        return combinedFair * decimalPayout - 1;
+      }
       const fairDec = 1 / Math.max(0.02, combinedFair);
       return fairDec * (1 - juice) * combinedFair - 1;
     })();
@@ -548,7 +552,6 @@ export function evaluateParlay(
     home: l.home,
     away: l.away,
   }));
-  const decimalPayout = product(legs.map((l) => americanToDecimal(l.price)));
   const sports = [...new Set(legs.map((l) => l.sport))];
   const corr = correlationOf(legs, sameGame);
   const shownPct = formatChancePct(shownCombinedChance(combinedFair, decimalPayout, legs.length, sameGame)) ?? `${Math.round(combinedFair * 100)}%`;

@@ -765,8 +765,8 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
     } else if (isMLB && q.inPlay) {
       // Unconditionally allow any live MLB game
     } else {
-      // Allow games starting within 24 hours, or games that are currently in-play, or recently finished (negative msUntil)
-      if (!q.inPlay && msUntil > 24 * 3600_000) continue;
+      // Allow games starting within 48 hours, or games that are currently in-play, or recently finished (negative msUntil)
+      if (!q.inPlay && msUntil > 48 * 3600_000) continue;
       if (!q.inPlay && msUntil < -36 * 3600_000) continue;
     }
 

@@ -15,20 +15,24 @@ export const DEFAULT_TUNING: TuningConfig = {
 };
 
 export async function getTuning(): Promise<TuningConfig> {
-  const sql = await getSql();
-  
-  // Stripped illegal cache-busting parameters. Pure standard SELECT.
-  const rows = await sql`SELECT min_edge, kelly, max_legs, feeds FROM desk_tuning_raw WHERE id = 1`;
-  
-  if (!rows || rows.length === 0) return DEFAULT_TUNING;
-  
-  const row = rows[0];
-  return {
-    minEdge: Number(row.min_edge),
-    kellyMultiplier: Number(row.kelly),
-    maxLegs: Number(row.max_legs),
-    activeFeeds: typeof row.feeds === "string" ? JSON.parse(row.feeds) : (Array.isArray(row.feeds) ? row.feeds : ["espn", "kalshi", "polymarket"])
-  };
+  try {
+    const sql = await getSql();
+    
+    // Stripped illegal cache-busting parameters. Pure standard SELECT.
+    const rows = await sql`SELECT min_edge, kelly, max_legs, feeds FROM desk_tuning_raw WHERE id = 1`;
+    
+    if (!rows || rows.length === 0) return DEFAULT_TUNING;
+    
+    const row = rows[0];
+    return {
+      minEdge: Number(row.min_edge) || DEFAULT_TUNING.minEdge,
+      kellyMultiplier: Number(row.kelly) || DEFAULT_TUNING.kellyMultiplier,
+      maxLegs: Number(row.max_legs) || DEFAULT_TUNING.maxLegs,
+      activeFeeds: typeof row.feeds === "string" ? JSON.parse(row.feeds) : (Array.isArray(row.feeds) ? row.feeds : ["espn", "kalshi", "polymarket"])
+    };
+  } catch {
+    return DEFAULT_TUNING;
+  }
 }
 
 export async function updateTuning(config: TuningConfig): Promise<TuningConfig> {

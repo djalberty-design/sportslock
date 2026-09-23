@@ -106,7 +106,16 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
     if (recipe === "props_hybrid") {
       const propLegs = candidatePool.filter((r) => r.isProp);
       const gameLegs = candidatePool.filter((r) => !r.isProp && ["ml", "spread", "total"].includes(r.marketType));
-      eligible = [...propLegs.slice(0, 10), ...gameLegs.slice(0, 10)];
+      if (propLegs.length > 0 && gameLegs.length > 0) {
+        eligible = [...propLegs.slice(0, 10), ...gameLegs.slice(0, 10)];
+      } else {
+        eligible = candidatePool;
+      }
+    }
+
+    // Fallback if specific recipe pool is smaller than required legs
+    if (eligible.length < legCount) {
+      eligible = candidatePool;
     }
 
     // Sort by individual EV & value
@@ -141,8 +150,8 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       // Must have unique events
       if (new Set(combo.map((l) => l.eventId)).size !== legCount) continue;
 
-      // For props_hybrid: must have at least 1 prop and 1 game line
-      if (recipe === "props_hybrid") {
+      // For props_hybrid: require at least 1 prop and 1 game line when both exist in seeds
+      if (recipe === "props_hybrid" && seeds.some(l => l.isProp) && seeds.some(l => !l.isProp)) {
         const hasProp = combo.some((l) => l.isProp);
         const hasGame = combo.some((l) => !l.isProp);
         if (!hasProp || !hasGame) continue;
@@ -175,6 +184,25 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       if (score > bestScore) {
         bestScore = score;
         bestCand = cand;
+      }
+    }
+
+    // Direct fallback with top unique-event seeds if all combos were strictly pruned
+    if (!bestCand && seeds.length >= legCount) {
+      const uniqueSeeds: ScanRow[] = [];
+      const seenEvents = new Set<string>();
+      for (const s of seeds) {
+        if (!seenEvents.has(s.eventId)) {
+          seenEvents.add(s.eventId);
+          uniqueSeeds.push(s);
+          if (uniqueSeeds.length === legCount) break;
+        }
+      }
+      if (uniqueSeeds.length === legCount) {
+        const evaluated = evaluateParlay(uniqueSeeds, undefined, "catalog");
+        if (!("ok" in evaluated && evaluated.ok === false)) {
+          bestCand = evaluated as ParlayCandidate;
+        }
       }
     }
 

@@ -144,7 +144,7 @@ function TopSingleAvatar({ row }: { row: ScanRow }) {
 export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
   const { legs: slipLegs, addLeg, removeLeg } = useParlaySlip();
 
-  // 1. Best Moneyline (highest EV)
+  // 1. Best Moneyline (highest EV, fallback to highest win prob)
   const bestMl = React.useMemo(() => {
     const mls = rows.filter(
       (r) =>
@@ -155,10 +155,16 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
         Number.isFinite(r.fairProb) &&
         r.fairProb >= 0.40,
     );
-    return mls.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0] ?? null;
+    if (mls.length > 0) {
+      return mls.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0];
+    }
+    const anyMl = rows.filter(
+      (r) => r.marketType === "ml" && !r.isProp && !r.inPlay && r.tag !== "illegal_fl" && Number.isFinite(r.fairProb)
+    );
+    return anyMl.sort((a, b) => (b.fairProb ?? 0) - (a.fairProb ?? 0))[0] ?? null;
   }, [rows]);
 
-  // 2. Best Spread (highest EV)
+  // 2. Best Spread (highest EV, fallback to highest win prob)
   const bestSpread = React.useMemo(() => {
     const spreads = rows.filter(
       (r) =>
@@ -169,7 +175,13 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
         Number.isFinite(r.fairProb) &&
         r.fairProb >= 0.45,
     );
-    return spreads.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0] ?? null;
+    if (spreads.length > 0) {
+      return spreads.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0];
+    }
+    const anySpread = rows.filter(
+      (r) => r.marketType === "spread" && !r.isProp && !r.inPlay && r.tag !== "illegal_fl" && Number.isFinite(r.fairProb)
+    );
+    return anySpread.sort((a, b) => (b.fairProb ?? 0) - (a.fairProb ?? 0))[0] ?? null;
   }, [rows]);
 
   // 3. Best Total (Over/Under)
@@ -183,7 +195,13 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
         Number.isFinite(r.fairProb) &&
         r.fairProb >= 0.45,
     );
-    return totals.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0] ?? null;
+    if (totals.length > 0) {
+      return totals.sort((a, b) => (b.evPct ?? -99) - (a.evPct ?? -99))[0];
+    }
+    const anyTotal = rows.filter(
+      (r) => r.marketType === "total" && !r.isProp && !r.inPlay && r.tag !== "illegal_fl" && Number.isFinite(r.fairProb)
+    );
+    return anyTotal.sort((a, b) => (b.fairProb ?? 0) - (a.fairProb ?? 0))[0] ?? null;
   }, [rows]);
 
   // 4. Best Player Prop
@@ -203,9 +221,9 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
     // Fallback to active cached props
     if (cachedProps && cachedProps.length > 0) {
       const sorted = [...cachedProps].sort((a, b) => {
-        const ea = Number(a.aiEdge || a.edge || 0);
-        const eb = Number(b.aiEdge || b.edge || 0);
-        return eb - ea;
+        const ea = Number(a.aiEdge ?? a.edge ?? 0);
+        const eb = Number(b.aiEdge ?? b.edge ?? 0);
+        return eb - ea || Number(b.aiProb ?? b.fairProb ?? 0) - Number(a.aiProb ?? a.fairProb ?? 0);
       });
       const top = sorted[0];
       if (top) {
@@ -219,10 +237,15 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
           side: top.side || "",
           selection: top.selection || `${top.player} Prop`,
           price: top.price || -110,
-          fairProb: top.aiProb ?? top.fairProb ?? 0.55,
-          evPct: top.aiEdge ?? top.edge ?? 0.05,
+          fairProb: Number(top.aiProb ?? top.fairProb ?? 0.55),
+          evPct: Number(top.aiEdge ?? top.edge ?? 0.05),
           isProp: true,
           player: top.player,
+          headshot: top.headshot || (top.row as any)?.headshot,
+          homeLogo: top.homeLogo || (top.row as any)?.homeLogo,
+          awayLogo: top.awayLogo || (top.row as any)?.awayLogo,
+          homeAbbr: top.homeAbbr || (top.row as any)?.homeAbbr,
+          awayAbbr: top.awayAbbr || (top.row as any)?.awayAbbr,
           tag: "fair_or_better",
           action: "enter_ticket",
           conviction: "high",

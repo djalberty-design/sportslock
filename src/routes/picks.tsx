@@ -292,14 +292,14 @@ function TheLab() {
 
     const isLive = (b: any) => {
       if (b.inPlay) return true;
-      if (b.eventId && liveEventIds.has(b.eventId)) return true;
-      const mKey = b.home && b.away ? `${b.away.toLowerCase()}|${b.home.toLowerCase()}` : "";
-      if (mKey && liveMatchups.has(mKey)) return true;
-      const startStr = b.start || eventStartMap.get(b.eventId || "") || (mKey ? matchupStartMap.get(mKey) : "");
+      const startStr = b.start || (b.eventId ? eventStartMap.get(b.eventId) : undefined);
       if (startStr) {
         const start = new Date(startStr).getTime();
-        if (!isNaN(start) && start < now) return true;
+        if (!isNaN(start)) {
+          return start < now;
+        }
       }
+      if (b.eventId && liveEventIds.has(b.eventId)) return true;
       return false;
     };
 

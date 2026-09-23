@@ -415,5 +415,31 @@ This file documents every change made to the codebase in sequential order, detai
     - Added visual `🛡️ CIRCUIT BREAKER` amber pulse badge state in the Live Dynamic Blend Weights gauges so admins are instantly alerted if any sport is in defensive fallback mode.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
 
+---
 
-
+## Change 25: Prediction Engine Resilience, Consensus Pricing Gate & The Lab Multi-Model Restoration
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/tuning-api.ts`
+  - `src/lib/market/engine.ts`
+  - `src/routes/index.tsx`
+  - `src/components/app/ai-top-singles.tsx`
+  - `src/components/app/ai-custom-architect.tsx`
+  - `src/lib/market/live-board.ts`
+  - `src/routes/picks.tsx`
+* **Rationale**:
+  - Web Worker & Client-Safe Tuning Fallback (`tuning-api.ts`):
+    - Wrapped `getTuning()` in a safe try/catch returning `DEFAULT_TUNING` on database errors or non-DB browser/Web Worker contexts, preventing uncaught rejections from aborting the ranker and leaving `scan` / `picks` null.
+  - Market Consensus Support & EV Cap (`engine.ts`):
+    - Updated `tagFor` to accept valid market consensus prices (`row.consensusPrice ?? row.price`) when Hard Rock Bet odds are pending, preventing valid pregame lines from being automatically tagged `juiced` with `action: "stand_down"`.
+    - Raised the EV sanity cap from `0.15` to `0.50` so legitimate high-value plus-money plays are not disqualified.
+    - Corrected `evaluateParlay` EV formula to `ev = combinedEv ?? (combinedFair * decimalPayout - 1)`, replacing an erroneous `-juice` identity that prevented custom parlays from registering positive expected value.
+  - Enriched Props & AI Top Singles Connection (`index.tsx`, `ai-top-singles.tsx`):
+    - Fetched `getAllEnrichedPropsFn()` on mount in `index.tsx` and passed `cachedProps` to `<AiTopSingles />`, ensuring the Best Player Prop card is always populated with headshots and active lines.
+    - Added resilient high-probability best-value fallbacks in `AiTopSingles` for Moneyline, Spread, and Total so users always see the top-ranked plays.
+  - Parlay Architect Combo Resilience (`ai-custom-architect.tsx`):
+    - Enhanced combination search to fallback gracefully to top candidate pool legs if specific sub-recipe pools are narrow or between slates, guaranteeing users can construct 2, 3, and 4-leg parlays anytime.
+  - Multi-Day Horizon & Live Filter Precision (`live-board.ts`, `picks.tsx`):
+    - Extended upcoming games window in `live-board.ts` from 24h to 48h to prevent tomorrow's slate from dropping after today's day games commence.
+    - Refined `isLive` in `picks.tsx` so future kickoff times are never flagged as live due to team name matches.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
