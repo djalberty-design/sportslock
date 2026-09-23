@@ -40,7 +40,7 @@ function SportsLockCommandCenter() {
   const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-1 sm:pt-0">
+    <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-4 sm:pt-0">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-2.5 sm:gap-3">
           <Sparkles className="size-7 sm:size-8 text-primary shrink-0" />

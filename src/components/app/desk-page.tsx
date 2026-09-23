@@ -85,7 +85,7 @@ export function DeskPage() {
     tab === "open" ? open : tab === "settled" ? settled : paperTickets.filter((t) => t.status !== "dismissed");
 
   return (
-    <div className="space-y-6 pt-1 sm:pt-0">
+    <div className="space-y-6 pt-4 sm:pt-0">
       <header className="max-w-2xl">
         <p className="text-sm text-emerald-500 font-semibold flex items-center gap-1.5">
           <Zap className="size-4" /> 100% AUTOMATIC BET TRACKING

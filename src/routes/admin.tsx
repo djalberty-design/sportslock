@@ -40,7 +40,7 @@ function AdminOverseer() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto pt-3 sm:pt-0">
       <div className="flex flex-col gap-2 border-b border-line pb-6">
         <h1 className="text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
           <ShieldAlert className="size-8 text-primary" />

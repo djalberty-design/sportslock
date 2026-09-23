@@ -498,7 +498,7 @@ function TheLab() {
   const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
 
   return (
-    <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500 pt-1 sm:pt-0">
+    <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500 pt-4 sm:pt-0">
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-2">

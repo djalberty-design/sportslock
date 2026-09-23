@@ -78,8 +78,8 @@ export function deskScore(chance: number, price: number, lean?: TapeLean | null)
   
   let s = (Math.pow(chance, 1.5) * Math.sqrt(pay) * 0.45) + (Math.max(ev, -0.05) * 0.35) + (kelly * 0.20);
   
-  if (lean === "sharp") s += 0.06;
-  else if (lean === "public") s -= 0.035;
+  if (lean === "sharp") s += 0.025;
+  else if (lean === "public") s -= 0.02;
   
   return s;
 }
