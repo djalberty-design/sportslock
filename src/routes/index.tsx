@@ -40,13 +40,13 @@ function SportsLockCommandCenter() {
   const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-1 sm:pt-0">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          <Sparkles className="size-8 text-primary" />
-          SportsLock AI Feed
+        <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-2.5 sm:gap-3">
+          <Sparkles className="size-7 sm:size-8 text-primary shrink-0" />
+          <span>SportsLock AI Feed</span>
         </h1>
-        <p className="text-muted text-sm">Top value picks ranked by probability, payout, and edge. Gold is the best bet on the board. Research, not a lock.</p>
+        <p className="text-muted text-xs sm:text-sm">Top value picks ranked by probability, payout, and edge. Gold is the best bet on the board. Research, not a lock.</p>
       </div>
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
@@ -73,9 +73,9 @@ function SportsLockCommandCenter() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-display font-bold text-ink tracking-tight flex items-center gap-1.5">
-                    <span className="text-amber-500 dark:text-amber-400">★</span> Gold Ticket
+                    <span className="text-amber-400">★</span> Gold Ticket
                   </h2>
-                  <span className="text-[10px] font-mono uppercase bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-600/30 dark:border-amber-400/30 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] font-mono uppercase bg-amber-400/15 text-amber-900 dark:text-amber-300 border border-amber-400/40 px-2.5 py-0.5 rounded-full font-bold">
                     Highest Quant Standard
                   </span>
                 </div>
@@ -85,8 +85,8 @@ function SportsLockCommandCenter() {
               </div>
             </div>
             {gold.length === 0 ? (
-              <div className="border border-dashed border-amber-600/30 dark:border-amber-400/20 bg-amber-500/[0.04] rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
+              <div className="border border-dashed border-amber-400/30 bg-amber-400/[0.05] rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-bold text-sm">
                   <span className="text-base">🛡️</span> Why is there no Gold Ticket on this slate?
                 </div>
                 <p className="text-xs text-muted leading-relaxed">

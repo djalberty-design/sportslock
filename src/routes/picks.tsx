@@ -498,7 +498,7 @@ function TheLab() {
   const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
 
   return (
-    <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500">
+    <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500 pt-1 sm:pt-0">
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -537,7 +537,7 @@ function TheLab() {
       {!loading && allBets.length > 0 && (
         <div className="flex flex-col gap-3 pb-24">
           {/* Filter bar */}
-          <div className="flex flex-col gap-2 sticky top-14 sm:top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
+          <div className="flex flex-col gap-2 sticky top-[calc(5.25rem+env(safe-area-inset-top,0px))] md:top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
             {/* Row 1: Bet type tabs */}
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {TAB_LABELS.map(({ key, label }) => (

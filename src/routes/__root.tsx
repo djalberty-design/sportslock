@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Outlet, Scripts, ScrollRestoration, createRootRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -70,6 +70,7 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body className="bg-paper text-ink">
+        <ScrollRestoration />
         <PreviewHostBridge />
         <ThemeSync />
         <AuthProvider>

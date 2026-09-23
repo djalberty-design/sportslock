@@ -239,12 +239,12 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
         <div className="text-ink font-display font-bold text-base mb-3 flex items-center gap-2 flex-wrap">
           {legs.length}-Leg Parlay
           {isGold ? (
-            <span className="text-amber-900 dark:text-amber-200 text-[10px] font-mono uppercase tracking-wider bg-amber-500/20 dark:bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-600/30 dark:border-amber-400/30 font-bold">Gold ticket</span>
+            <span className="text-amber-900 dark:text-amber-300 text-[10px] font-mono uppercase tracking-wider bg-amber-400/20 dark:bg-amber-400/15 px-2 py-0.5 rounded border border-amber-400/40 font-bold">Gold ticket</span>
           ) : (
             <span className="text-muted text-[10px] font-mono uppercase tracking-wider bg-obsidian px-1.5 py-0.5 rounded border border-line">Catalog</span>
           )}
           <span className="text-muted text-[10px] font-mono uppercase tracking-wider bg-obsidian px-1.5 py-0.5 rounded border border-line">{mix.label}</span>
-          <span className={cn("text-xs font-mono px-1.5 py-0.5 rounded border font-bold", isGold ? "text-amber-900 dark:text-amber-200 bg-amber-500/15 dark:bg-amber-500/10 border-amber-600/30 dark:border-amber-400/20" : "text-primary bg-primary/10 border-primary/20")}>
+          <span className={cn("text-xs font-mono px-1.5 py-0.5 rounded border font-bold", isGold ? "text-amber-900 dark:text-amber-300 bg-amber-400/15 dark:bg-amber-400/10 border-amber-400/30" : "text-primary bg-primary/10 border-primary/20")}>
             +{Math.round(combinedEv * 100)}% EDGE
           </span>
         </div>

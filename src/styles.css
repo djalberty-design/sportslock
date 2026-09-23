@@ -93,6 +93,8 @@ html.light {
   --color-background: #fafafa;
   --color-foreground: #18181b;
   --color-border: #e4e4e7;
+  --color-down: #b91c1c;
+  --color-crimson: #dc2626;
 }
 html.light body,
 html.light #app {
@@ -111,12 +113,35 @@ html.light .text-amber-400 {
 }
 html.light .bg-amber-500\/10,
 html.light .bg-amber-500\/15,
-html.light .bg-amber-500\/20 {
+html.light .bg-amber-500\/20,
+html.light .bg-amber-400\/10,
+html.light .bg-amber-400\/15 {
   background-color: rgba(217, 119, 6, 0.14) !important;
 }
 html.light .border-amber-400\/20,
 html.light .border-amber-400\/30,
 html.light .border-amber-400\/35,
+html.light .border-amber-400\/40,
 html.light .border-amber-500\/30 {
   border-color: rgba(180, 83, 9, 0.35) !important;
+}
+
+/* Light mode high-contrast overrides for losses and red callouts */
+html.light .text-red-400,
+html.light .text-rose-400 {
+  color: #b91c1c !important; /* Deep red-700 for crisp WCAG AAA legibility */
+}
+html.light .text-red-500,
+html.light .text-rose-500 {
+  color: #991b1b !important; /* Deep red-800 */
+}
+html.light .bg-red-950\/40,
+html.light .bg-red-950\/50,
+html.light .bg-red-950\/60 {
+  background-color: #fee2e2 !important; /* Clean light red pill */
+}
+html.light .border-red-500\/20,
+html.light .border-red-500\/30,
+html.light .border-red-500\/40 {
+  border-color: #fca5a5 !important;
 }

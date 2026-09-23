@@ -275,8 +275,8 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
     {
       category: "TOTAL",
       categoryLabel: "Best Over/Under",
-      badgeColor: "text-amber-400",
-      badgeBg: "bg-amber-500/10 border-amber-500/30",
+      badgeColor: "text-amber-400 dark:text-amber-300 font-bold",
+      badgeBg: "bg-amber-400/15 border-amber-400/30",
       row: bestTotal,
     },
     {
@@ -428,7 +428,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                 </div>
 
                 {/* Quant Factor Attribution Waterfall */}
-                <div className="mb-3 space-y-1">
+                <div className="mb-3 space-y-1 w-full max-w-full overflow-hidden">
                   <div className="flex items-center justify-between text-[9px] uppercase font-bold tracking-wider text-muted px-0.5">
                     <span>Quant Factor Decomposition</span>
                     <span className="text-[8px] font-mono text-primary font-normal">Base &rarr; Sim &rarr; Edges</span>

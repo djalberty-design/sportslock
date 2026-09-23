@@ -46,46 +46,50 @@ export function QuantFactorWaterfall({ waterfall, compact = false }: QuantFactor
       {/* Header Bar */}
       <div
         className={cn(
-          "flex items-center justify-between gap-2 select-none",
+          "flex items-center justify-between gap-2 select-none w-full min-w-0",
           compact && "cursor-pointer"
         )}
         onClick={() => compact && setExpanded((prev) => !prev)}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="size-6 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
             <Layers className="size-3.5 text-primary" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-ink">Quant Factor Waterfall</span>
-              <span className="text-[10px] font-mono uppercase bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
-                Institutional Alpha
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-bold text-ink leading-tight">
+                {compact ? "Alpha Waterfall" : "Quant Factor Waterfall"}
               </span>
+              {!compact && (
+                <span className="text-[10px] font-mono uppercase bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
+                  Institutional Alpha
+                </span>
+              )}
             </div>
-            <p className="text-[10px] text-muted">Orthogonal decomposition of model edge & win probability</p>
+            {!compact && (
+              <p className="text-[10px] text-muted">Orthogonal decomposition of model edge & win probability</p>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right">
-            <span
-              className={cn(
-                "text-xs font-mono font-bold px-2 py-0.5 rounded border",
-                isPositive
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                  : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-              )}
-            >
-              {isPositive ? `+${edgeBp} bp` : `${edgeBp} bp`} ({(edgeBp / 100).toFixed(1)}% EV)
-            </span>
-          </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className={cn(
+              "text-[11px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap",
+              edgeBp > 0
+                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                : edgeBp < 0
+                  ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                  : "bg-wash text-muted border-line"
+            )}
+          >
+            {isPositive ? `+${edgeBp} bp` : `${edgeBp} bp`}
+            {!compact && ` (${(edgeBp / 100).toFixed(1)}% EV)`}
+          </span>
           {compact && (
-            <button
-              type="button"
-              className="size-6 rounded flex items-center justify-center hover:bg-line text-muted"
-            >
+            <div className="size-5 rounded flex items-center justify-center hover:bg-line text-muted">
               {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-            </button>
+            </div>
           )}
         </div>
       </div>
@@ -112,35 +116,35 @@ export function QuantFactorWaterfall({ waterfall, compact = false }: QuantFactor
               return (
                 <div
                   key={i}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded-lg bg-surface/50 border border-line/40 text-xs hover:border-line transition-colors"
+                  className="flex items-start justify-between gap-2 p-2 rounded-lg bg-surface/50 border border-line/40 text-xs hover:border-line transition-colors"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={cn("size-5 rounded flex items-center justify-center shrink-0 border", styling.bg, styling.border, styling.text)}>
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <span className={cn("size-5 rounded flex items-center justify-center shrink-0 border mt-0.5", styling.bg, styling.border, styling.text)}>
                       <Icon className="size-3" />
                     </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-ink text-[11px] truncate">{f.name}</span>
-                        <span className="text-[9px] font-mono text-muted/80">({f.weightPct}% blend)</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        <span className="font-semibold text-ink text-[11px] leading-tight">{f.name}</span>
+                        <span className="text-[9px] font-mono text-muted/80 shrink-0">({f.weightPct}% blend)</span>
                       </div>
-                      <p className="text-[10px] text-muted truncate">{f.detail}</p>
+                      <p className="text-[10px] text-muted leading-tight mt-0.5 break-words">{f.detail}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 sm:self-center self-end shrink-0 pl-7 sm:pl-0">
+                  <div className="flex items-center shrink-0 self-center pl-1">
                     {isNonZero ? (
                       <span
                         className={cn(
-                          "font-mono font-bold text-[10px] px-1.5 py-0.5 rounded",
+                          "font-mono font-bold text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap",
                           f.impactBp > 0
-                            ? "text-emerald-400 bg-emerald-500/10"
-                            : "text-rose-400 bg-rose-500/10"
+                            ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                            : "text-rose-400 bg-rose-500/10 border border-rose-500/20"
                         )}
                       >
                         {f.impactBp > 0 ? `+${f.impactBp} bp` : `${f.impactBp} bp`}
                       </span>
                     ) : (
-                      <span className="font-mono text-[10px] text-muted px-1.5 py-0.5 rounded bg-wash">
+                      <span className="font-mono text-[10px] text-muted px-1.5 py-0.5 rounded bg-wash border border-line/40 whitespace-nowrap">
                         Anchor Base
                       </span>
                     )}

@@ -85,7 +85,7 @@ export function DeskPage() {
     tab === "open" ? open : tab === "settled" ? settled : paperTickets.filter((t) => t.status !== "dismissed");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-1 sm:pt-0">
       <header className="max-w-2xl">
         <p className="text-sm text-emerald-500 font-semibold flex items-center gap-1.5">
           <Zap className="size-4" /> 100% AUTOMATIC BET TRACKING
@@ -354,8 +354,8 @@ function HardRockTicketCard({
               WON
             </span>
           ) : isLost ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-950/40 border border-red-500/20 px-2.5 py-0.5 text-xs font-medium text-zinc-400">
-              <XCircle className="size-3" />
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 border border-red-300 dark:bg-red-950/60 dark:border-red-500/30 dark:text-red-300 px-2.5 py-0.5 text-xs font-bold">
+              <XCircle className="size-3 text-red-600 dark:text-red-400" />
               LOST
             </span>
           ) : (
@@ -518,9 +518,12 @@ function HardRockTicketCard({
             </div>
           )}
           {isLost && (
-            <div className="mt-2 text-xs text-muted bg-panel/40 border border-line/40 rounded px-2.5 py-1 flex items-center justify-between">
-              <span>✗ Bet Settled</span>
-              <span className="text-down font-mono">-{formatBetUsd(ticket.stake)}</span>
+            <div className="mt-2 text-xs text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/25 rounded px-2.5 py-1.5 flex items-center justify-between font-semibold">
+              <span className="flex items-center gap-1.5">
+                <XCircle className="size-3.5 text-red-600 dark:text-red-400" />
+                Bet Settled &amp; Lost
+              </span>
+              <span className="text-red-600 dark:text-red-400 font-mono font-bold">-{formatBetUsd(ticket.stake)}</span>
             </div>
           )}
         </div>

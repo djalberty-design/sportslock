@@ -75,21 +75,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row w-full max-w-full overflow-x-hidden">
-      <div className="fixed top-0 left-0 right-0 z-50 h-7 bg-obsidian border-b border-line/50 flex items-center justify-between px-3 sm:px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
-        <div className="flex items-center gap-2 shrink-0">
-          <DeskStamp />
-        </div>
-        {isAdmin && quota != null && quotaInfo && (
-          <div className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
-            <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
-              ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls</span><span className="sm:hidden">props</span>
-            </span>
-            <span className="text-muted/40 hidden sm:inline">|</span>
-            <span className="text-muted/60 font-mono hidden sm:inline">{quota}/500</span>
-            <span className="text-muted/40 hidden md:inline">|</span>
-            <span className="text-muted/50 hidden md:inline">resets {quotaInfo.resetLabel}</span>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-obsidian border-b border-line/50 pt-[env(safe-area-inset-top,0px)]">
+        <div className="h-7 flex items-center justify-between px-3 sm:px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
+          <div className="flex items-center gap-2 shrink-0">
+            <DeskStamp />
           </div>
-        )}
+          {isAdmin && quota != null && quotaInfo && (
+            <div className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
+              <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
+                ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls</span><span className="sm:hidden">props</span>
+              </span>
+              <span className="text-muted/40 hidden sm:inline">|</span>
+              <span className="text-muted/60 font-mono hidden sm:inline">{quota}/500</span>
+              <span className="text-muted/40 hidden md:inline">|</span>
+              <span className="text-muted/50 hidden md:inline">resets {quotaInfo.resetLabel}</span>
+            </div>
+          )}
+        </div>
       </div>
       {/* Mobile Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden w-full max-w-full">
@@ -155,9 +157,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 bg-background relative mt-7 w-full max-w-full overflow-x-hidden" id="main">
+      <main className="flex-1 bg-background relative mt-[calc(1.75rem+env(safe-area-inset-top,0px))] md:mt-7 w-full max-w-full overflow-x-hidden" id="main">
         {/* Top Header for Mobile */}
-        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/95 px-3 backdrop-blur-md md:hidden w-full max-w-full gap-2">
+        <header className="sticky top-[calc(1.75rem+env(safe-area-inset-top,0px))] z-40 flex h-14 items-center justify-between border-b border-line bg-background/95 px-3 backdrop-blur-md md:hidden w-full max-w-full gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/" className="flex items-center gap-1.5 shrink-0 text-ink">
               <Hexagon className="size-5 text-primary shrink-0" />
@@ -186,7 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
+        <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden pt-3 sm:pt-6">
           {children}
           {isAdmin && (
             <div className="md:hidden mt-8 mb-16 pt-4 border-t border-line/40 flex items-center justify-between px-2 text-xs text-muted">
