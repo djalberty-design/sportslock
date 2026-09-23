@@ -210,6 +210,88 @@ This file documents every change made to the codebase in sequential order, detai
   - Mounted both components prominently on the Home AI Feed (`index.tsx`) and The Lab / AI Picks view (`picks.tsx`).
 * **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
 
+---
+
+## Change 16: Mojibake Character Eradication & "AI Picks" Navigation Renaming
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/market/engine.ts`
+  - `src/lib/market/picks.ts`
+  - `src/lib/market/props.ts`
+  - `src/lib/market/chance.ts`
+  - `src/lib/market/officials.ts`
+  - `src/components/app/shell.tsx`
+* **Rationale**:
+  - Eradicated all corrupted UTF-8 mojibake strings (`ÃƒÆ’...`, `â€”`, `Â§`) across core market calculation engines, replacing them with standard characters (`—`, `~`, `·`, `§`).
+  - Fixed automated parlay titles (`${legs.length}-game parlay — fun money`) and reason summaries (`Combined chance ~ ${shownPct}`).
+  - Fixed player name regex in `props.ts` (`cut.replace(/[-—_]/g, " ")`).
+  - Renamed primary desktop and mobile navigation tab label from "SportsLock" to "AI Picks" for clarity and user comprehension.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
+
+---
+
+## Change 17: Headshot Resolution Engine & Team Logos Integration
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/market/logos.ts`
+  - `src/lib/market/server.ts`
+  - `src/routes/picks.tsx`
+  - `src/components/app/ai-top-singles.tsx`
+  - `src/components/app/sportslock-parlay-card.tsx`
+* **Rationale**:
+  - Restored player headshots in The Lab (`/picks`): Fixed `BetAvatar` fallback logic so player props no longer fall back to team logos when roster headshots are missing. Integrated ESPN Public Search API (`fetchPlayerHeadshot`) and synchronous cache (`resolvePlayerHeadshotSync`) to automatically resolve athlete headshots across all sports.
+  - Added Team Logos & Player Headshots to the AI Picks Tab (`ai-top-singles.tsx`):
+    - Added `TopSingleAvatar` to the Top AI Single Plays showcase.
+    - Moneyline & Spread plays display official team logos based on chosen team.
+    - Over/Under game totals display overlapping dual-team matchup marks.
+    - Player prop plays display verified athlete headshot avatars with automatic resolution and initials fallback.
+  - Added Player Headshots to Parlay Leg Cards (`sportslock-parlay-card.tsx`):
+    - Added `LegMark` component to both the feed parlay card and the Deep Dive modal sheet.
+    - If a parlay leg is a player prop, it renders the athlete's headshot rather than duplicate team logos.
+  - Server-side fallback: In `src/lib/market/server.ts`, added `resolvePlayerHeadshotSync` fallbacks during live prop enrichment and cached prop parsing.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
+
+---
+
+## Change 18: Architect Placement & Mobile Phone UI Viewport Hardening
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/routes/index.tsx`
+  - `src/routes/picks.tsx`
+  - `src/components/app/shell.tsx`
+  - `src/routes/__root.tsx`
+  - `src/styles.css`
+* **Rationale**:
+  - Architect Placement:
+    - Removed `AiCustomArchitect` from the AI Picks home feed (`index.tsx`), keeping `AiTopSingles` (the single ticket AI picks) visible where it is.
+    - Featured `AiCustomArchitect` exclusively at the top of The Lab (`/picks`), and removed duplicate `AiTopSingles` from The Lab so the custom parlay engine sits right above the multi-model bet tables.
+  - Mobile Phone UI Viewport Hardening:
+    - Fixed root cause of mobile viewport overflow bug where users had to zoom out to see the 5th navigation tab ("Track Record") on the far right, which previously shrank the entire page content.
+    - Added `overflow-x: hidden; max-width: 100vw; width: 100%;` to `html, body, #app` in `styles.css`.
+    - Added `maximum-scale=1` to the viewport meta tag in `src/routes/__root.tsx`.
+    - Added `w-full max-w-full overflow-x-hidden` across the app shell, mobile top header, main content wrapper, and route page containers.
+    - Made top desk bar quota widget responsive on mobile (displaying compact `⚡ <N> props` on mobile screens instead of overflowing fixed-width text).
+    - Compacted mobile bottom navigation tab items with `min-w-0 px-0.5 text-center truncate` to guarantee all 5 tabs (`AI Picks`, `The Lab`, `Matchups`, `My Action`, `Track Record`) fit evenly and comfortably within standard 360px-390px mobile phone screens with zero horizontal overflow.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
+
+---
+
+## Change 19: Odds API Quota Guard, Daily Pull Frequency Lock & Preseason Exclusions
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/market/odds-api.ts`
+  - `src/lib/market/server.ts`
+* **Rationale**:
+  - Preseason Exclusion:
+    - Integrated ESPN scoreboard API introspection (`isSportInRegularOrPostseason`) to detect `season.type`.
+    - Automatically excludes leagues in preseason (`season.type === 1`), such as NBA and NHL in late September / early October, ensuring game line pulls only occur for active regular-season and playoff sports (NFL, NCAAF, MLB).
+  - Strict Once-Per-Day Pull Guard:
+    - Added an 18-hour daily frequency lock to `fetchOddsApiMains`. If the daily mains pull has already completed today within the last 18 hours, duplicate scheduled cron jobs or manual refreshes automatically return the cached DB data rather than consuming Odds API credits.
+  - Prop Cache Protection:
+    - In `server.ts` (`fetchRealPropsFn`), updated the prop fetching logic to use `data.force ?? false` instead of unconditional `force = true`. When props are already in the DB cache (`odds_api_cache`), they are served immediately at zero quota expense.
+  - Quota Accuracy:
+    - Verified the real sport schedule formula: Active sports (3 in September) × remaining days (7) = 21 reserved for daily lines. Out of 416 remaining, exactly 395 prop pulls are available this month.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both pass with exit code 0.
 
 
 

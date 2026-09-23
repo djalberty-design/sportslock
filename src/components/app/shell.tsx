@@ -9,7 +9,7 @@ import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 
 const TABS = [
-  { to: "/", label: "SportsLock", icon: Hexagon },
+  { to: "/", label: "AI Picks", icon: Hexagon },
   { to: "/picks", label: "The Lab", icon: Beaker },
   { to: "/games", label: "Matchups", icon: Activity },
   { to: "/ticket", label: "My Action", icon: Ticket },
@@ -74,25 +74,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [quota]);
 
   return (
-        <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row">
-      <div className="fixed top-0 left-0 right-0 z-50 h-7 bg-obsidian border-b border-line/50 flex items-center justify-between px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
-        <div className="flex items-center gap-4">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row w-full max-w-full overflow-x-hidden">
+      <div className="fixed top-0 left-0 right-0 z-50 h-7 bg-obsidian border-b border-line/50 flex items-center justify-between px-3 sm:px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
+        <div className="flex items-center gap-2 shrink-0">
           <DeskStamp />
         </div>
         {isAdmin && quota != null && quotaInfo && (
-          <div className="flex items-center gap-2 normal-case tracking-normal" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
-            <span className={cn("font-mono", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
-              ⚡ {quotaInfo.propsAvail} prop pulls
+          <div className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
+            <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
+              ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls</span><span className="sm:hidden">props</span>
             </span>
-            <span className="text-muted/40">|</span>
-            <span className="text-muted/60 font-mono">{quota}/500</span>
-            <span className="text-muted/40">|</span>
-            <span className="text-muted/50">resets {quotaInfo.resetLabel}</span>
+            <span className="text-muted/40 hidden sm:inline">|</span>
+            <span className="text-muted/60 font-mono hidden sm:inline">{quota}/500</span>
+            <span className="text-muted/40 hidden md:inline">|</span>
+            <span className="text-muted/50 hidden md:inline">resets {quotaInfo.resetLabel}</span>
           </div>
         )}
       </div>
       {/* Mobile Bottom App Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden w-full max-w-full">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.to);
           return (
@@ -100,12 +100,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={tab.to}
               to={tab.to}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-colors",
+                "flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors min-w-0 px-0.5 text-center",
                 active ? "text-primary" : "text-muted hover:text-ink",
               )}
             >
-              <tab.icon className="size-5" />
-              <span className="text-[10px] font-medium tracking-wide">{tab.label}</span>
+              <tab.icon className="size-5 shrink-0" />
+              <span className="text-[9px] font-medium tracking-tight truncate max-w-full">{tab.label}</span>
             </Link>
           );
         })}
@@ -155,14 +155,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 bg-background relative mt-7" id="main">
+      <main className="flex-1 bg-background relative mt-7 w-full max-w-full overflow-x-hidden" id="main">
         {/* Top Header for Mobile */}
-        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden">
-          <div className="flex items-center gap-2">
+        <header className="sticky top-7 z-40 flex h-14 items-center justify-between border-b border-line bg-background/90 px-4 backdrop-blur-md md:hidden w-full max-w-full">
+          <div className="flex items-center gap-2 shrink-0">
             <Hexagon className="size-5 text-primary" />
             <span className="font-display font-bold tracking-tight">SportsLock AI</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
              <ThemeToggleIcon />
              <TicketChip />
              <UserButton />
@@ -174,7 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8">
+        <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
           {children}
         </div>
       </main>

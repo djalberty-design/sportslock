@@ -97,7 +97,7 @@ export function officialLayer(snap: OfficialSnap): OfficialLayer {
       home: 0.5,
       precision: 0,
       empty: true,
-      note: `Crew posted: ${names.slice(0, 3).join(", ")}. Tendency file empty â€” no invented ATS or zone.`,
+      note: `Crew posted: ${names.slice(0, 3).join(", ")}. Tendency file empty — no invented ATS or zone.`,
     };
   }
   

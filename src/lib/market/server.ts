@@ -269,12 +269,12 @@ export const getOddsQuotaFn = createServerFn({ method: "GET" })
 
 export const fetchRealPropsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((d: { sportKey: string, eventId: string }) => d)
+  .validator((d: { sportKey: string; eventId: string; force?: boolean }) => d)
   .handler(async ({ data, context }): Promise<{ ok: boolean; props?: any[]; error?: string }> => {
     try {
       await assertAdmin(context.userId);
       const { fetchOddsApiProps, writeOddsApiCache } = await import("@/lib/market/odds-api");
-      const res = await fetchOddsApiProps(data.sportKey, data.eventId, true);
+      const res = await fetchOddsApiProps(data.sportKey, data.eventId, data.force ?? false);
       if (!res) return { ok: false, error: "Odds API returned empty response" };
       if (res.__error) return { ok: false, error: `Odds API HTTP ${res.status}: ${res.message || "Unknown error"}` };
 
@@ -293,7 +293,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
 
       // ── Phase 1: Fetch ESPN rosters for headshots + team + position (free) ──
-      const { teamAbbrFromName } = await import("@/lib/market/logos");
+      const { teamAbbrFromName, resolvePlayerHeadshotSync } = await import("@/lib/market/logos");
       const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
       const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
 
@@ -387,7 +387,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
               isProp: true,
               source: bk.key || "odds-api",
               // Phase 1: Enriched fields from ESPN roster
-              headshot: rosterHit?.headshot || undefined,
+              headshot: rosterHit?.headshot || (playerName ? resolvePlayerHeadshotSync(playerName) : undefined) || undefined,
               team: rosterHit?.team || undefined,
               position: rosterHit?.position || undefined,
               homeAway: rosterHit?.homeAway || undefined,
@@ -511,7 +511,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
 
       // Fetch ESPN rosters for headshots + team + position (free)
-      const { teamAbbrFromName } = await import("@/lib/market/logos");
+      const { teamAbbrFromName, resolvePlayerHeadshotSync } = await import("@/lib/market/logos");
       const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
       const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
 
@@ -596,7 +596,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
               fairProb: implied,
               isProp: true,
               source: bk.key || "odds-api",
-              headshot: rosterHit?.headshot || undefined,
+              headshot: rosterHit?.headshot || (playerName ? resolvePlayerHeadshotSync(playerName) : undefined) || undefined,
               team: rosterHit?.team || undefined,
               position: rosterHit?.position || undefined,
               homeAway: rosterHit?.homeAway || undefined,

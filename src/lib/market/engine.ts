@@ -186,7 +186,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       const book = line.hardRockPrice ?? (line.source === "hardrock_fl" ? line.price : undefined);
       const price = book ?? line.price;
       const ev = Number.isFinite(fair) ? evPct(price, fair) : NaN;
-      // inPlay is strictly from the API feed ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â no Date.now() fallback.
+      // inPlay is strictly from the API feed — no Date.now() fallback.
       // A clock inference would corrupt The Call with stale pre-game picks.
       const inPlay = Boolean(line.inPlay);
       // Completed games (phase = "post" | "final") are dropped from the active board.
@@ -247,7 +247,7 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
         action: stand ? "stand_down" : "enter_ticket",
         reason:
           line.scheduleOnly
-            ? "This matchup is on the calendar. ESPN has not posted a two-way price yet ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â photograph Hard Rock when the number drops."
+            ? "This matchup is on the calendar. ESPN has not posted a two-way price yet — photograph Hard Rock when the number drops."
             : tag === "illegal_fl"
             ? line.isProp && isCollegeSport(line.sport)
               ? "College player bets are not allowed on Hard Rock Bet."
@@ -255,11 +255,11 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
             : tag === "unknown_market"
               ? unknownMarketReason(line.selection)
             : tag === "in_play"
-              ? "The game already started ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Live desk only. Never The Call. Photograph Hard Rock now."
+              ? "The game already started — Live desk only. Never The Call. Photograph Hard Rock now."
               : tag === "fair_or_better"
                 ? "Hard Rock price is fair or better versus the true two-way odds."
                 : tag === "close_enough"
-                  ? "Close to a fair price. Fine as fun money ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â not the recommended pick."
+                  ? "Close to a fair price. Fine as fun money — not the recommended pick."
                   : "The sportsbook's cut makes this overpriced. Don't bet it.",
         conviction: tag === "fair_or_better" ? "medium" : "low",
         spark: Number.isFinite(ev) ? `${(ev * 100).toFixed(1)}% edge` : "n/a",
@@ -525,8 +525,8 @@ export function evaluateParlay(
   const games = new Set(legs.map((l) => l.eventId));
   const sameGame = games.size < legs.length;
   const mlAndSpread = sameGame && legs.some((l) => l.marketType === "ml") && legs.some((l) => l.marketType === "spread");
-  // combineParlayFair is the canonical parlay pricer ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â handles SGP joint paths,
-  // cross-game independence, and fallback haircut in one place (BIBLE ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§sgp rule).
+  // combineParlayFair is the canonical parlay pricer — handles SGP joint paths,
+  // cross-game independence, and fallback haircut in one place (BIBLE §sgp rule).
   const combinedFair = Math.min(0.97, combineParlayFair(legs).combinedFair);
   const juice = typicalParlayJuice(legs.length);
   const ev =
@@ -560,14 +560,14 @@ export function evaluateParlay(
     researchOnly: legs.some((l) => l.hardRockPrice == null),
     sameGame,
     title: pricedAsEntertainment
-      ? `${legs.length}-game${sameGame ? " same-game" : ""} parlay ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â fun money`
+      ? `${legs.length}-game${sameGame ? " same-game" : ""} parlay — fun money`
       : `${legs.length}-game${sameGame ? " same-game" : ""} parlay`,
     reason:
       corr === "shared-latent"
-        ? `Same-game joint paths. Combined chance ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  ${shownPct}.`
+        ? `Same-game joint paths. Combined chance ~${shownPct}.`
         : corr === "fallback-haircut"
-          ? `Same-game combo. Joint from FrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©chet bounds (they move together). Combined chance ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  ${shownPct}.`
-          : `Near-independent games (tiny shared residual). Combined chance ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  ${shownPct}.`,
+          ? `Same-game combo. Joint from Fréchet bounds (they move together). Combined chance ~${shownPct}.`
+          : `Near-independent games (tiny shared residual). Combined chance ~${shownPct}.`,
     score: Math.max(
       parlayScore(combinedFair, decimalPayout),
       growthScore(combinedFair, decimalPayout, parlayInfoQuality(legs.length, sameGame), activeKelly) * 12,

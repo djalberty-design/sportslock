@@ -9,8 +9,7 @@ import { getAllEnrichedPropsFn } from "@/lib/market/server";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { labScore, type LabScore } from "@/lib/market/ev-score";
 import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
-import { resolveTeamLogo, resolveLegTeam } from "@/lib/market/logos";
-import { AiTopSingles } from "@/components/app/ai-top-singles";
+import { resolveTeamLogo, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 
 export const Route = createFileRoute("/picks")({
@@ -111,16 +110,45 @@ function renderStars(n: number) {
 /* ── Fallback Avatar Component ──────────────────────────── */
 
 function BetAvatar({
-  headshot,
+  headshot: initialHeadshot,
   logoUrl,
   initials,
+  playerName,
 }: {
   headshot?: string;
   logoUrl?: string | null;
   initials?: string;
+  playerName?: string;
 }) {
+  const [headshot, setHeadshot] = useState<string | undefined>(
+    initialHeadshot || (playerName ? resolvePlayerHeadshotSync(playerName) || undefined : undefined)
+  );
   const [error, setError] = useState(false);
-  const src = !error ? (headshot || logoUrl) : null;
+
+  useEffect(() => {
+    if (initialHeadshot) {
+      setHeadshot(initialHeadshot);
+      setError(false);
+      return;
+    }
+    if (playerName) {
+      const sync = resolvePlayerHeadshotSync(playerName);
+      if (sync) {
+        setHeadshot(sync);
+        setError(false);
+      } else {
+        fetchPlayerHeadshot(playerName).then((res) => {
+          if (res) {
+            setHeadshot(res);
+            setError(false);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [initialHeadshot, playerName]);
+
+  // For player props (playerName exists), never fall back to team logo
+  const src = !error ? (headshot || (!playerName ? logoUrl : null)) : null;
 
   if (src) {
     return (
@@ -131,7 +159,7 @@ function BetAvatar({
           "size-10 rounded-full ring-2 ring-line bg-obsidian transition-opacity",
           headshot ? "object-cover" : "object-contain p-1"
         )}
-        alt=""
+        alt={playerName || ""}
         loading="lazy"
       />
     );
@@ -139,8 +167,8 @@ function BetAvatar({
 
   if (initials) {
     return (
-      <div className="size-10 rounded-full bg-line ring-2 ring-primary/20 flex items-center justify-center">
-        <span className="text-[10px] font-bold text-muted">{initials}</span>
+      <div className="size-10 rounded-full bg-violet-500/10 border border-violet-500/30 ring-2 ring-line flex items-center justify-center">
+        <span className="text-xs font-bold text-violet-300 font-mono">{initials}</span>
       </div>
     );
   }
@@ -416,7 +444,7 @@ function TheLab() {
   const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
 
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
+    <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
         <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
@@ -431,11 +459,6 @@ function TheLab() {
       {/* Sport Filter */}
       <div className="mb-4">
         <SportFilter sports={liveSports} />
-      </div>
-
-      {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
-      <div className="mb-6">
-        <AiTopSingles rows={scan?.rows || []} cachedProps={cachedProps} />
       </div>
 
       {/* ── BUILD WITH AI CUSTOM PARLAY ARCHITECT ── */}
@@ -584,8 +607,9 @@ function TheLab() {
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <BetAvatar
                         headshot={b.headshot}
-                        logoUrl={!b.headshot ? logoUrl : undefined}
+                        logoUrl={!playerName ? logoUrl : undefined}
                         initials={initials}
+                        playerName={playerName}
                       />
                       <div className="flex gap-px">{renderStars(stars)}</div>
                     </div>

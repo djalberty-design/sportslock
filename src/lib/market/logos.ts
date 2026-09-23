@@ -311,3 +311,46 @@ export function resolveLegTeam(leg: any, quote?: any) {
   const matchup = [awayName, homeName].filter(Boolean).join(" at ") || "Matchup";
   return { sport, homeName, awayName, homeAbbr, awayAbbr, homeLogo, awayLogo, selectionLogo, side, matchup };
 }
+
+// ── Player Headshot Resolution ──────────────────────────────────────────
+
+const PLAYER_HEADSHOT_CACHE = new Map<string, string>();
+
+const SEED_HEADSHOTS: Record<string, string> = {
+  "chris blair": "https://a.espncdn.com/i/headshots/nfl/players/full/4369886.png",
+  "nick muse": "https://a.espncdn.com/i/headshots/nfl/players/full/4249624.png",
+  "reggie gilliam": "https://a.espncdn.com/i/headshots/nfl/players/full/4039505.png",
+  "charlie woerner": "https://a.espncdn.com/i/headshots/nfl/players/full/4035020.png",
+};
+for (const [k, v] of Object.entries(SEED_HEADSHOTS)) {
+  PLAYER_HEADSHOT_CACHE.set(k.toLowerCase(), v);
+}
+
+export function resolvePlayerHeadshotSync(name?: string | null): string | null {
+  if (!name) return null;
+  const key = name.trim().toLowerCase();
+  return PLAYER_HEADSHOT_CACHE.get(key) || null;
+}
+
+export async function fetchPlayerHeadshot(name: string, sport?: string): Promise<string | null> {
+  if (!name) return null;
+  const key = name.trim().toLowerCase();
+  const cached = PLAYER_HEADSHOT_CACHE.get(key);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`https://site.web.api.espn.com/apis/search/v2?query=${encodeURIComponent(name.trim())}&limit=1`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const item = json?.results?.[0]?.contents?.[0];
+    const imgUrl = item?.image?.default || item?.image?.defaultDark;
+    if (imgUrl && typeof imgUrl === "string") {
+      PLAYER_HEADSHOT_CACHE.set(key, imgUrl);
+      return imgUrl;
+    }
+  } catch {}
+  return null;
+}

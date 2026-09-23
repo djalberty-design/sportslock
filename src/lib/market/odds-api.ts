@@ -88,6 +88,39 @@ export function getActiveSports(): string[] {
   return active;
 }
 
+const SPORT_TO_ESPN_PATH: Record<string, string> = {
+  americanfootball_nfl: "football/nfl",
+  americanfootball_ncaaf: "football/college-football",
+  baseball_mlb: "baseball/mlb",
+  basketball_nba: "basketball/nba",
+  icehockey_nhl: "hockey/nhl",
+  basketball_ncaab: "basketball/mens-college-basketball",
+};
+
+/** Verify if a sport is in active regular-season or playoffs (strictly excludes preseason: season.type === 1) */
+export async function isSportInRegularOrPostseason(sportKey: string): Promise<boolean> {
+  const path = SPORT_TO_ESPN_PATH[sportKey];
+  if (!path) return true;
+  try {
+    const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/${path}/scoreboard`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    const seasonType = json?.season?.type;
+    // 1 = preseason (EXCLUDE), 2 = regular season (INCLUDE), 3 = postseason/playoffs (INCLUDE)
+    if (seasonType === 1) {
+      console.log(`[odds-api] ${sportKey} is currently in PRESEASON (season.type = 1). Skipping daily Odds API pull.`);
+      return false;
+    }
+    if (seasonType === 2 || seasonType === 3) return true;
+    return Boolean(json?.events && json.events.length > 0 && seasonType !== 1);
+  } catch {
+    return true; // Fallback to calendar if ESPN network fails
+  }
+}
+
 function normalizeEventBooks(event: any) {
   if (!event || typeof event !== "object") return event;
   const books = Array.isArray(event.bookmakers) ? event.bookmakers : [];
@@ -171,30 +204,44 @@ export async function fetchOddsApiEvent(sportKey: string, eventId: string) {
   return data;
 }
 
-export async function fetchOddsApiMains(force = false) {
+export async function fetchOddsApiMains(force = false, bypassDailyGuard = false) {
   if (!force && globalCache.mains && globalCache.mains.length > 0 && Date.now() - globalCache.mainsLastFetch < CACHE_TTL) {
     console.log("[odds-api] L1 memory cache hit, age:", Math.round((Date.now() - globalCache.mainsLastFetch) / 60000), "min");
     return globalCache.mains;
   }
 
-  if (!force) {
-    const cached = await readDbCache("mains");
-    if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
-      const age = Date.now() - cached.fetchedAt.getTime();
-      if (age < CACHE_TTL) {
-        console.log("[odds-api] L2 DB cache hit, age:", Math.round(age / 60000), "min");
-        globalCache.mains = cached.data;
-        globalCache.mainsLastFetch = cached.fetchedAt.getTime();
-        return cached.data;
-      }
+  const cached = await readDbCache("mains");
+  if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
+    const age = Date.now() - cached.fetchedAt.getTime();
+    if (!force && age < CACHE_TTL) {
+      console.log("[odds-api] L2 DB cache hit, age:", Math.round(age / 60000), "min");
+      globalCache.mains = cached.data;
+      globalCache.mainsLastFetch = cached.fetchedAt.getTime();
+      return cached.data;
+    }
+
+    // STRICT ONCE-PER-DAY GUARD:
+    // Even if force=true, if a pull succeeded within the last 18 hours, do not burn quota
+    // unless bypassDailyGuard is explicitly requested.
+    if (force && !bypassDailyGuard && age < 18 * 60 * 60 * 1000) {
+      console.log(`[odds-api] Daily pull already completed ${Math.round(age / 3600000)}h ago. Quota guard active: returning cached mains.`);
+      globalCache.mains = cached.data;
+      globalCache.mainsLastFetch = cached.fetchedAt.getTime();
+      return cached.data;
     }
   }
 
-  console.log("[odds-api] Cache miss — fetching from Odds API...");
-  const sports = getActiveSports();
+  console.log("[odds-api] Cache miss / scheduled daily pull — fetching from Odds API...");
+  const candidateSports = getActiveSports();
   const results = [];
 
-  for (const sport of sports) {
+  for (const sport of candidateSports) {
+    const isLiveRegularSeason = await isSportInRegularOrPostseason(sport);
+    if (!isLiveRegularSeason) {
+      console.log(`[odds-api] Skipping ${sport} (preseason or off-season)`);
+      continue;
+    }
+
     try {
       const url = oddsUrl(`sports/${sport}/odds/`, "markets=h2h,spreads,totals");
       const res = await fetch(url);

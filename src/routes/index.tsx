@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
 import { AiTopSingles } from "@/components/app/ai-top-singles";
-import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 import { Sparkles, Activity } from "lucide-react";
 import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
@@ -33,7 +32,7 @@ function SportsLockCommandCenter() {
   const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
           <Sparkles className="size-8 text-primary" />
@@ -47,9 +46,6 @@ function SportsLockCommandCenter() {
       </div>
       {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
       <AiTopSingles rows={scan?.rows || []} />
-
-      {/* ── BUILD WITH AI CUSTOM PARLAY ARCHITECT ── */}
-      <AiCustomArchitect rows={scan?.rows || []} />
 
       {gold.length === 0 && catalog.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-line rounded-xl">

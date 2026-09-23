@@ -3,7 +3,7 @@ import type { ScanRow } from "@/lib/market/types";
 import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { cn } from "@/lib/utils";
-import { resolveTeamLogo } from "@/lib/market/logos";
+import { resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import {
   TrendingUp,
   Target,
@@ -29,6 +29,115 @@ interface SingleCategoryBet {
   badgeBg: string;
   row: ScanRow | null;
   playerData?: any;
+}
+
+function TopSingleAvatar({ row }: { row: ScanRow }) {
+  const [headshot, setHeadshot] = React.useState<string | undefined>(
+    row.headshot || (row.player ? resolvePlayerHeadshotSync(row.player) || undefined : undefined)
+  );
+  const [imgErr, setImgErr] = React.useState(false);
+
+  React.useEffect(() => {
+    if (row.headshot) {
+      setHeadshot(row.headshot);
+      setImgErr(false);
+      return;
+    }
+    if (row.isProp && row.player) {
+      const sync = resolvePlayerHeadshotSync(row.player);
+      if (sync) {
+        setHeadshot(sync);
+        setImgErr(false);
+      } else {
+        fetchPlayerHeadshot(row.player, row.sport).then((url) => {
+          if (url) {
+            setHeadshot(url);
+            setImgErr(false);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [row.headshot, row.player, row.isProp, row.sport]);
+
+  if (row.isProp && row.player) {
+    if (headshot && !imgErr) {
+      return (
+        <img
+          src={headshot}
+          alt={row.player}
+          onError={() => setImgErr(true)}
+          className="size-9 rounded-full ring-2 ring-line bg-obsidian object-cover shrink-0"
+        />
+      );
+    }
+    const initials = row.player
+      .split(/\s+/)
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    return (
+      <div className="size-9 rounded-full bg-purple-500/10 border border-purple-500/30 ring-2 ring-line flex items-center justify-center shrink-0">
+        <span className="text-xs font-bold text-purple-300 font-mono">{initials || "P"}</span>
+      </div>
+    );
+  }
+
+  // Game line (ML, Spread, Total)
+  const teams = resolveLegTeam(row);
+  if (row.marketType === "total") {
+    return (
+      <div className="flex items-center -space-x-2 shrink-0">
+        <span className="relative size-7 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-line ring-2 ring-panel flex items-center justify-center text-[9px] font-bold text-muted">
+            {teams.awayName?.charAt(0) || "A"}
+          </span>
+          {teams.awayLogo && (
+            <img
+              src={teams.awayLogo}
+              alt={teams.awayName || "Away"}
+              className="relative size-7 rounded-full ring-2 ring-panel bg-white object-contain"
+              onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+            />
+          )}
+        </span>
+        <span className="relative size-7 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-line ring-2 ring-panel flex items-center justify-center text-[9px] font-bold text-muted">
+            {teams.homeName?.charAt(0) || "H"}
+          </span>
+          {teams.homeLogo && (
+            <img
+              src={teams.homeLogo}
+              alt={teams.homeName || "Home"}
+              className="relative size-7 rounded-full ring-2 ring-panel bg-white object-contain"
+              onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+            />
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  // ML / Spread - show picked team logo or both
+  const logo = teams.selectionLogo || teams.homeLogo || teams.awayLogo;
+  const name = teams.side === "away" ? teams.awayName : teams.homeName;
+  const letter = (name || "?").charAt(0).toUpperCase();
+
+  return (
+    <span className="relative size-9 shrink-0">
+      <span className="absolute inset-0 rounded-full bg-line ring-2 ring-panel flex items-center justify-center text-xs font-bold text-muted">
+        {letter}
+      </span>
+      {logo && (
+        <img
+          src={logo}
+          alt={name || ""}
+          className="relative size-9 rounded-full ring-2 ring-panel bg-white object-contain p-0.5"
+          onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+        />
+      )}
+    </span>
+  );
 }
 
 export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
@@ -241,12 +350,17 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                   </span>
                 </div>
 
-                {/* Matchup & Selection */}
-                <div className="text-[11px] text-muted truncate mb-1">
-                  {matchupText}
-                </div>
-                <div className="text-sm font-bold text-ink leading-snug line-clamp-2 min-h-[38px]">
-                  {r.selection}
+                {/* Matchup & Selection with Avatar */}
+                <div className="flex items-center gap-3 mb-2">
+                  <TopSingleAvatar row={r} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] text-muted truncate">
+                      {matchupText}
+                    </div>
+                    <div className="text-sm font-bold text-ink leading-snug line-clamp-2 min-h-[38px] flex items-center">
+                      {r.selection}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Metrics Box */}

@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
-import { matchSnapshotEvent, resolveLegTeam } from "@/lib/market/logos";
+import { matchSnapshotEvent, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +62,76 @@ function TeamMark({ src, name }: { src: string | null; name: string }) {
         />
       ) : null}
     </span>
+  );
+}
+
+function LegMark({
+  leg,
+  teams,
+}: {
+  leg: any;
+  teams: { awayLogo: string | null; awayName?: string; homeLogo: string | null; homeName?: string };
+}) {
+  const isProp = Boolean(leg?.isProp || leg?.player || leg?.marketType === "prop" || String(leg?.marketType || "").startsWith("player_"));
+  const playerName = leg?.player;
+  const [headshot, setHeadshot] = useState<string | undefined>(
+    leg?.headshot || (playerName ? resolvePlayerHeadshotSync(playerName) || undefined : undefined)
+  );
+  const [imgErr, setImgErr] = useState(false);
+
+  useEffect(() => {
+    if (leg?.headshot) {
+      setHeadshot(leg.headshot);
+      setImgErr(false);
+      return;
+    }
+    if (isProp && playerName) {
+      const sync = resolvePlayerHeadshotSync(playerName);
+      if (sync) {
+        setHeadshot(sync);
+        setImgErr(false);
+      } else {
+        fetchPlayerHeadshot(playerName, leg?.sport).then((url) => {
+          if (url) {
+            setHeadshot(url);
+            setImgErr(false);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [leg?.headshot, isProp, playerName, leg?.sport]);
+
+  if (isProp && playerName) {
+    if (headshot && !imgErr) {
+      return (
+        <span className="relative size-8 shrink-0">
+          <img
+            src={headshot}
+            alt={playerName}
+            onError={() => setImgErr(true)}
+            className="size-8 rounded-full ring-2 ring-panel bg-obsidian object-cover"
+          />
+        </span>
+      );
+    }
+    const initials = playerName
+      .split(/\s+/)
+      .map((w: string) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    return (
+      <span className="size-8 rounded-full bg-purple-500/10 border border-purple-500/30 ring-2 ring-panel flex items-center justify-center shrink-0">
+        <span className="text-[10px] font-bold text-purple-300 font-mono">{initials || "P"}</span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center -space-x-2 shrink-0">
+      <TeamMark src={teams.awayLogo} name={teams.awayName || "Away"} />
+      <TeamMark src={teams.homeLogo} name={teams.homeName || "Home"} />
+    </div>
   );
 }
 
@@ -190,9 +260,8 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                     <Flame className="size-4 text-orange-500 fill-orange-500/20" />
                   </div>
                 )}
-                <div className="flex items-center -space-x-2 shrink-0 mt-0.5">
-                  <TeamMark src={teams.awayLogo} name={teams.awayName || "Away"} />
-                  <TeamMark src={teams.homeLogo} name={teams.homeName || "Home"} />
+                <div className="shrink-0 mt-0.5">
+                  <LegMark leg={leg} teams={teams} />
                 </div>
                 <div className="flex flex-col w-full min-w-0">
                   <div className="text-sm flex items-start justify-between w-full gap-2">
@@ -280,9 +349,8 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3 min-w-0">
-                              <div className="flex items-center -space-x-2 shrink-0 mt-0.5">
-                                <TeamMark src={teams.awayLogo} name={teams.awayName || "Away"} />
-                                <TeamMark src={teams.homeLogo} name={teams.homeName || "Home"} />
+                              <div className="shrink-0 mt-0.5">
+                                <LegMark leg={leg} teams={teams} />
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">

@@ -1,9 +1,9 @@
 /**
- * AI Picks desk ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â rank every ticket the book posts, not just game winners.
+ * AI Picks desk — rank every ticket the book posts, not just game winners.
  *
  * Popular (ML / spread / total), player props, period markets, same-game
  * parlays, and cross-game 2/3/4-legs all go through ticketScore:
- * chance ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â payout ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â market-quality ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â edge vs the juice.
+ * chance · payout · market-quality · edge vs the juice.
  * Tape is a layer. Never a lock.
  */
 import { formatChancePct, shortPick } from "../copy.ts";
@@ -90,7 +90,7 @@ export type DeskPicks = {
 
 const BUCKETS: PickBucket[] = ["popular", "prop", "period", "sgp", "parlay2", "parlay3", "parlay4"];
 
-/** Unique market cell (no bucket) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â used to de-dupe sheet vs posted rows. */
+/** Unique market cell (no bucket) — used to de-dupe sheet vs posted rows. */
 export function rowTicketId(row: {
   eventId: string;
   marketType: string;
@@ -277,7 +277,7 @@ function sameLegSet(
  * How much information this market actually carries.
  * Sharps do not treat a 1st-inning 0.5 the same as a full-game moneyline.
  * Period slices are shrunk in the sheet; this stops them from stealing The Call.
- * NFL/CFB spreads get a key-number tilt (3 and 7) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Dimers / CLV desks treat those as physics.
+ * NFL/CFB spreads get a key-number tilt (3 and 7) — Dimers / CLV desks treat those as physics.
  */
 export function infoQuality(opts: {
   bucket: PickBucket;
@@ -359,7 +359,7 @@ export function edgePts(chance: number, price?: number): number {
 export { calibratedChance, parlayInfoQuality, shownCombinedChance } from "./calibrate.ts";
 
 /**
- * Ranking score. deskScore (chanceÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â² ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â Ãƒâ€¦Ã‚Â¡payout, tape nudge) is the core.
+ * Ranking score. deskScore (chance² · √payout, tape nudge) is the core.
  * Quality haircuts noisy slices. Edge vs the juice is the sharp overlay.
  */
 export function ticketScore(
@@ -376,7 +376,7 @@ export function ticketScore(
   return s;
 }
 
-/** Quality badge is one scale. High ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°Ãƒâ€šÃ‚Â¥0.72, Med 0.55ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ0.71, Low <0.55. Chance does not rewrite the label. */
+/** Quality badge is one scale. High >=0.72, Med 0.55-0.71, Low <0.55. Chance does not rewrite the label. */
 export function qualityBand(quality: number): DeskConfidence {
   const q = Number(quality);
   if (!Number.isFinite(q)) return "low";
@@ -493,12 +493,12 @@ function stampDisplayedChance(reason: string, shown: number): string {
   const pct = formatChancePct(shown);
   if (!reason || !pct) return reason;
   const next = reason
-    .replace(/Combined chance[^.]*ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°Ãƒâ€¹Ã¢â‚¬Â \s*[\d.]+(?:\s*in 100)?%?\.?/gi, `Combined chance ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°Ãƒâ€¹Ã¢â‚¬Â  ${pct}.`)
+    .replace(/Combined chance[^.]*~\s*[\d.]+(?:\s*in 100)?%?\.?/gi, `Combined chance ~ ${pct}.`)
     .replace(/about [\d.]+ in 100 tickets/gi, `about ${pct.replace("%", "")} in 100 tickets`);
   return next;
 }
 
-/** Displayed combined % from builder legs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â same fromParlay calibration the catalog and /ticket use. */
+/** Displayed combined % from builder legs — same fromParlay calibration the catalog and /ticket use. */
 export function shownParlayFromStoreLegs(
   legs: Array<{
     eventId: string;
@@ -730,11 +730,11 @@ function popularWhy(r: ScanRow): string {
     if (r.leftover) {
       return `Live remaining-stat. Leftover mean from score + clock, not a haircut of the pre-game %. Photograph Hard Rock now. Last-10 still ran. Not The Call.${tape}`;
     }
-    return `Live ticket. The public number is delayed ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â photograph Hard Rock now. Last-10 scores and the full ensemble still run; quality is haircut because a delayed live fill is not a prior. Not The Call.${tape}`;
+    return `Live ticket. The public number is delayed — photograph Hard Rock now. Last-10 scores and the full ensemble still run; quality is haircut because a delayed live fill is not a prior. Not The Call.${tape}`;
   }
   const m =
     r.marketType === "ml"
-      ? "Who wins the game ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â moneyline. Highest-info market on the board."
+      ? "Who wins the game — moneyline. Highest-info market on the board."
       : r.marketType === "spread"
         ? "Spread. The favorite must cover the number. NFL/college: 3 and 7 are the key numbers."
         : "Over/under on the combined score. Last-10 combined scoring nudges the mean. Weather and pace move this more than a moneyline.";
@@ -742,17 +742,17 @@ function popularWhy(r: ScanRow): string {
 }
 
 function propWhy(r: ScanRow): string {
-  return `${r.player ?? "This player"} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ${shortPick(r.selection, r.marketType)}. Last-10 games (when we have them) blended with season rate, today's total, script, park, weather, and who is listed out. College player bets are blocked in Florida. Photograph the live Hard Rock number ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â analysis, not a fill.`;
+  return `${r.player ?? "This player"} — ${shortPick(r.selection, r.marketType)}. Last-10 games (when we have them) blended with season rate, today's total, script, park, weather, and who is listed out. College player bets are blocked in Florida. Photograph the live Hard Rock number — analysis, not a fill.`;
 }
 
 function periodWhy(r: ScanRow): string {
   return `${shortPick(r.selection, r.marketType)} is a slice of the game. Last-10 scores still feed the full-game ensemble, then this period is shrunk toward 50/50 because one inning/quarter is noisier than the whole game. Not The Call. Not a lock.`;
 }
 
-/** The Call must be a high-info ticket that still pays ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â not a noisy 0.5 inning. */
+/** The Call must be a high-info ticket that still pays — not a noisy 0.5 inning. */
 function heroEligible(p: DeskPick): boolean {
   if (p.parlay) return false;
-  // Use isLiveDeskPick ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â checks inPlay flag, in_play tag, AND start time so
+  // Use isLiveDeskPick — checks inPlay flag, in_play tag, AND start time so
   // a game that has kicked off but not yet flipped the feed doesn't slip through.
   if (isLiveDeskPick(p)) return false;
   if (p.bucket === "period") return false;
@@ -1009,7 +1009,7 @@ function fallbackParlay(rows: ScanRow[], reason: string): ParlayCandidate {
     researchOnly: rows.some((l) => l.hardRockPrice == null),
     sameGame,
     title: `${rows.length}-game${sameGame ? " same-game" : ""} parlay`,
-    reason: `${reason} Combined chance ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°Ãƒâ€¹Ã¢â‚¬Â  ${formatChancePct(calibratedChance(combinedFair, decimalPayout > 1 ? 1 / decimalPayout : undefined, parlayInfoQuality(rows.length, sameGame))) ?? "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â"}. Combined is closed form. Quality capped at 0.64. No fake sim %.`,
+    reason: `${reason} Combined chance ~ ${formatChancePct(calibratedChance(combinedFair, decimalPayout > 1 ? 1 / decimalPayout : undefined, parlayInfoQuality(rows.length, sameGame))) ?? "—"}. Combined is closed form. Quality capped at 0.64. No fake sim %.`,
     score: parlayScore(combinedFair, decimalPayout > 1 ? decimalPayout : 1.01),
     mix: sameGame ? "same-game" : sports.length > 1 ? "cross-sport" : "same-sport",
     decimalPayout,
@@ -1063,7 +1063,7 @@ export function deskPickFromLegRefs(
     pick.confidence = qualityBand(pick.infoQuality);
   }
   if (live) {
-    pick.why = `${pick.why} Live leg on the slip ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â combined quality haircut. Never The Call. Never the gold ribbon.`;
+    pick.why = `${pick.why} Live leg on the slip — combined quality haircut. Never The Call. Never the gold ribbon.`;
   }
   if (stood.length) {
     pick.why = `${pick.why} Stood down: ${stood.join("; ")}. Still opened the slip.`;
@@ -1072,7 +1072,7 @@ export function deskPickFromLegRefs(
 }
 
 export function correlationFlag(corr?: ParlayCandidate["correlation"], sameGame?: boolean): string {
-  if (corr === "shared-latent") return "joint-path ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· shared-latent";
+  if (corr === "shared-latent") return "joint-path · shared-latent";
   if (corr === "fallback-haircut") return "Thin fallback-haircut";
   if (sameGame) return "Same-game";
   return "near-independent";
@@ -1087,22 +1087,22 @@ export function ribbonSitWhy(p: DeskPick, rows?: ScanRow[]): string {
   }
   const live = parlay.legs.some((l) => matchLegRow(rows ?? [], l)?.inPlay);
   if (live) {
-    return "Not on the gold ribbon ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â live legs cannot load onto the ribbon. Combined quality is haircut. Never The Call.";
+    return "Not on the gold ribbon — live legs cannot load onto the ribbon. Combined quality is haircut. Never The Call.";
   }
   if (parlay.legs.some((l) => isCollegeSport(l.sport) && l.marketType === "prop")) {
     return "College player legs cannot load. Florida compact blocks them. Stood that leg down.";
   }
   if (parlay.legs.some((l) => l.marketType === "prop")) {
-    return "Not on the gold ribbon ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â player props are custom builder, never the gold badge.";
+    return "Not on the gold ribbon — player props are custom builder, never the gold badge.";
   }
   if (parlay.sameGame) {
-    return "Not on the gold ribbon ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â same-game lives as SGP catalog, not the gold badge. Joint-path or Thin fallback-haircut still prints on the ticket.";
+    return "Not on the gold ribbon — same-game lives as SGP catalog, not the gold badge. Joint-path or Thin fallback-haircut still prints on the ticket.";
   }
   if (parlay.legs.some((l) => /1st inning|first inning/i.test(l.selection) && /0\.5/.test(l.selection))) {
-    return "Not on the gold ribbon ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â a period 0.5 cannot be a ribbon leg.";
+    return "Not on the gold ribbon — a period 0.5 cannot be a ribbon leg.";
   }
   if (!ribbonEligible(p)) {
-    return "Not on the gold ribbon ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â a leg missed the 56%/60% displayed floor, the combined floor, payout 1.45, or quality 0.72.";
+    return "Not on the gold ribbon — a leg missed the 56%/60% displayed floor, the combined floor, payout 1.45, or quality 0.72.";
   }
   return "On the gold ribbon: 2- or 3-leg mains, floors cleared, no live, no college player, no period 0.5.";
 }
@@ -1238,7 +1238,7 @@ export function lookupPick(id: string, scan: ScanBundle, snapshot: DeskSnapshot)
 export function pickMatchup(p: DeskPick): string {
   if (p.away && p.home) return matchupLine(p.away, p.home);
   if (p.parlay) {
-    return p.parlay.legs.map((l) => `${l.away} at ${l.home}`).join(" ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+    return p.parlay.legs.map((l) => `${l.away} at ${l.home}`).join(" · ");
   }
   return p.sport || "Ticket";
 }
@@ -1253,7 +1253,7 @@ export function pickInSport(p: DeskPick, sport: string | undefined): boolean {
   return p.sport === sport;
 }
 
-/** Same board in ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ same string out. No clock, no random. */
+/** Same board in → same string out. No clock, no random. */
 export function picksFingerprint(bag: DeskPicks): string {
   return bag.all
     .map((p) => `${p.id}|${p.chance.toFixed(6)}|${p.score.toFixed(6)}|${p.bucket}`)
