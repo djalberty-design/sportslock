@@ -1,4 +1,4 @@
-import { getSql } from "@/lib/db";
+import { getSql } from "../db.ts";
 
 export type SuggestionStatus = "pending" | "accepted" | "rejected" | "later" | "auto_applied" | "revoked";
 

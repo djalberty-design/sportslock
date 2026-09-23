@@ -1,4 +1,4 @@
-import { getSql } from "@/lib/db";
+import { getSql } from "./db.ts";
 
 export type TuningConfig = {
   minEdge: number;

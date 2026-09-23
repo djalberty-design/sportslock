@@ -1,5 +1,5 @@
-import type { EventBrief, PublicSplit, QuantFactorItem, QuantWaterfall, ScanRow } from "./types";
-import { getDynamicWeightsSync } from "./dynamic-weights";
+import type { EventBrief, PublicSplit, QuantFactorItem, QuantWaterfall, ScanRow } from "./types.ts";
+import { getDynamicWeightsSync } from "./dynamic-weights.ts";
 
 /**
  * Computes an institutional Quant Factor Waterfall for a given play.

@@ -1,5 +1,5 @@
-import { getSql } from "@/lib/db";
-import { logActivity } from "@/lib/market/activity";
+import { getSql } from "../db.ts";
+import { logActivity } from "./activity.ts";
 
 export type BlendWeights = {
   wSim: number;

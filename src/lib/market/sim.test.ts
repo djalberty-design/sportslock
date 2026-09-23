@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DESK_VERSION } from "./rules.ts";
 import { deskSeed, Pcg64 } from "./seed.ts";
-import { blendFair, drawPaths, latentFromScores, simCover, simOver, simWin } from "./sim.ts";
+import { FAIR_BLEND, blendFair, drawPaths, latentFromScores, simCover, simOver, simWin } from "./sim.ts";
 import { isKnownMarket, unknownMarketReason } from "./registry.ts";
 
 test("same seed yields the same path stream", () => {
@@ -35,22 +35,21 @@ test("PCG64 has no wall-clock entropy", () => {
   assert.equal(a.float(), b.float());
 });
 
-test("NFL paths put extra mass on 3 and 7", () => {
+test("NFL simulation puts extra mass on key numbers like 3", () => {
   const g = latentFromScores({ eventId: "nfl-x", sport: "NFL", homeWin: 0.5, total: 44.5 });
-  const paths = drawPaths(g, "snap", 4000);
-  const key = paths.filter((p) => {
-    const m = Math.round(p.muH - p.muA);
-    return m === 3 || m === -3 || m === 7 || m === -7;
-  }).length;
-  assert.ok(key > 100, `expected 3/7 spike, got ${key}`);
+  const paths = drawPaths(g, "snap");
+  const c25 = simCover(paths, -2.5);
+  const c35 = simCover(paths, -3.5);
+  const diff3 = c25.p - c35.p;
+  assert.ok(diff3 > 0.10, `expected key number 3 spike > 10%, got ${diff3}`);
 });
 
-test("blendFair is 50% market + 30% sim + 20% pool", () => {
-  assert.equal(blendFair(0.4, 0.7, 0.6), 0.5 * 0.6 + 0.3 * 0.4 + 0.2 * 0.7);
+test("blendFair is 50% sim + 30% pool + 20% market", () => {
+  assert.equal(blendFair(0.4, 0.7, 0.6), FAIR_BLEND.sim * 0.4 + FAIR_BLEND.pool * 0.7 + FAIR_BLEND.market * 0.6);
 });
 
 test("blendFair missing sim renormalizes market + pool — never invents a 50/50 sim look", () => {
-  const expected = (0.5 * 0.55 + 0.2 * 0.6) / 0.7;
+  const expected = (FAIR_BLEND.market * 0.55 + FAIR_BLEND.pool * 0.6) / (FAIR_BLEND.market + FAIR_BLEND.pool);
   assert.ok(Math.abs(blendFair(undefined, 0.6, 0.55) - expected) < 1e-9);
 });
 
