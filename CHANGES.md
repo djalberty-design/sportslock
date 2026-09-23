@@ -497,4 +497,18 @@ This file documents every change made to the codebase in sequential order, detai
     - Added sub-tabbed proposal management (Pending vs Applied Tuning) with visual diff badges.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
 
+---
+
+## Change 28: Mobile Responsive Header Polish & Sticky Viewport Alignment
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/routes/picks.tsx`
+* **Rationale**:
+  - Mobile Viewport Header Optimization (`picks.tsx`):
+    - Adjusted title font scaling (`text-xl sm:text-2xl`) and multi-model badge sizing (`text-[10px] sm:text-xs`) to prevent line truncation or awkward wrapping on narrow screens ($\le 390\text{px}$).
+    - Added dedicated analyzed plays counter badge aligned cleanly in the header flex row.
+    - Updated sticky filter bar offset from `top-7` to `top-14 sm:top-7` to eliminate clash and overlap with the mobile top navigation shell during scrolling.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+
 

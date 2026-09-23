@@ -501,12 +501,18 @@ function TheLab() {
     <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-line pb-4 mb-6">
-        <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-          The Lab <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 tracking-normal uppercase">Multi-Model Parlay Builder</span>
-        </h1>
-        <p className="text-sm text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-ink flex flex-wrap items-center gap-2 sm:gap-3">
+            The Lab <span className="text-[10px] sm:text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-normal uppercase">Multi-Model Parlay Builder</span>
+          </h1>
+          {allBets.length > 0 && (
+            <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+              {allBets.length} Plays Analyzed
+            </span>
+          )}
+        </div>
+        <p className="text-xs sm:text-sm text-muted">
           Every pregame bet ranked by Expected Value and Edge %. Filter by AI Model: 10k Monte Carlo Simulation, Player Prop Labs, Sharp Steam, or Periods.
-          {allBets.length > 0 && <span className="text-primary font-bold ml-1">{allBets.length} bets analyzed</span>}
         </p>
       </div>
 
@@ -531,7 +537,7 @@ function TheLab() {
       {!loading && allBets.length > 0 && (
         <div className="flex flex-col gap-3 pb-24">
           {/* Filter bar */}
-          <div className="flex flex-col gap-2 sticky top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
+          <div className="flex flex-col gap-2 sticky top-14 sm:top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
             {/* Row 1: Bet type tabs */}
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {TAB_LABELS.map(({ key, label }) => (
