@@ -246,3 +246,142 @@ export async function getGradeStats(): Promise<GradeStats> {
     return { ok: false, graded: 0, pending: 0, wins: 0, losses: 0, pushes: 0, expired: 0, error: String(err) };
   }
 }
+
+/**
+ * Grade pending predictions in prediction_logs using live and historical scores.
+ */
+export async function gradePredictionLogs(scores?: LiveScore[]): Promise<{ graded: number; unmatched: number; historical: number }> {
+  try {
+    const sql = await getSql();
+
+    let allScores = scores;
+    if (!allScores || allScores.length === 0) {
+      const live = await fetchLiveScores().catch(() => []);
+      const hist = await fetchAllHistoricalForGrading().catch(() => []);
+      allScores = [...live.filter((s) => s.complete), ...hist];
+    }
+
+    if (!allScores.length) return { graded: 0, unmatched: 0, historical: 0 };
+
+    const pending = await sql<{
+      id: string;
+      event_id: string;
+      selection: string;
+      market_type: string;
+      line: string | number | null;
+      snapshot: any;
+    }>`
+      SELECT id, event_id, selection, market_type, line, snapshot
+      FROM prediction_logs
+      WHERE status = 'PENDING'
+      ORDER BY created_at DESC
+      LIMIT 1000
+    `;
+
+    if (!pending.length) return { graded: 0, unmatched: 0, historical: 0 };
+
+    // Pre-load event info from market_tape for events that are pending
+    const eventIds = [...new Set(pending.map((p) => p.event_id).filter(Boolean))];
+    const tapeInfoMap = new Map<string, { home: string; away: string; sport: string }>();
+    if (eventIds.length > 0) {
+      try {
+        const tapeRows = await sql<{ event_id: string; home: string; away: string; sport: string }>`
+          SELECT DISTINCT event_id, home, away, sport
+          FROM market_tape
+          WHERE event_id = ANY(${eventIds})
+        `;
+        for (const tr of tapeRows) {
+          if (tr.event_id && tr.home && tr.away) {
+            tapeInfoMap.set(tr.event_id, { home: tr.home, away: tr.away, sport: tr.sport });
+          }
+        }
+      } catch {}
+    }
+
+    let graded = 0;
+    let unmatched = 0;
+    let historical = 0;
+
+    for (const log of pending) {
+      try {
+        const selection = String(log.selection || "");
+        const marketType = String(log.market_type || "");
+        const eventId = String(log.event_id || "");
+        const sportMatch = eventId.match(/^(?:oddsapi|espn)-([A-Z]+)-/);
+        const inferredSport = sportMatch?.[1] || null;
+
+        const tapeInfo = tapeInfoMap.get(eventId);
+        const home = log.snapshot?.home || tapeInfo?.home || null;
+        const away = log.snapshot?.away || tapeInfo?.away || null;
+        const sport = log.snapshot?.sport || tapeInfo?.sport || inferredSport;
+
+        let hit: LiveScore | null = null;
+
+        if (home && away) {
+          hit = allScores.find(
+            (s) =>
+              s.complete &&
+              (!sport || !s.sport || s.sport.toUpperCase() === sport.toUpperCase()) &&
+              teamsMatch(s.home, home, s.homeAbbr) &&
+              teamsMatch(s.away, away, s.awayAbbr),
+          ) || null;
+        }
+
+        if (!hit) {
+          hit = allScores.find(
+            (s) =>
+              s.complete &&
+              (!sport || !s.sport || s.sport.toUpperCase() === sport.toUpperCase()) &&
+              (teamsMatch(selection, s.home, s.homeAbbr) || teamsMatch(selection, s.away, s.awayAbbr)),
+          ) || null;
+        }
+
+        if (!hit) {
+          unmatched++;
+          continue;
+        }
+
+        const outcome = gradeMarket({
+          marketType,
+          side: log.snapshot?.side || (home && teamsMatch(selection, home) ? "home" : away && teamsMatch(selection, away) ? "away" : null),
+          selection,
+          line: log.line != null ? Number(log.line) : null,
+          home: hit.home,
+          away: hit.away,
+          homeScore: hit.homeScore,
+          awayScore: hit.awayScore,
+        });
+
+        if (!outcome) {
+          unmatched++;
+          continue;
+        }
+
+        await sql`
+          UPDATE prediction_logs
+          SET status = ${outcome},
+              actual_result = ${JSON.stringify({
+                home: hit.home,
+                away: hit.away,
+                homeScore: hit.homeScore,
+                awayScore: hit.awayScore,
+                source: hit.source,
+                gradedBy: "auto-grader"
+              })}::jsonb,
+              updated_at = now()
+          WHERE id = ${log.id}
+        `;
+        graded++;
+        if (hit.source?.includes("historical")) historical++;
+      } catch (e) {
+        console.error(`Failed to grade prediction_log ${log.id}:`, e);
+        unmatched++;
+      }
+    }
+
+    return { graded, unmatched, historical };
+  } catch (err) {
+    console.error("gradePredictionLogs failed:", err);
+    return { graded: 0, unmatched: 0, historical: 0 };
+  }
+}

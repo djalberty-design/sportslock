@@ -212,7 +212,7 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
       americanfootball_ncaaf: "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_anytime_td",
       basketball_nba: "player_points,player_rebounds,player_assists,player_threes",
       basketball_ncaab: "player_points,player_rebounds,player_assists,player_threes",
-      baseball_mlb: "player_home_runs,player_strikeouts,player_hits,player_total_bases",
+      baseball_mlb: "batter_home_runs,batter_hits,batter_total_bases,batter_rbis,batter_runs_scored,pitcher_strikeouts,pitcher_outs",
       icehockey_nhl: "player_points,player_assists,player_goals,player_shots_on_goal",
     };
     const markets = SPORT_MARKETS[sportKey] || "player_points,player_assists";

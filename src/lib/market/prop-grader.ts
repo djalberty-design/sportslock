@@ -28,10 +28,8 @@ async function fetchJson(url: string): Promise<any | null> {
 }
 
 function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}${m}${day}`;
+  const nyDate = d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  return nyDate.replace(/-/g, "");
 }
 
 async function resolveEspnEventId(sport: string, date: Date, home: string, away: string): Promise<string | null> {

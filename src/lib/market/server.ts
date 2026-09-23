@@ -311,13 +311,18 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
         player_shots_on_goal: "shots on goal", player_goals: "goals",
         player_points_nhl: "points", player_saves: "saves",
         player_blocked_shots: "blocked shots",
+        // MLB batter_/pitcher_ prefixes (The Odds API uses these for baseball)
+        batter_home_runs: "home run", batter_hits: "hits", batter_total_bases: "total bases",
+        batter_rbis: "rbi", batter_runs_scored: "runs scored",
+        batter_hits_runs_rbis: "hits + runs + RBIs",
+        pitcher_strikeouts: "strikeouts", pitcher_outs: "pitcher outs",
       };
 
       const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
         for (const mkt of bk.markets || []) {
-          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^player_/, "").replace(/_/g, " ") || "";
+          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^(?:player|batter|pitcher)_/, "").replace(/_/g, " ") || "";
           for (const outcome of mkt.outcomes || []) {
             const price = outcome.price || -110;
             const implied = price < 0
@@ -339,6 +344,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
               sport,
               home,
               away,
+              start: event.commence_time || "",
               selection: selectionWithStat.trim(),
               player: playerName,
               marketType: mkt.key || "prop",
@@ -518,13 +524,18 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         player_shots_on_goal: "shots on goal", player_goals: "goals",
         player_points_nhl: "points", player_saves: "saves",
         player_blocked_shots: "blocked shots",
+        // MLB batter_/pitcher_ prefixes (The Odds API uses these for baseball)
+        batter_home_runs: "home run", batter_hits: "hits", batter_total_bases: "total bases",
+        batter_rbis: "rbi", batter_runs_scored: "runs scored",
+        batter_hits_runs_rbis: "hits + runs + RBIs",
+        pitcher_strikeouts: "strikeouts", pitcher_outs: "pitcher outs",
       };
 
       const props: any[] = [];
       const bookmakers = event.bookmakers || [];
       for (const bk of bookmakers) {
         for (const mkt of bk.markets || []) {
-          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^player_/, "").replace(/_/g, " ") || "";
+          const statLabel = MKT_TO_STAT[mkt.key] || mkt.key?.replace(/^(?:player|batter|pitcher)_/, "").replace(/_/g, " ") || "";
           for (const outcome of mkt.outcomes || []) {
             const price = outcome.price || -110;
             const implied = price < 0
@@ -613,10 +624,22 @@ export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
         AND fetched_at > NOW() - INTERVAL '48 hours'
         ORDER BY fetched_at DESC
       `;
+      const now = Date.now();
       const allProps: any[] = [];
       for (const row of rows) {
         if (Array.isArray(row.data)) {
-          allProps.push(...row.data);
+          const fetchedAge = now - new Date(row.fetched_at).getTime();
+          for (const p of row.data) {
+            // Server-side pregame filter: skip props whose game has already started
+            if (p.start) {
+              const startMs = new Date(p.start).getTime();
+              if (!isNaN(startMs) && startMs < now) continue;
+            } else if (fetchedAge > 6 * 60 * 60 * 1000) {
+              // Legacy props without start field: if fetched > 6h ago, the game has surely started/finished
+              continue;
+            }
+            allProps.push(p);
+          }
         }
       }
       return { ok: true, props: allProps };
@@ -953,9 +976,20 @@ export const batchGradeFn = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     try {
       await assertAdmin(context.userId);
-      const { gradeMarketTape } = await import("@/lib/market/grade-tape");
-      const result = await gradeMarketTape();
-      return result;
+      const { gradeMarketTape, gradePredictionLogs } = await import("@/lib/market/grade-tape");
+      const { gradePlayerProps } = await import("@/lib/market/prop-grader");
+
+      const tapeResult = await gradeMarketTape();
+      const predResult = await gradePredictionLogs();
+      const propResult = await gradePlayerProps().catch(() => ({ graded: 0, unmatched: 0, skipped: 0, expired: 0 }));
+
+      return {
+        ok: true,
+        graded: tapeResult.graded + predResult.graded + propResult.graded,
+        unmatched: tapeResult.unmatched + predResult.unmatched,
+        historical: tapeResult.historical + predResult.historical,
+        expired: tapeResult.expired + (propResult.expired || 0),
+      };
     } catch (e: any) {
       return { ok: false, graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) };
     }
@@ -1108,7 +1142,10 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
             THEN round(avg(CASE WHEN status IN ('WIN','LOSS') THEN
                    (model_probability - (CASE WHEN status = 'WIN' THEN 1 ELSE 0 END))^2
                  END)::numeric, 4)
-            ELSE NULL END AS brier
+            ELSE NULL END AS brier,
+          CASE WHEN count(*) > 0
+            THEN round(avg(COALESCE(edge, 0))::numeric, 2)
+            ELSE 0 END AS avg_clv
         FROM market_tape
         ${where}
       `;

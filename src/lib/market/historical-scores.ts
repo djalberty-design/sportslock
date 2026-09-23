@@ -23,12 +23,10 @@ const SPORT_PATHS: Record<string, string> = {
   NHL: "hockey/nhl",
 };
 
-/** Format Date to YYYYMMDD for ESPN API */
+/** Format Date to YYYYMMDD for ESPN API (using America/New_York timezone) */
 function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}${m}${day}`;
+  const nyDate = d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  return nyDate.replace(/-/g, "");
 }
 
 /** Fetch JSON with timeout */
@@ -131,7 +129,7 @@ export async function fetchHistoricalScores(date: Date): Promise<LiveScore[]> {
 
   // MLB has its own API
   try {
-    const mlbDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const mlbDate = date.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     const mlbUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${mlbDate}&hydrate=linescore,team`;
     const mlbJson = await fetchJson(mlbUrl);
     if (mlbJson) allScores.push(...parseMlbBoard(mlbJson));
@@ -156,21 +154,30 @@ export async function fetchHistoricalScores(date: Date): Promise<LiveScore[]> {
 }
 
 /**
- * Get all unique dates that have ungraded predictions in market_tape.
- * Returns dates older than 6 hours (give live grading time to work first).
+ * Get all unique dates that have ungraded predictions in market_tape or prediction_logs.
+ * Dates are calculated in US Eastern time (America/New_York) to match league schedules.
  */
 export async function getUngradedDates(): Promise<Date[]> {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
   const rows = await sql.query<{ game_date: string }>(
-    `SELECT DISTINCT date_trunc('day', COALESCE(start, snapped_at))::date::text AS game_date
-     FROM market_tape
-     WHERE (status IS NULL OR status = 'PENDING')
-       AND COALESCE(start, snapped_at) < now() - interval '6 hours'
+    `SELECT DISTINCT game_date FROM (
+       SELECT (COALESCE(start, snapped_at) AT TIME ZONE 'America/New_York')::date::text AS game_date
+       FROM market_tape
+       WHERE (status IS NULL OR status = 'PENDING')
+         AND COALESCE(start, snapped_at) < now() - interval '3 hours'
+       UNION
+       SELECT (created_at AT TIME ZONE 'America/New_York')::date::text AS game_date
+       FROM prediction_logs
+       WHERE status = 'PENDING'
+         AND created_at < now() - interval '3 hours'
+     ) sub
+     WHERE game_date IS NOT NULL
      ORDER BY game_date DESC
      LIMIT 30`,
   );
-  return rows.map((r) => new Date(r.game_date));
+  // Anchor at 12:00:00 UTC so date calculations never shift dates in US timezones
+  return rows.map((r) => new Date(`${r.game_date}T12:00:00Z`));
 }
 
 /**

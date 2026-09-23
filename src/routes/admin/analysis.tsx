@@ -115,7 +115,7 @@ function AnalysisWorkbench() {
       <section className="bg-panel border border-line rounded-xl p-4 sm:p-6">
         <SectionHeader icon={<Target className="size-4" />} title="Performance Summary"
           description="Win/loss counts and key metrics for the current filter. Brier Score measures prediction accuracy (lower = better). A Brier of 0.25 = random guessing." />
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3 mt-4">
           <StatCard label="Total" value={agg.total || 0} color="text-blue-400" />
           <StatCard label="Won" value={agg.wins || 0} color="text-emerald-400" />
           <StatCard label="Lost" value={agg.losses || 0} color="text-red-400" />
@@ -126,6 +126,8 @@ function AnalysisWorkbench() {
             color={Number(agg.win_rate) >= 55 ? "text-emerald-400" : Number(agg.win_rate) >= 50 ? "text-amber-400" : "text-red-400"} />
           <StatCard label="Brier Score" value={agg.brier != null ? Number(agg.brier).toFixed(4) : "—"}
             color={Number(agg.brier) < 0.22 ? "text-emerald-400" : Number(agg.brier) < 0.25 ? "text-amber-400" : "text-red-400"} />
+          <StatCard label="Avg CLV" value={agg.avg_clv != null ? `${agg.avg_clv > 0 ? "+" : ""}${Number(agg.avg_clv).toFixed(1)}%` : "—"}
+            color={Number(agg.avg_clv) > 0 ? "text-emerald-400" : "text-amber-400"} />
         </div>
       </section>
 

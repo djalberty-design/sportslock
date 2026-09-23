@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { combineParlayFair, type JointLeg } from "./market/joint-grade";
 
 export type ParlayLeg = {
   eventId: string;
@@ -60,14 +61,15 @@ export function isLegSelected(
 
 /**
  * Compute combined American odds from an array of legs.
- * Each leg's price is in American format.
+ * Uses Clayton copula for correlated same-game legs.
  */
 export function combinedOdds(legs: ParlayLeg[]): {
   american: string;
   decPayout: number;
   combinedProb: number;
+  isCorrelated: boolean;
 } {
-  if (legs.length === 0) return { american: "+0", decPayout: 1, combinedProb: 0 };
+  if (legs.length === 0) return { american: "+0", decPayout: 1, combinedProb: 0, isCorrelated: false };
 
   // Combined implied probability (from the line)
   const combinedImplied = legs.reduce((acc, leg) => {
@@ -76,8 +78,19 @@ export function combinedOdds(legs: ParlayLeg[]): {
     return acc * prob;
   }, 1);
 
-  // Combined fair probability (from the model)
-  const combinedFair = legs.reduce((acc, leg) => acc * leg.fairProb, 1);
+  // Convert to JointLeg format for copula calculation
+  const jointLegs: JointLeg[] = legs.map((l) => ({
+    eventId: l.eventId || "unknown",
+    marketType: l.marketType || "unknown",
+    side: l.side || (l.selection?.toLowerCase().includes("over") ? "over" : l.selection?.toLowerCase().includes("under") ? "under" : "home"),
+    fairProb: l.fairProb,
+    price: l.price,
+    isProp: l.marketType === "prop" || l.marketType.startsWith("player_") || l.marketType.startsWith("batter_") || l.marketType.startsWith("pitcher_"),
+    selection: l.selection,
+    sport: l.sport,
+  }));
+
+  const { combinedFair, sameGame } = combineParlayFair(jointLegs);
 
   const decPayout = combinedImplied > 0 ? 1 / combinedImplied : 1;
   const american =
@@ -87,5 +100,5 @@ export function combinedOdds(legs: ParlayLeg[]): {
         ? `-${Math.round(100 / (decPayout - 1))}`
         : "+0";
 
-  return { american, decPayout, combinedProb: combinedFair };
+  return { american, decPayout, combinedProb: combinedFair, isCorrelated: sameGame };
 }

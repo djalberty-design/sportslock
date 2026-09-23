@@ -146,7 +146,14 @@ function bagFrom(cats: Cat[] | undefined): SplitBag {
   b.tov = g("turnoverpct", "tovpct", "tov");
   b.orb = g("offensivereboundpct", "orbpct", "orb");
   b.ftRate = g("freethrowrate", "ftrate");
-  b.kenpom = g("kenpom", "adjem", "adjustedefficiency");
+  b.kenpom = g("kenpom", "adjem", "adjustedefficiency", "netrating");
+  // Derive power efficiency margin proxy when third-party rating feed is missing
+  if (b.kenpom == null && b.ptsG != null && b.ptsAllowed != null) {
+    b.kenpom = (b.ptsG - b.ptsAllowed) + (b.wp != null ? (b.wp - 0.5) * 8 : 0);
+  }
+  if (b.epa == null && b.ptsG != null && b.ptsAllowed != null) {
+    b.epa = (b.ptsG - b.ptsAllowed) / 10;
+  }
   b.xg = g("xg", "expectedgoals", "xgf");
   b.gsax = g("gsax", "goalssavedaboveexpected");
   return b;

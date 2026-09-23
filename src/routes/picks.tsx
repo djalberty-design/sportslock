@@ -128,12 +128,17 @@ function TheLab() {
     // Build a map of eventId → start time and a set of known-live events from the scan
     const now = Date.now();
     const eventStartMap = new Map<string, string>();
+    const matchupStartMap = new Map<string, string>(); // "away|home" -> start time
     const liveEventIds = new Set<string>();
     const liveMatchups = new Set<string>(); // "away|home" for cross-format matching
     const rows = scan?.rows || [];
     for (const r of rows) {
       if (r.eventId && r.start && !eventStartMap.has(r.eventId)) {
         eventStartMap.set(r.eventId, r.start);
+      }
+      if (r.home && r.away && r.start) {
+        const mKey = `${r.away.toLowerCase()}|${r.home.toLowerCase()}`;
+        if (!matchupStartMap.has(mKey)) matchupStartMap.set(mKey, r.start);
       }
       // Mark event as live if inPlay OR start is in the past
       if (r.eventId) {
@@ -150,9 +155,10 @@ function TheLab() {
     const isLive = (b: any) => {
       if (b.inPlay) return true;
       if (b.eventId && liveEventIds.has(b.eventId)) return true;
+      const mKey = b.home && b.away ? `${b.away.toLowerCase()}|${b.home.toLowerCase()}` : "";
       // Cross-format: match by team names
-      if (b.home && b.away && liveMatchups.has(`${b.away.toLowerCase()}|${b.home.toLowerCase()}`)) return true;
-      const startStr = b.start || eventStartMap.get(b.eventId || "");
+      if (mKey && liveMatchups.has(mKey)) return true;
+      const startStr = b.start || eventStartMap.get(b.eventId || "") || (mKey ? matchupStartMap.get(mKey) : "");
       if (startStr) {
         const start = new Date(startStr).getTime();
         if (!isNaN(start) && start < now) return true;
