@@ -285,8 +285,8 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
       side: line.side,
       selection: line.selection,
       price,
-      fairProb: implied,
-      evPct: NaN,
+      fairProb: line.isProp && ((line as any).aiProb != null || line.fairProb != null) ? ((line as any).aiProb ?? line.fairProb) : implied,
+      evPct: line.isProp && ((line as any).aiProb != null || line.fairProb != null) ? evPct(price, (line as any).aiProb ?? line.fairProb) : NaN,
       hold: NaN,
       hardRockPrice: book,
       consensusPrice: line.consensusPrice,
@@ -328,27 +328,47 @@ export function scoreQuotes(snapshot: DeskSnapshot): ScanRow[] {
     });
     const unknown = Boolean(line.isProp) && !isKnownMarket(line.selection, line.marketType);
     const college = Boolean(line.isProp) && isCollegeSport(line.sport);
+    const propEv = base.evPct;
+    const isPropValue = Boolean(
+      line.isProp &&
+      Number.isFinite(propEv) &&
+      !college &&
+      !unknown &&
+      !inPlay &&
+      propEv >= 0.015
+    );
+
     const finalTag = college
       ? "illegal_fl"
       : unknown
         ? "unknown_market"
-        : tag === "illegal_fl"
-          ? "illegal_fl"
-          : inPlay
-            ? "in_play"
-            : "juiced";
+        : isPropValue
+          ? (propEv >= 0.05 ? "fair_or_better" : "close_enough")
+          : tag === "illegal_fl"
+            ? "illegal_fl"
+            : inPlay
+              ? "in_play"
+              : "juiced";
+
+    const finalAction = isPropValue ? "enter_ticket" : "stand_down";
+    const finalReason = isPropValue
+      ? `AI player prop model identifies +${(propEv * 100).toFixed(1)}% EV edge over sportsbook line.`
+      : college
+        ? "College player bets are not allowed on Hard Rock Bet."
+        : unknown
+          ? unknownMarketReason(line.selection)
+          : "Only one side of the market is listed — we cannot call this a fair price.";
+
+    const finalConviction = isPropValue ? (propEv >= 0.05 ? "high" : "medium") : "low";
+    const finalSpark = isPropValue ? `+${(propEv * 100).toFixed(1)}% edge` : "missing two-way";
+
     rows.push({
       ...base,
       tag: finalTag,
-      action: "stand_down",
-      reason:
-        college
-          ? "College player bets are not allowed on Hard Rock Bet."
-          : unknown
-            ? unknownMarketReason(line.selection)
-            : "Only one side of the market is listed ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â we cannot call this a fair price.",
-      conviction: "low",
-      spark: "missing two-way",
+      action: finalAction,
+      reason: finalReason,
+      conviction: finalConviction,
+      spark: finalSpark,
     });
   }
   return rows;
@@ -633,8 +653,7 @@ function catalogPool(rows: ScanRow[]): ScanRow[] {
       r.tag !== "in_play" &&
       r.tag !== "illegal_fl" &&
       r.tag !== "unknown_market" &&
-      isMainMarket(r.marketType) &&
-      !r.isProp &&
+      (isMainMarket(r.marketType) || (r.isProp && r.action === "enter_ticket")) &&
       !r.scheduleOnly &&
       onDeskHorizon(r.start) &&
       Number.isFinite(r.fairProb) &&
@@ -714,6 +733,27 @@ export function enumerateCrossParlays(rows: ScanRow[], n: 2 | 3 | 4, limit = 12)
   const out: ParlayCandidate[] = [];
   for (const combo of combinations(seeds, n)) {
     if (new Set(combo.map((l) => l.eventId)).size !== n) continue;
+
+    // Anti-hedge: If multiple legs in a cross-parlay share the same home/away teams (e.g. doubleheader),
+    // ensure we don't pick opposing sides (e.g. one home spread, one away spread) in the same parlay
+    const matchups = combo.map((l) => [l.home || "", l.away || ""].sort().join(" vs "));
+    if (new Set(matchups).size < n) {
+      const byMatchup = new Map<string, string[]>();
+      let hasConflictingSides = false;
+      for (const l of combo) {
+        const mKey = [l.home || "", l.away || ""].sort().join(" vs ");
+        const existingSides = byMatchup.get(mKey) || [];
+        const opposite = l.side === "home" ? "away" : l.side === "away" ? "home" : null;
+        if (opposite && existingSides.includes(opposite)) {
+          hasConflictingSides = true;
+          break;
+        }
+        if (l.side) existingSides.push(l.side);
+        byMatchup.set(mKey, existingSides);
+      }
+      if (hasConflictingSides) continue;
+    }
+
     const built = buildFromLegs(combo);
     if (built) out.push(built);
   }

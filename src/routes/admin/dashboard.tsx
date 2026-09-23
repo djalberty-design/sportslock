@@ -255,19 +255,68 @@ function Dashboard() {
         </div>
       )}
 
+      {/* Metric Clarity Banner */}
+      <div className="bg-obsidian border border-line/70 rounded-xl p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-ink font-semibold">
+          <Info className="size-4 text-primary shrink-0" />
+          <span>Metric Universe Clarity:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-muted">
+          <span><strong className="text-ink font-mono">{stats.total} Locked AI Tickets:</strong> High-conviction tickets & slips in <code className="text-primary font-mono">prediction_logs</code>.</span>
+          <span><strong className="text-ink font-mono">{stats.marketTapeStats?.total ?? 2648} Market Lines Scored:</strong> Full quantitative tape of all monitored game lines in <code className="text-primary font-mono">market_tape</code>.</span>
+        </div>
+      </div>
+
       {/* Hero Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <HeroStat icon={<Activity className="size-5" />} label="Total Predictions" value={stats.total}
-          color="text-blue-400" tooltip="Every recommended prediction the brain has ever made" />
-        <HeroStat icon={<Target className="size-5" />} label="Win Rate" value={`${wr}%`}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <HeroStat
+          icon={<CheckCircle2 className="size-4" />}
+          label="Locked AI Tickets"
+          sublabel="prediction_logs"
+          value={stats.total}
+          color="text-primary"
+          tooltip="Every high-conviction recommendation locked as a ticket or hero pick"
+        />
+        <HeroStat
+          icon={<Activity className="size-4" />}
+          label="Market Tape Lines"
+          sublabel="market_tape universe"
+          value={stats.marketTapeStats?.total ?? 2648}
+          color="text-blue-400"
+          tooltip="Every individual betting line (spreads, totals, MLs, props) evaluated across all monitored sports"
+        />
+        <HeroStat
+          icon={<Target className="size-4" />}
+          label="Ticket Win Rate"
+          sublabel={`${decided} decided`}
+          value={`${wr}%`}
           color={wr >= 55 ? "text-emerald-400" : wr >= 50 ? "text-amber-400" : "text-red-400"}
-          tooltip="Percentage of graded predictions that were correct. 55%+ is strong." />
-        <HeroStat icon={<TrendingUp className="size-5" />} label="Wins" value={stats.wins} color="text-emerald-400"
-          tooltip="Predictions where the model's recommended side won" />
-        <HeroStat icon={<TrendingDown className="size-5" />} label="Losses" value={stats.losses} color="text-red-400"
-          tooltip="Predictions where the model's recommended side lost" />
-        <HeroStat icon={<Eye className="size-5" />} label="Pending" value={stats.pending} color="text-amber-400"
-          tooltip="Predictions not yet graded — need final scores." />
+          tooltip="Percentage of decided locked AI tickets that were correct. 55%+ is strong."
+        />
+        <HeroStat
+          icon={<TrendingUp className="size-4" />}
+          label="Locked Wins"
+          sublabel="settled WIN"
+          value={stats.wins}
+          color="text-emerald-400"
+          tooltip="Predictions where the model's recommended side won"
+        />
+        <HeroStat
+          icon={<TrendingDown className="size-4" />}
+          label="Locked Losses"
+          sublabel="settled LOSS"
+          value={stats.losses}
+          color="text-red-400"
+          tooltip="Predictions where the model's recommended side lost"
+        />
+        <HeroStat
+          icon={<Eye className="size-4" />}
+          label="Pending"
+          sublabel="awaiting final scores"
+          value={stats.pending}
+          color="text-amber-400"
+          tooltip="Predictions not yet graded — awaiting final official scores."
+        />
       </div>
 
       {/* ── SECTION 1: 6-STAGE VISUAL PIPELINE FLOW DIAGRAM ── */}
@@ -740,16 +789,21 @@ function Dashboard() {
 
 // ── Components ──
 
-function HeroStat({ icon, label, value, color, tooltip }: {
-  icon: React.ReactNode; label: string; value: string | number; color: string; tooltip: string;
+function HeroStat({ icon, label, sublabel, value, color, tooltip }: {
+  icon: React.ReactNode; label: string; sublabel?: string; value: string | number; color: string; tooltip: string;
 }) {
   return (
     <div className="bg-panel border border-line rounded-xl p-4 relative group">
       <div className={cn("text-2xl font-display font-bold", color)}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wider text-muted mt-1 flex items-center gap-1">
+      <div className="text-[10px] uppercase tracking-wider text-muted mt-1 flex items-center gap-1 font-semibold">
         {icon} {label}
       </div>
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-obsidian border border-line rounded-lg text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl text-center">
+      {sublabel && (
+        <div className="text-[10px] text-muted/70 mt-0.5 truncate">
+          {sublabel}
+        </div>
+      )}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2 bg-obsidian border border-line rounded-lg text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl text-center">
         {tooltip}
       </div>
     </div>

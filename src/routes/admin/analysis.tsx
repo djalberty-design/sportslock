@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   Brain, BarChart2, Filter, RefreshCw, Download, ChevronDown, ChevronRight,
   TrendingUp, TrendingDown, Target, AlertTriangle, Zap, CheckCircle2, XCircle, Clock, Info,
-  Search, ShieldAlert, Check, X
+  Search, ShieldAlert, Check, X, Activity
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/analysis")({ component: AnalysisWorkbench });
@@ -19,11 +19,12 @@ type Filters = {
   dateFrom: string;
   dateTo: string;
   edgeTier: string;
+  dataset: "market_tape" | "locked_tickets";
   page: number;
 };
 
 const INITIAL_FILTERS: Filters = {
-  sport: "", marketType: "", status: "", bucket: "", dateFrom: "", dateTo: "", edgeTier: "", page: 1,
+  sport: "", marketType: "", status: "", bucket: "", dateFrom: "", dateTo: "", edgeTier: "", dataset: "market_tape", page: 1,
 };
 
 function AnalysisWorkbench() {
@@ -94,6 +95,42 @@ function AnalysisWorkbench() {
           <Tooltip text="Fetches historical ESPN scores for every past date with ungraded predictions. Grades ML, spread, and total. Marks predictions >14 days old as expired." />
         </div>
       </header>
+
+      {/* ── DATASET UNIVERSE SELECTOR ── */}
+      <div className="bg-panel border border-line rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <span className="text-xs font-mono font-bold text-muted uppercase tracking-wider">Active Analysis Dataset:</span>
+          <p className="text-xs text-muted mt-0.5">
+            Switch between the broad quantitative universe of all scored market lines or strictly audit locked AI tickets.
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 bg-obsidian border border-line p-1 rounded-xl shrink-0">
+          <button
+            onClick={() => setFilter("dataset", "market_tape")}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+              (filters.dataset || "market_tape") === "market_tape"
+                ? "bg-primary text-black shadow-sm"
+                : "text-muted hover:text-ink"
+            )}
+          >
+            <Activity className="size-3.5" />
+            Market Tape Universe ({d?.aggregates?.total || "2,648"})
+          </button>
+          <button
+            onClick={() => setFilter("dataset", "locked_tickets")}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+              filters.dataset === "locked_tickets"
+                ? "bg-primary text-black shadow-sm"
+                : "text-muted hover:text-ink"
+            )}
+          >
+            <CheckCircle2 className="size-3.5" />
+            Locked AI Tickets Only
+          </button>
+        </div>
+      </div>
 
       {/* ── SECTION: FORENSIC 4-BUCKET LOSS AUTOPSY MATRIX ── */}
       <section className="bg-panel border border-line rounded-xl p-4 sm:p-6 space-y-4">

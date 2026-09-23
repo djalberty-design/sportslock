@@ -10,6 +10,8 @@ import { formatAmerican } from "@/lib/market/hit-pct";
 import { labScore, type LabScore } from "@/lib/market/ev-score";
 import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
 import { resolveTeamLogo, resolveLegTeam } from "@/lib/market/logos";
+import { AiTopSingles } from "@/components/app/ai-top-singles";
+import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -429,6 +431,16 @@ function TheLab() {
       {/* Sport Filter */}
       <div className="mb-4">
         <SportFilter sports={liveSports} />
+      </div>
+
+      {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
+      <div className="mb-6">
+        <AiTopSingles rows={scan?.rows || []} cachedProps={cachedProps} />
+      </div>
+
+      {/* ── BUILD WITH AI CUSTOM PARLAY ARCHITECT ── */}
+      <div className="mb-6">
+        <AiCustomArchitect rows={scan?.rows || []} cachedProps={cachedProps} />
       </div>
 
       {/* Loading */}

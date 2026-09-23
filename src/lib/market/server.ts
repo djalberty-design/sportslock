@@ -20,7 +20,40 @@ async function assertAdmin(userId: string) {
   }
 }
 
+let lastAutoGradeMs = 0;
+let isGradingRunning = false;
+
+export async function autoGradeIfStale(): Promise<void> {
+  const now = Date.now();
+  // 10-minute cadence (600,000 ms)
+  if (now - lastAutoGradeMs < 10 * 60 * 1000 || isGradingRunning) {
+    return;
+  }
+  lastAutoGradeMs = now;
+  isGradingRunning = true;
+
+  (async () => {
+    try {
+      const { gradeMarketTape, gradePredictionLogs } = await import("@/lib/market/grade-tape");
+      const { gradePlayerProps } = await import("@/lib/market/prop-grader");
+      const { runTapeAutopsy } = await import("@/lib/market/autopsy-tape");
+      const { runPostGradeAnalysis } = await import("@/lib/market/post-grade-analysis");
+
+      await gradeMarketTape().catch(() => {});
+      await gradePredictionLogs().catch(() => {});
+      await gradePlayerProps().catch(() => {});
+      await runTapeAutopsy().catch(() => {});
+      await runPostGradeAnalysis().catch(() => {});
+    } catch (e) {
+      console.error("[auto-grade-heartbeat] background error:", e);
+    } finally {
+      isGradingRunning = false;
+    }
+  })();
+}
+
 export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
+  autoGradeIfStale().catch(() => {});
   try {
     return await buildLiveSnapshot();
   } catch (err: any) {
@@ -714,6 +747,13 @@ export type BrainStats = {
   pushes: number;
   pending: number;
   winRate: number;
+  marketTapeStats?: {
+    total: number;
+    graded: number;
+    wins: number;
+    losses: number;
+    winRate: number;
+  };
   byMarket: { market: string; total: number; wins: number; winRate: number }[];
   bySport: { sport: string; total: number; wins: number; winRate: number }[];
   byEdgeTier: { tier: string; total: number; wins: number; winRate: number }[];
@@ -744,6 +784,7 @@ export type BrainStats = {
 export const getBrainStatsFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<BrainStats> => {
+    autoGradeIfStale().catch(() => {});
     try {
       await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
@@ -917,6 +958,26 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         allTime: { wins: wall, losses: lall, pct: (wall + lall) > 0 ? Math.round(wall / (wall + lall) * 1000) / 10 : 0 },
       };
 
+      // Market tape overall universe stats
+      const tapeTotalsRaw = await sql<any>`
+        SELECT 
+          count(*)::int as total,
+          count(*) filter (where status IN ('WIN', 'LOSS', 'PUSH'))::int as graded,
+          count(*) filter (where status = 'WIN')::int as wins,
+          count(*) filter (where status = 'LOSS')::int as losses
+        FROM market_tape
+      `;
+      const tt = (tapeTotalsRaw[0] || { total: 0, graded: 0, wins: 0, losses: 0 }) as any;
+      const tapeDecided = Number(tt.wins) + Number(tt.losses);
+      const tapeWinRate = tapeDecided > 0 ? Math.round((Number(tt.wins) / tapeDecided) * 1000) / 10 : 0;
+      const marketTapeStats = {
+        total: Number(tt.total) || 0,
+        graded: Number(tt.graded) || 0,
+        wins: Number(tt.wins) || 0,
+        losses: Number(tt.losses) || 0,
+        winRate: tapeWinRate,
+      };
+
       return {
         total: Number(t.total) || 0,
         wins: Number(t.wins) || 0,
@@ -924,6 +985,7 @@ export const getBrainStatsFn = createServerFn({ method: "GET" })
         pushes: Number(t.pushes) || 0,
         pending: Number(t.pending) || 0,
         winRate, byMarket, bySport, byEdgeTier, recentLogs, autopsySummary,
+        marketTapeStats,
         streakData: { currentStreak, streakType, longestWin, longestLoss },
         dailyDigest,
       };
@@ -1119,13 +1181,183 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
     dateFrom?: string;
     dateTo?: string;
     edgeTier?: string;
+    dataset?: "market_tape" | "locked_tickets";
     page?: number;
   }) => d)
   .handler(async ({ data, context }): Promise<AnalysisDataResult> => {
+    autoGradeIfStale().catch(() => {});
     try {
       await assertAdmin(context.userId);
       const { getSql } = await import("@/lib/db");
       const sql = await getSql();
+
+      if (data.dataset === "locked_tickets") {
+        const conditions: string[] = [];
+        const params: any[] = [];
+        let pIdx = 1;
+
+        if (data.sport) {
+          conditions.push(`split_part(event_id, '-', 2) = $${pIdx++}`);
+          params.push(data.sport);
+        }
+        if (data.marketType) {
+          conditions.push(`market_type = $${pIdx++}`);
+          params.push(data.marketType);
+        }
+        if (data.status) {
+          if (data.status === "PENDING") {
+            conditions.push(`(status IS NULL OR status = 'PENDING')`);
+          } else {
+            conditions.push(`status = $${pIdx++}`);
+            params.push(data.status);
+          }
+        }
+        if (data.bucket) {
+          conditions.push(`ai_autopsy ILIKE $${pIdx++}`);
+          params.push(`%${data.bucket.replace(/_/g, " ")}%`);
+        }
+        if (data.dateFrom) {
+          conditions.push(`created_at >= $${pIdx++}::timestamptz`);
+          params.push(data.dateFrom);
+        }
+        if (data.dateTo) {
+          conditions.push(`created_at <= $${pIdx++}::timestamptz`);
+          params.push(data.dateTo);
+        }
+        if (data.edgeTier === "HIGH") {
+          conditions.push(`ABS(edge) >= 0.05`);
+        } else if (data.edgeTier === "LOW") {
+          conditions.push(`ABS(edge) >= 0.02 AND ABS(edge) < 0.05`);
+        } else if (data.edgeTier === "MICRO") {
+          conditions.push(`ABS(edge) < 0.02`);
+        }
+
+        const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+        const offset = ((data.page || 1) - 1) * 50;
+
+        const aggQuery = `
+          SELECT
+            count(*)::int AS total,
+            count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+            count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+            count(*) FILTER (WHERE status = 'PUSH')::int AS pushes,
+            count(*) FILTER (WHERE status IS NULL OR status = 'PENDING')::int AS pending,
+            count(*) FILTER (WHERE status = 'EXPIRED')::int AS expired,
+            CASE WHEN count(*) FILTER (WHERE status IN ('WIN','LOSS')) > 0
+              THEN round(count(*) FILTER (WHERE status = 'WIN')::numeric /
+                     count(*) FILTER (WHERE status IN ('WIN','LOSS'))::numeric * 100, 1)
+              ELSE 0 END AS win_rate,
+            CASE WHEN count(*) FILTER (WHERE status IN ('WIN','LOSS')) > 0
+              THEN round(avg(CASE WHEN status IN ('WIN','LOSS') THEN
+                     (model_probability - (CASE WHEN status = 'WIN' THEN 1 ELSE 0 END))^2
+                   END)::numeric, 4)
+              ELSE NULL END AS brier,
+            CASE WHEN count(*) > 0
+              THEN round(avg(COALESCE(edge, 0))::numeric * 100, 2)
+              ELSE 0 END AS avg_clv
+          FROM prediction_logs
+          ${where}
+        `;
+        const agg = await sql.query(aggQuery, params);
+
+        const calQuery = `
+          SELECT
+            floor(model_probability * 10)::int AS bucket,
+            count(*)::int AS n,
+            count(*) FILTER (WHERE status = 'WIN')::int AS hits,
+            round(avg(model_probability)::numeric, 3) AS avg_prob,
+            CASE WHEN count(*) > 0
+              THEN round(count(*) FILTER (WHERE status = 'WIN')::numeric / count(*)::numeric, 3)
+              ELSE 0 END AS actual_rate
+          FROM prediction_logs
+          ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+          GROUP BY 1
+          ORDER BY 1
+        `;
+        const calBuckets = await sql.query(calQuery, params);
+
+        const rowsQuery = `
+          SELECT id, selection, split_part(event_id, '-', 2) as sport, market_type, line,
+                 price, model_probability, edge, status,
+                 created_at as snapped_at, created_at as graded_at, event_id,
+                 ai_autopsy as autopsy_note, snapshot
+          FROM prediction_logs
+          ${where}
+          ORDER BY created_at DESC
+          LIMIT 50 OFFSET $${pIdx}
+        `;
+        const rows = await sql.query(rowsQuery, [...params, offset]);
+
+        const sportBreakdown = await sql.query(`
+          SELECT split_part(event_id, '-', 2) as sport,
+            count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+            count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+            count(*)::int AS total
+          FROM prediction_logs
+          ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+          GROUP BY split_part(event_id, '-', 2) ORDER BY total DESC
+        `, params);
+
+        const marketBreakdown = await sql.query(`
+          SELECT market_type,
+            count(*) FILTER (WHERE status = 'WIN')::int AS wins,
+            count(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+            count(*)::int AS total
+          FROM prediction_logs
+          ${where} ${conditions.length ? "AND" : "WHERE"} status IN ('WIN','LOSS')
+          GROUP BY market_type ORDER BY total DESC
+        `, params);
+
+        const autopsyBreakdownRows = await sql.query<any>(`
+          SELECT 
+            count(*) filter (where ai_autopsy ILIKE '%MODEL ERROR%' or ai_autopsy ILIKE '%MODEL MISS%')::int as model_miss,
+            count(*) filter (where ai_autopsy ILIKE '%ECHO%' or ai_autopsy ILIKE '%BOOK%')::int as echoed_book,
+            count(*) filter (where ai_autopsy ILIKE '%HIGH VARIANCE%')::int as high_variance,
+            count(*) filter (where status = 'WIN')::int as settled
+          FROM prediction_logs
+        `);
+        const ab = autopsyBreakdownRows[0] || {};
+        const autopsyBreakdown = {
+          model_miss: Number(ab.model_miss) || 0,
+          echoed_book: Number(ab.echoed_book) || 0,
+          high_variance: Number(ab.high_variance) || 0,
+          settled: Number(ab.settled) || 0,
+        };
+
+        return {
+          ok: true,
+          aggregates: agg[0] || {},
+          calibration: calBuckets,
+          sportBreakdown,
+          marketBreakdown,
+          autopsyBreakdown,
+          rows: rows.map((r: any) => ({
+            id: r.id,
+            selection: r.selection,
+            sport: r.sport,
+            home: "",
+            away: "",
+            marketType: r.market_type,
+            side: "",
+            line: r.line != null ? Number(r.line) : null,
+            price: r.price,
+            modelProb: r.model_probability != null ? Number(r.model_probability) : null,
+            edge: r.edge != null ? Number(r.edge) : null,
+            status: r.status || "PENDING",
+            resultHome: null,
+            resultAway: null,
+            gradedAt: r.graded_at ? String(r.graded_at) : null,
+            snappedAt: String(r.snapped_at),
+            start: null,
+            eventId: r.event_id || null,
+            phase: null,
+            inPlay: false,
+            bucket: r.autopsy_note ? (r.autopsy_note.includes("MODEL") ? "model_miss" : r.autopsy_note.includes("ECHO") ? "echoed_book" : "high_variance") : null,
+            autopsyNote: r.autopsy_note,
+            snapshot: r.snapshot,
+          })),
+        };
+      }
 
       // Ensure autopsy columns exist (they're normally created by autopsy-tape.ts)
       await sql.query(`ALTER TABLE market_tape ADD COLUMN IF NOT EXISTS bucket text`);

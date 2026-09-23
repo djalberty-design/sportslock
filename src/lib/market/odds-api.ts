@@ -44,6 +44,38 @@ export async function writeOddsApiCache(key: string, data: any): Promise<void> {
   }
 }
 
+export async function getActiveCachedProps(): Promise<any[]> {
+  try {
+    const sql = await getSql();
+    const rows = await sql<{ data: any; fetched_at: string }>`
+      SELECT data, fetched_at FROM odds_api_cache
+      WHERE key LIKE 'enriched-props:%'
+      AND fetched_at > NOW() - INTERVAL '36 hours'
+      ORDER BY fetched_at DESC
+    `;
+    const now = Date.now();
+    const out: any[] = [];
+    const seen = new Set<string>();
+    for (const r of rows) {
+      if (!Array.isArray(r.data)) continue;
+      for (const p of r.data) {
+        if (!p || typeof p !== "object") continue;
+        if (p.start) {
+          const s = new Date(p.start).getTime();
+          if (!isNaN(s) && s < now) continue;
+        }
+        const key = `${p.eventId || ""}|${p.selection || ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(p);
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export function getActiveSports(): string[] {
   const month = new Date().getMonth() + 1;
   const active = [];

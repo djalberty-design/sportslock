@@ -1,10 +1,50 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Flame, BarChart2, X, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
 import { cn } from "@/lib/utils";
+
+function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
+  const startStr = leg?.start || quote?.start;
+  const dateObj = startStr ? new Date(startStr) : null;
+  const timeFormatted = dateObj && !isNaN(dateObj.getTime())
+    ? dateObj.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+  const dateFormatted = dateObj && !isNaN(dateObj.getTime())
+    ? dateObj.toLocaleDateString([], { month: "short", day: "numeric" })
+    : null;
+
+  let doubleheaderText: string | null = null;
+  const home = quote?.home || leg?.home;
+  const away = quote?.away || leg?.away;
+  if (home && away && allQuotes && Array.isArray(allQuotes) && dateObj) {
+    const sameDayGames = allQuotes.filter((q: any) => {
+      if (!q.start || !q.home || !q.away) return false;
+      const qDate = new Date(q.start);
+      return (
+        qDate.toDateString() === dateObj.toDateString() &&
+        ((q.home === home && q.away === away) || (q.home === away && q.away === home))
+      );
+    });
+    const uniqueEvents = Array.from(new Set(sameDayGames.map((g: any) => g.eventId)))
+      .map(id => sameDayGames.find((g: any) => g.eventId === id))
+      .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+    if (uniqueEvents.length > 1) {
+      const targetEventId = quote?.eventId || leg?.eventId;
+      const gameIdx = uniqueEvents.findIndex((g: any) => g?.eventId === targetEventId);
+      if (gameIdx >= 0) {
+        doubleheaderText = `Game ${gameIdx + 1} of ${uniqueEvents.length}`;
+      } else {
+        doubleheaderText = "Doubleheader";
+      }
+    }
+  }
+
+  return { timeFormatted, dateFormatted, doubleheaderText };
+}
 
 function TeamMark({ src, name }: { src: string | null; name: string }) {
   const letter = (name || "?").replace(/^(the)\s+/i, "").charAt(0).toUpperCase() || "?";
@@ -38,6 +78,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
   const [wager, setWager] = useState("10");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [expandedLeg, setExpandedLeg] = useState<number | null>(null);
 
   const pick = parlay;
   const parlayCand = pick?.parlay || pick;
@@ -211,41 +252,133 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                    </div>
                    <p className="text-sm text-ink/90 leading-relaxed">{aiInsight}</p>
                  </div>
-                 <h4 className="font-bold text-sm uppercase tracking-wider text-muted border-b border-line pb-2 mt-4">Leg-by-Leg Metrics</h4>
+                 <div className="flex items-center justify-between border-b border-line pb-2 mt-4">
+                   <h4 className="font-bold text-sm uppercase tracking-wider text-muted">Leg-by-Leg Metrics</h4>
+                   <span className="text-[11px] text-muted font-mono">Tap any leg to expand AI & Vegas breakdown</span>
+                 </div>
                  <div className="flex flex-col gap-4">
-                   {legs.map((leg: any, i: number) => {
-                     const hit = matchSnapshotEvent(snapshot, leg);
-                     const teams = resolveLegTeam(leg, hit.quote);
-                     return (
-                       <div key={i} className="bg-obsidian border border-line rounded-xl p-4 flex flex-col gap-3">
-                         <div className="flex items-start gap-3">
-                           <div className="flex items-center -space-x-2 shrink-0">
-                             <TeamMark src={teams.awayLogo} name={teams.awayName || "Away"} />
-                             <TeamMark src={teams.homeLogo} name={teams.homeName || "Home"} />
-                           </div>
-                           <div className="flex flex-col min-w-0">
-                             <span className="font-bold text-ink text-lg leading-tight">{displaySelection(leg, teams)}</span>
-                             <span className="text-xs font-bold text-muted">{leg.marketType} &bull; {teams.matchup}</span>
-                           </div>
-                         </div>
-                         {/* % to hit this leg */}
-                         {leg.fairProb != null && (
-                           <div className="mt-1">
-                             <div className="flex items-center justify-between text-[10px] text-muted mb-0.5">
-                               <span>% to hit this leg</span>
-                               <span className="font-bold text-ink">{Math.round(leg.fairProb * 100)}%</span>
-                             </div>
-                             <div className="h-2 rounded-full bg-line/50 overflow-hidden">
-                               <div className={`h-full rounded-full ${leg.fairProb >= 0.6 ? 'bg-emerald-500' : leg.fairProb >= 0.45 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.round(leg.fairProb * 100)}%` }} />
-                             </div>
-                             <p className="text-[9px] text-muted mt-0.5">
-                               {leg.fairProb >= 0.65 ? 'Strong favorite — high chance' : leg.fairProb >= 0.55 ? 'Slight edge — better than a coin flip' : leg.fairProb >= 0.45 ? 'Close to a toss-up — could go either way' : leg.fairProb >= 0.3 ? 'Underdog — lower chance, bigger payout' : 'Long shot — risky but high reward'}
-                             </p>
-                           </div>
-                         )}
-                       </div>
-                     );
-                   })}
+                    {legs.map((leg: any, i: number) => {
+                      const hit = matchSnapshotEvent(snapshot, leg);
+                      const teams = resolveLegTeam(leg, hit.quote);
+                      const timeInfo = getLegTimeInfo(leg, hit.quote, snapshot?.quotes);
+                      const isExp = expandedLeg === i;
+
+                      const legProb = leg.fairProb ?? hit.quote?.fairProb ?? 0.5;
+                      const rawPrice = Number(leg.price) || -110;
+                      const impliedProb = rawPrice < 0 ? Math.abs(rawPrice) / (Math.abs(rawPrice) + 100) : 100 / (rawPrice + 100);
+                      const edgeVal = +((legProb - impliedProb) * 100).toFixed(1);
+                      const simFair = hit.quote?.simFair ?? null;
+
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => setExpandedLeg(isExp ? null : i)}
+                          className={cn(
+                            "bg-obsidian border rounded-xl p-4 flex flex-col gap-3 transition-colors cursor-pointer select-none",
+                            isExp ? "border-primary/60 shadow-md ring-1 ring-primary/20" : "border-line hover:border-line/80 hover:bg-obsidian/80"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className="flex items-center -space-x-2 shrink-0 mt-0.5">
+                                <TeamMark src={teams.awayLogo} name={teams.awayName || "Away"} />
+                                <TeamMark src={teams.homeLogo} name={teams.homeName || "Home"} />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-ink text-base leading-tight">{displaySelection(leg, teams)}</span>
+                                  {timeInfo.doubleheaderText && (
+                                    <span className="bg-primary/20 text-primary border border-primary/30 font-bold px-2 py-0.5 rounded text-[10px] tracking-wide">
+                                      {timeInfo.doubleheaderText}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-muted mt-0.5 flex-wrap">
+                                  <span>{leg.marketType} &bull; {teams.matchup}</span>
+                                  {timeInfo.timeFormatted && (
+                                    <span className="text-[11px] font-mono text-ink/70 flex items-center gap-1 font-normal bg-line/30 px-1.5 py-0.5 rounded">
+                                      <Clock className="size-3 text-muted" />
+                                      {timeInfo.dateFormatted ? `${timeInfo.dateFormatted} · ` : ""}{timeInfo.timeFormatted}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-muted hover:text-ink shrink-0"
+                              aria-label={isExp ? "Collapse details" : "Expand details"}
+                            >
+                              <ChevronDown className={cn("size-5 transition-transform duration-200", isExp && "rotate-180 text-primary")} />
+                            </button>
+                          </div>
+
+                          {/* % to hit this leg */}
+                          {leg.fairProb != null && (
+                            <div className="mt-1">
+                              <div className="flex items-center justify-between text-[10px] text-muted mb-0.5">
+                                <span className="font-medium">Chance to hit this leg</span>
+                                <span className="font-bold text-ink font-mono">{Math.round(leg.fairProb * 100)}%</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-line/50 overflow-hidden">
+                                <div className={`h-full rounded-full ${leg.fairProb >= 0.6 ? 'bg-emerald-500' : leg.fairProb >= 0.45 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.round(leg.fairProb * 100)}%` }} />
+                              </div>
+                              <p className="text-[9px] text-muted mt-0.5">
+                                {leg.fairProb >= 0.65 ? 'Strong favorite — high chance' : leg.fairProb >= 0.55 ? 'Slight edge — better than a coin flip' : leg.fairProb >= 0.45 ? 'Close to a toss-up — could go either way' : leg.fairProb >= 0.3 ? 'Underdog — lower chance, bigger payout' : 'Long shot — risky but high reward'}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Expandable Deep Dive Metrics Panel */}
+                          <AnimatePresence>
+                            {isExp && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden border-t border-line/60 pt-3 mt-1"
+                              >
+                                <div className="grid grid-cols-3 gap-2 text-center bg-panel/70 rounded-xl p-3 border border-line/40">
+                                  <div>
+                                    <div className="text-[10px] text-muted mb-0.5 uppercase tracking-wider font-bold">Our AI says</div>
+                                    <div className="text-lg font-mono font-bold text-primary">{Math.round(legProb * 100)}%</div>
+                                    <div className="text-[9px] text-muted">chance to hit</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] text-muted mb-0.5 uppercase tracking-wider font-bold">Vegas says</div>
+                                    <div className="text-lg font-mono font-bold text-ink">{Math.round(impliedProb * 100)}%</div>
+                                    <div className="text-[9px] text-muted">implied ({rawPrice > 0 ? `+${rawPrice}` : rawPrice})</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] text-muted mb-0.5 uppercase tracking-wider font-bold">Your edge</div>
+                                    <div className={cn("text-lg font-mono font-bold", edgeVal > 0 ? "text-emerald-400" : "text-amber-400")}>
+                                      {edgeVal > 0 ? "+" : ""}{edgeVal}%
+                                    </div>
+                                    <div className="text-[9px] text-muted">{edgeVal > 0 ? "value bet" : "fair value"}</div>
+                                  </div>
+                                </div>
+
+                                {/* Context metrics */}
+                                <div className="flex items-center justify-between text-[11px] text-muted pt-2.5 px-1 flex-wrap gap-2">
+                                  {simFair != null && (
+                                    <span className="font-mono">
+                                      ⚡ 10k Sim: <strong className="text-ink font-semibold">{Math.round(simFair * 100)}%</strong>
+                                    </span>
+                                  )}
+                                  {hit.brief?.venue && (
+                                    <span>🏟️ {hit.brief.venue}</span>
+                                  )}
+                                  {hit.brief?.weather && (
+                                    <span>🌤️ {hit.brief.weather}</span>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
                  </div>
               </div>
               <div className="p-4 sm:p-6 bg-obsidian border-t border-line">

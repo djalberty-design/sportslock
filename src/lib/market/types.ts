@@ -52,6 +52,8 @@ export type QuoteLine = {
   consensusPrice?: number;
   hardRockPrice?: number;
   openPrice?: number;
+  fairProb?: number;
+  aiProb?: number;
   venueNote?: VenueNote | string;
   homeRecord?: string;
   awayRecord?: string;

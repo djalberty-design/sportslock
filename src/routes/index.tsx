@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
+import { AiTopSingles } from "@/components/app/ai-top-singles";
+import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 import { Sparkles, Activity } from "lucide-react";
 import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
@@ -17,7 +19,7 @@ import {
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
 function SportsLockCommandCenter() {
-  const { picks, snapshot } = useDeskDecision();
+  const { picks, snapshot, scan } = useDeskDecision();
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const [mixFilter, setMixFilter] = useState<MixFilter>("ALL");
 
@@ -43,6 +45,12 @@ function SportsLockCommandCenter() {
         <SportFilter sports={liveSports} />
         <MixFilterBar value={mixFilter} onChange={setMixFilter} />
       </div>
+      {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
+      <AiTopSingles rows={scan?.rows || []} />
+
+      {/* ── BUILD WITH AI CUSTOM PARLAY ARCHITECT ── */}
+      <AiCustomArchitect rows={scan?.rows || []} />
+
       {gold.length === 0 && catalog.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-line rounded-xl">
           <Activity className="size-8 text-muted mb-3" />

@@ -7,7 +7,7 @@ import { fetchTeamLooks } from "./looks.ts";
 import { mergeForm } from "./form.ts";
 import { fetchKalshiContracts, kalshiHomeWin } from "./kalshi.ts";
 import { fetchPolymarketContracts, fetchPolymarketBySlug, polyFromEventResearch, type PolyContract, guessPolySlug, polymarketHomeWin } from "./polymarket.ts";
-import { fetchOddsApiMains, getOddsPropsCache } from "./odds-api.ts";
+import { fetchOddsApiMains, getOddsPropsCache, getActiveCachedProps } from "./odds-api.ts";
 import { buildChance, parseEra } from "./chance.ts";
 import { twoWayNoVig } from "./engine.ts";
 import { ALL_SPORTS } from "./universe.ts";
@@ -736,12 +736,13 @@ async function fetchBriefs(
 }
 
 export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promise<DeskSnapshot> {
-  let [{ quotes, notes }, kalshiContracts, polyContracts, rawTape, oddsApiMains] = await Promise.all([
+  let [{ quotes, notes }, kalshiContracts, polyContracts, rawTape, oddsApiMains, activeProps] = await Promise.all([
     Promise.resolve({ quotes: [] as QuoteLine[], notes: [] as string[] }), // ESPN completely disabled per user request
     fetchKalshiContracts().catch(() => []),
     fetchPolymarketContracts().catch(() => [] as PolyContract[]),
     fetchActionNetworkTape().catch(() => [] as RawBookTape[]),
     fetchOddsApiMains().catch(() => []), // cache is respected
+    getActiveCachedProps().catch(() => [] as QuoteLine[]),
   ]);
   if (quotes.length === 0 && oddsApiMains && oddsApiMains.length > 0) {
     quotes = quotesFromOddsApi(oddsApiMains);
@@ -874,6 +875,9 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   // the frontend needs every market line (ML home, ML away, spread, total, etc).
   const validEventIds = new Set(uniqueQuotes.map(q => q.eventId));
   let finalQuotes = quotes.filter(q => validEventIds.has(q.eventId));
+  if (activeProps && activeProps.length > 0) {
+    finalQuotes.push(...activeProps);
+  }
   if (finalQuotes.length === 0) {
     finalQuotes.push({
       eventId: "diagnostic-empty",
