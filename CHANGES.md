@@ -443,3 +443,33 @@ This file documents every change made to the codebase in sequential order, detai
     - Extended upcoming games window in `live-board.ts` from 24h to 48h to prevent tomorrow's slate from dropping after today's day games commence.
     - Refined `isLive` in `picks.tsx` so future kickoff times are never flagged as live due to team name matches.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+---
+
+## Change 26: Quant Factor Waterfall & Institutional Model Contribution Transparency
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/market/types.ts`
+  - `src/lib/market/waterfall.ts` [NEW]
+  - `src/components/app/quant-factor-waterfall.tsx` [NEW]
+  - `src/lib/market/engine.ts`
+  - `src/components/app/pick-card.tsx`
+  - `src/components/app/game-page.tsx`
+  - `src/routes/admin/dashboard.tsx`
+* **Rationale**:
+  - Institutional Factor Waterfall Decomposition Engine (`types.ts`, `waterfall.ts`):
+    - Created `computeQuantFactorWaterfall` decomposing each play's net edge and model win probability into 5 orthogonal alpha drivers:
+      1. Consensus Market Baseline: De-vigged market consensus implied odds ($\ge 70\%$ Bayesian anchor).
+      2. 10,000 Monte Carlo Simulation: Differential against market line based on simulation possessions and score margins.
+      3. Rest & Schedule Fatigue: Quantifies turnaround asymmetries and rest day advantages (+120 bp for $\ge +2$ days rest, -110 bp for short turnarounds).
+      4. Sharp Money / Steam / RLM: Detects reverse line movement and handle vs ticket divergence (+180 bp for institutional whale flow, -90 bp for public traps).
+      5. Environment & Venue: Venue altitude, wind drag on totals, and home-field edge.
+  - Interactive Factor Component (`quant-factor-waterfall.tsx`):
+    - Built responsive visual waterfall component with color-coded basis point impacts (`+140 bp`, `-90 bp`), blend percentages, and category icons.
+  - Model Transparency Integration:
+    - Wired into `applyEnsemble` in `engine.ts` so every `ScanRow` carries full factor attribution.
+    - Embedded compact expandable waterfall in `pick-card.tsx` so users can inspect alpha attribution directly on AI Pick cards.
+    - Added dedicated "Quant Waterfall" tab in `game-page.tsx` for full game slate factor attribution.
+    - Added Section 2.5 in `dashboard.tsx` with live multi-sport switcher (`MLB`, `NBA`, `NFL`, `NHL`, `NCAAF`, `NCAAB`) in Overseer Mission Control.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+

@@ -19,6 +19,7 @@ import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
 import { FastLogModal } from "./fast-log-modal";
 import { SharePickButton } from "./share-pick";
+import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 
 export function PickCard({
   pick,
@@ -161,6 +162,11 @@ export function PickCard({
         )}
       </Link>
       <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
+      {row?.waterfall && (
+        <div className="mt-3">
+          <QuantFactorWaterfall waterfall={row.waterfall} compact={true} />
+        </div>
+      )}
       <div className="mt-2 flex items-center justify-between">
         <FeeTimingRow pick={pick} />
         <SharePickButton

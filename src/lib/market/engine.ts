@@ -29,6 +29,7 @@ import { formatChancePct } from "../copy.ts";
 import { DEFAULT_COMBO_LEG_CAP, type RankSettings } from "../desk-settings.ts";
 import { getTuning } from "../tuning-api.ts";
 import { getDynamicWeightsSync } from "./dynamic-weights.ts";
+import { computeQuantFactorWaterfall } from "./waterfall.ts";
 
 export const COMBO_SEED_CAP = DEFAULT_COMBO_LEG_CAP;
 
@@ -1037,6 +1038,11 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
         reason =
           "Live remaining-stat from leftover mean (score + clock), not a haircut of the pre-game %. Photograph Hard Rock now. Not The Call.";
       }
+      const waterfall = computeQuantFactorWaterfall(
+        { ...r, fairProb, poolFair, simFair, tapeLean },
+        brief,
+        split,
+      );
       out.push({
         ...r,
         fairProb,
@@ -1049,6 +1055,7 @@ function applyEnsemble(rows: ScanRow[], snapshot: DeskSnapshot): ScanRow[] {
         tag,
         action,
         reason,
+        waterfall,
       });
     }
   }

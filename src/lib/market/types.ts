@@ -138,6 +138,26 @@ export type ScanRow = {
   team?: string;
   position?: string;
   edge?: number;
+  waterfall?: QuantWaterfall;
+};
+
+export type QuantFactorCategory = "market" | "sim" | "schedule" | "steam" | "environment";
+
+export type QuantFactorItem = {
+  name: string;
+  category: QuantFactorCategory;
+  impactBp: number; // basis points, e.g. +140 bp = +1.4%
+  weightPct: number; // % contribution to model
+  detail: string;
+  favorable: boolean;
+};
+
+export type QuantWaterfall = {
+  marketAnchorProb: number;
+  modelProb: number;
+  netEdgeBp: number;
+  factors: QuantFactorItem[];
+  summary: string;
 };
 
 export type ParlayLeg = {

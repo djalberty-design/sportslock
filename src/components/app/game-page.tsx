@@ -13,6 +13,8 @@ import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip"
 import { MarketTip } from "./market-tip";
 import { ProjectedScore, PublicSharpMeter, StreakBadge } from "./competitive-widgets";
 import { ticketHitPct } from "@/lib/market/hit-pct";
+import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
@@ -527,6 +529,36 @@ export function GamePage({ eventId }: { eventId: string }) {
     let items: any[] = [];
     const lines = gameQuotes.filter((q: any) => q.marketType === "spread" || q.marketType === "total" || q.marketType === "ml");
 
+    if (type === "waterfall") {
+      const candidates = lines.slice(0, 6);
+      return (
+        <div className="space-y-4 pt-2">
+          <div className="p-3 bg-panel/70 border border-line rounded-xl text-xs text-muted">
+            <span className="font-bold text-ink">Institutional Factor Attribution:</span> Inspect how the consensus market base, 10,000 Monte Carlo simulation runs, rest differentials, sharp money flow, and venue environment combine to create model edge.
+          </div>
+          {candidates.length === 0 ? (
+            <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">
+              No game lines available to compute factor waterfall.
+            </div>
+          ) : (
+            candidates.map((q: any, i: number) => {
+              const row = q.row || q;
+              const wf = row.waterfall || computeQuantFactorWaterfall(row, gameBrief);
+              return (
+                <div key={i} className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-ink px-1">
+                    <span>{q.selection} ({String(q.marketType || "").toUpperCase()})</span>
+                    <span className="text-muted font-mono">{getAmOdds(q)}</span>
+                  </div>
+                  <QuantFactorWaterfall waterfall={wf} compact={false} />
+                </div>
+              );
+            })
+          )}
+        </div>
+      );
+    }
+
     if (type === "popular") items = [...lines.slice(0, 4), ...gameProps.slice(0, 6)];
     else if (type === "props") items = gameProps;
     else if (type === "lines") items = lines;
@@ -836,13 +868,13 @@ export function GamePage({ eventId }: { eventId: string }) {
 
         {/* Tabs */}
         <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-line/0">
-           {["popular", "lines", "props"].map(tab => (
+           {["popular", "lines", "props", "waterfall"].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn("pb-3 text-sm font-bold uppercase tracking-wider transition-colors relative whitespace-nowrap", activeTab === tab ? "text-primary" : "text-muted hover:text-ink")}
               >
-                 {tab === "lines" ? "Game Lines" : tab === "props" ? "Player Props" : tab}
+                 {tab === "lines" ? "Game Lines" : tab === "props" ? "Player Props" : tab === "waterfall" ? "Quant Waterfall" : tab}
                  {activeTab === tab && <motion.div layoutId="sgptab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
               </button>
            ))}

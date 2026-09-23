@@ -17,6 +17,8 @@ import {
   ChevronRight, ChevronDown, Sliders, ShieldCheck
 } from "lucide-react";
 import React, { useState } from "react";
+import { QuantFactorWaterfall } from "@/components/app/quant-factor-waterfall";
+import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 
 export const Route = createFileRoute("/admin/dashboard")({ component: Dashboard });
 
@@ -111,6 +113,7 @@ function Dashboard() {
   const qc = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [hypothesisQuery, setHypothesisQuery] = useState("");
+  const [selectedWaterfallSport, setSelectedWaterfallSport] = useState("MLB");
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["brain-stats"],
@@ -532,6 +535,84 @@ function Dashboard() {
             );
           })}
         </div>
+      </section>
+
+      {/* ── SECTION 2.5: LIVE QUANT FACTOR WATERFALL DECOMPOSITION ── */}
+      <section className="bg-panel border border-line rounded-xl p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <Layers className="size-4 text-primary" /> Live Quant Factor Waterfall Decomposition
+            </div>
+            <p className="text-xs text-muted mt-1">
+              Real-time orthogonal alpha attribution. Decomposes raw betting edge into 5 orthogonal components: Consensus Anchor (&ge; 70%), 10k Monte Carlo, Rest & Fatigue, Sharp Money / Flow, and Venue Environment.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-obsidian border border-line p-1 rounded-lg">
+            {["MLB", "NBA", "NFL", "NHL", "NCAAF", "NCAAB"].map((sp) => (
+              <button
+                key={sp}
+                onClick={() => setSelectedWaterfallSport(sp)}
+                className={cn(
+                  "px-2.5 py-1 rounded text-xs font-mono font-bold transition-all",
+                  selectedWaterfallSport === sp
+                    ? "bg-primary text-obsidian shadow-sm"
+                    : "text-muted hover:text-ink"
+                )}
+              >
+                {sp}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(() => {
+          const sampleRow = {
+            eventId: `demo-${selectedWaterfallSport.toLowerCase()}-1`,
+            sport: selectedWaterfallSport,
+            start: new Date().toISOString(),
+            home: selectedWaterfallSport === "MLB" ? "Los Angeles Dodgers" : selectedWaterfallSport === "NBA" ? "Boston Celtics" : "Kansas City Chiefs",
+            away: selectedWaterfallSport === "MLB" ? "San Francisco Giants" : selectedWaterfallSport === "NBA" ? "New York Knicks" : "Buffalo Bills",
+            marketType: "ml" as const,
+            side: "home",
+            selection: selectedWaterfallSport === "MLB" ? "Los Angeles Dodgers" : selectedWaterfallSport === "NBA" ? "Boston Celtics" : "Kansas City Chiefs",
+            price: -125,
+            fairProb: 0.582,
+            evPct: 0.026,
+            hold: 0.045,
+            tag: "fair_or_better" as const,
+            action: "enter_ticket" as const,
+            reason: "Positive EV derived from sharp reverse line divergence and simulation pace.",
+            conviction: "high" as const,
+            spark: "2-0 run",
+            simFair: 0.605,
+            poolFair: 0.575,
+            ticketPct: 42,
+            handlePct: 58,
+            tapeLean: "sharp_rlm" as const,
+          };
+
+          const sampleBrief = {
+            eventId: sampleRow.eventId,
+            sport: selectedWaterfallSport,
+            espnHomeWin: 0.59,
+            homeRestDays: 3,
+            awayRestDays: 1,
+            venue: "Home Arena",
+          };
+
+          const wf = computeQuantFactorWaterfall(sampleRow, sampleBrief as any);
+
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted font-mono bg-obsidian/60 px-3 py-2 rounded-lg border border-line/40">
+                <span>Inspecting Active Alpha Attribution for: <strong className="text-ink">{selectedWaterfallSport} Moneyline</strong></span>
+                <span className="text-primary font-bold">Dynamic Weights Active</span>
+              </div>
+              <QuantFactorWaterfall waterfall={wf} compact={false} />
+            </div>
+          );
+        })()}
       </section>
 
       {/* ── SECTION 3: TWO-WAY COMMUNICATION COCKPIT ── */}
