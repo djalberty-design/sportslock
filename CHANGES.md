@@ -510,5 +510,38 @@ This file documents every change made to the codebase in sequential order, detai
     - Updated sticky filter bar offset from `top-7` to `top-14 sm:top-7` to eliminate clash and overlap with the mobile top navigation shell during scrolling.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
 
+---
+
+## Change 29: Quant Factor Waterfall Visibility, Matchup Multi-Leg Parlay Slip, Architect Combo Rotation, and Overseer Section Guides
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/parlay-slip.ts`
+  - `src/components/app/game-page.tsx`
+  - `src/components/app/sportslock-parlay-card.tsx`
+  - `src/components/app/ai-top-singles.tsx`
+  - `src/components/app/ai-custom-architect.tsx`
+  - `src/routes/admin/dashboard.tsx`
+* **Rationale**:
+  - **Quant Factor Waterfall Everywhere**:
+    - Embedded `QuantFactorWaterfall` inside the Deep Dive Analysis modal (`sportslock-parlay-card.tsx`) whenever any leg is expanded (`isExp`), decomposing the edge into Consensus Anchor, 10k Sim, Rest & Fatigue, Sharp Money Flow, and Venue Environment.
+    - Embedded compact `QuantFactorWaterfall` into every card in Top AI Single Bets by Market (`ai-top-singles.tsx`) on the home page (`/`).
+  - **Matchup Ticket Multi-Selection & Parlay Builder**:
+    - Overhauled `useParlaySlip` (`parlay-slip.ts`): Refined mutual exclusivity so multiple player props from the same game or different games can be combined freely without kicking each other out. Player props only replace each other if it is the exact same player and exact same stat category. SGP combination of game lines + player props from the same game is fully permitted.
+    - Added `removeLegByIndex` and disambiguated selection matching using `eventId` and `player`.
+    - Upgraded `game-page.tsx` bottom ticker: computes real-time Clayton copula joint hit percentage and combined odds (`combinedOdds`), differentiates single straight bets vs SGP vs multi-game parlays, allows individual leg removal via `removeLegByIndex(i)`, and added a prominent "Discard Parlay" (`clearAll()`) button next to "Lock It In".
+  - **Custom Parlay Architect "Generate New Combo"**:
+    - Enhanced `ai-custom-architect.tsx` to collect, rank, and deduplicate all high-EV valid combinations.
+    - Added `comboIndex` state with automatic reset on recipe/leg count change.
+    - Added a dedicated "Generate New Combo" button with `<RefreshCw />` and a combo counter ("Combo 1 of N available"), allowing users to cycle through alternative algorithmic combinations on demand.
+  - **Overseer Command Center Guides & Plain-English Descriptions**:
+    - Added an expandable top Overseer Command Center & Operator Guide banner explaining the autonomous closed loop, circuit breakers, and 1-click rollback guarantees.
+    - Added descriptive "What you are looking at & how to use this section" guide callout boxes to:
+      1. Section 1 (6-Stage Pipeline Architecture)
+      2. Section 2 (Dynamic Blend Weights & Circuit Breakers)
+      3. Section 2.5 (Quant Factor Waterfall Decomposition)
+      4. Section 3 (Algorithmic Tuning Cockpit & Talk to the Brain)
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+
 
 

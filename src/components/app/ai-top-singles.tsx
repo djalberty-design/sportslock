@@ -4,6 +4,8 @@ import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip"
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { cn } from "@/lib/utils";
 import { resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
+import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 import {
   TrendingUp,
   Target,
@@ -325,7 +327,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
             );
           }
 
-          const inSlip = isLegSelected(slipLegs, r.selection, r.marketType);
+          const inSlip = isLegSelected(slipLegs, r.selection, r.marketType, r.eventId, r.player);
           const ev = r.evPct ?? 0;
           const evText = ev > 0 ? `+${(ev * 100).toFixed(1)}%` : `${(ev * 100).toFixed(1)}%`;
           const vegasImplied = r.price < 0 ? Math.round((-r.price / (-r.price + 100)) * 100) : Math.round((100 / (r.price + 100)) * 100);
@@ -349,7 +351,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
 
           const handleToggleSlip = () => {
             if (inSlip) {
-              removeLeg(r.selection, r.marketType);
+              removeLeg(r.selection, r.marketType, r.eventId, r.player);
             } else {
               const leg: ParlayLeg = {
                 eventId: r.eventId,
@@ -423,6 +425,18 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                       {evText}
                     </div>
                   </div>
+                </div>
+
+                {/* Quant Factor Attribution Waterfall */}
+                <div className="mb-3 space-y-1">
+                  <div className="flex items-center justify-between text-[9px] uppercase font-bold tracking-wider text-muted px-0.5">
+                    <span>Quant Factor Decomposition</span>
+                    <span className="text-[8px] font-mono text-primary font-normal">Base &rarr; Sim &rarr; Edges</span>
+                  </div>
+                  <QuantFactorWaterfall
+                    waterfall={r.waterfall || computeQuantFactorWaterfall(r)}
+                    compact={true}
+                  />
                 </div>
               </div>
 

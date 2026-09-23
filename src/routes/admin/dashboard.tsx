@@ -115,6 +115,7 @@ function Dashboard() {
   const [hypothesisQuery, setHypothesisQuery] = useState("");
   const [selectedWaterfallSport, setSelectedWaterfallSport] = useState("MLB");
   const [suggestionTab, setSuggestionTab] = useState<"pending" | "applied">("pending");
+  const [showGuide, setShowGuide] = useState(true);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["brain-stats"],
@@ -260,6 +261,66 @@ function Dashboard() {
         </div>
       </header>
 
+      {/* ── OVERSEER OPERATOR GUIDE & CONTROL MANUAL ── */}
+      <div className="bg-obsidian border border-primary/30 rounded-xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="size-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+              <ShieldCheck className="size-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-ink flex items-center gap-1.5">
+                  Overseer Command Center & Operator Guide
+                </h2>
+                <span className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                  Safe to Operate
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Welcome to the neural control cockpit of SportsLock AI. This dashboard gives you total visibility and manual governance over the prediction engine, model weights, factor attribution, and self-tuning feedback loops.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowGuide((v) => !v)}
+            className="flex items-center gap-1 text-xs font-mono font-bold text-primary hover:underline shrink-0"
+          >
+            {showGuide ? "Hide Guide" : "Show Full Guide"}
+            <ChevronDown className={cn("size-3.5 transition-transform", showGuide && "rotate-180")} />
+          </button>
+        </div>
+
+        {showGuide && (
+          <div className="mt-4 pt-4 border-t border-line/50 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-muted animate-in fade-in duration-300">
+            <div className="bg-panel/70 border border-line/60 rounded-lg p-3 space-y-1">
+              <div className="font-bold text-ink flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-emerald-400" /> 1. Autonomous Closed Loop
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Every 10 minutes, the background cron queries ESPN scoreboards to match and grade completed games. Graded outcomes flow directly into loss autopsies and rolling calibration without manual work.
+              </p>
+            </div>
+            <div className="bg-panel/70 border border-line/60 rounded-lg p-3 space-y-1">
+              <div className="font-bold text-ink flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-indigo-400" /> 2. Circuit Breakers & Weights
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                The engine anchors &ge;70% to sharp consensus. If any sport hits a cold streak (&lt;48% win rate over 20+ picks), an automated circuit breaker clamps 90% weight onto sharp books to protect your bankroll.
+              </p>
+            </div>
+            <div className="bg-panel/70 border border-line/60 rounded-lg p-3 space-y-1">
+              <div className="font-bold text-ink flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-primary" /> 3. Safe 1-Click Tuning & Rollback
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                When tuning suggestions are formulated, you retain human-in-the-loop control. You can approve or reject proposals, and any applied parameter can be rolled back to its previous state with a single click.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Pending Alert */}
       {hasPending && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -360,6 +421,16 @@ function Dashboard() {
             <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-400" /> Active Stage</span>
             <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-primary" /> Closed-Loop Tuning</span>
           </div>
+        </div>
+
+        {/* Section 1 Guide Callout */}
+        <div className="bg-obsidian/70 border border-line/60 rounded-lg p-3 text-xs text-muted space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-ink">
+            <Info className="size-3.5 text-primary" /> What you are looking at & how to use this section:
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            This flowchart maps the life cycle of every bet in SportsLock. Stages <strong>1 to 4</strong> build pre-game predictions (Consensus &rarr; 10k Simulations &rarr; 15+ Feature Layers &rarr; Calibrated Blend). Once games start, Stages <strong>5 and 6</strong> automatically verify outcomes against ESPN box scores and feed results into the self-tuning autopsy engine. <strong>Click any box</strong> to open full mathematical operations and live feed telemetry below.
+          </p>
         </div>
 
         {/* The 6-Stage Diagram Grid */}
@@ -489,6 +560,24 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Section 2 Guide Callout */}
+        <div className="bg-obsidian/70 border border-line/60 rounded-lg p-3 text-xs text-muted space-y-2">
+          <div className="flex items-center gap-1.5 font-bold text-ink">
+            <Info className="size-3.5 text-primary" /> What you are looking at & what these controls do:
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            Each card shows the active probability blend weights for a sport: <strong className="text-indigo-400">Market Consensus (70–90%)</strong>, <strong className="text-emerald-400">Monte Carlo Sim (5–20%)</strong>, and <strong className="text-amber-400">Feature Pool (5–20%)</strong>.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] border-t border-line/40 pt-1.5">
+            <div>
+              <strong className="text-ink">• Audit Circuit Breakers:</strong> Scans rolling 30-day win rates. If any sport experiences a dip below 48% over 20+ picks, a fail-safe breaker activates to clamp 90% weight onto sharp books to halt drawdown.
+            </div>
+            <div>
+              <strong className="text-ink">• Calibrate Weights (30d):</strong> Runs rolling Brier score optimization over the past 30 days of ESPN official results, automatically increasing weights for whichever sub-models were most accurate.
+            </div>
+          </div>
+        </div>
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
           {(weights || []).map((w: any) => {
             const mktPct = Math.round((w.wMarket || 0.8) * 100);
@@ -576,6 +665,16 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Section 2.5 Guide Callout */}
+        <div className="bg-obsidian/70 border border-line/60 rounded-lg p-3 text-xs text-muted space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-ink">
+            <Info className="size-3.5 text-primary" /> What you are looking at & how to use this section:
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            The Waterfall decomposes the model's exact edge into 5 orthogonal factor layers above the baseline vig: <strong>Consensus Anchor</strong> (&ge;70% base from sharp bookmakers), <strong>10k Monte Carlo</strong> (simulation distribution shift), <strong>Rest & Fatigue</strong> (schedule and rest advantage), <strong>Sharp Money Flow</strong> (reverse line movement and professional handle), and <strong>Venue Environment</strong> (park factors & weather conditions). <strong>Click any sport button above (MLB, NBA, NFL, etc.)</strong> to inspect the live factor attribution model for that sport.
+          </p>
+        </div>
+
         {(() => {
           const sampleRow = {
             eventId: `demo-${selectedWaterfallSport.toLowerCase()}-1`,
@@ -647,6 +746,24 @@ function Dashboard() {
                 <Sparkles className={cn("size-3.5", formulateMut.isPending && "animate-spin")} />
                 {formulateMut.isPending ? "Formulating..." : "Formulate Proposals"}
               </button>
+            </div>
+          </div>
+
+          {/* Section 3 Guide Callout */}
+          <div className="bg-obsidian/70 border border-line/60 rounded-lg p-3 text-xs text-muted space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-ink">
+              <Info className="size-3.5 text-primary" /> How to use the Algorithmic Tuning Cockpit:
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              This is where SportsLock AI's self-improvement takes place safely with your oversight. Click <strong>&ldquo;Formulate Proposals&rdquo;</strong> to have the AI scan recent loss autopsies and suggest concrete parameter updates (such as simulation temperature scaling, edge floors, or Kelly sizing adjustments).
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] border-t border-line/40 pt-1.5">
+              <div>
+                <strong className="text-ink">• Pending Tab:</strong> Review proposed changes with their expected impact. Click <strong>Approve</strong> to apply immediately or <strong>Reject</strong> to dismiss.
+              </div>
+              <div>
+                <strong className="text-ink">• Applied Tuning Tab:</strong> Displays all currently active manual and AI adjustments. Click <strong>Rollback</strong> at any time to instantly revert parameters to prior values.
+              </div>
             </div>
           </div>
 
@@ -803,6 +920,16 @@ function Dashboard() {
             </div>
             <p className="text-xs text-muted mt-0.5">
               Submit custom hypotheses or analytical inquiries. The Brain audits historical performance and logs the inquiry.
+            </p>
+          </div>
+
+          {/* Talk to the Brain Guide Callout */}
+          <div className="bg-obsidian/70 border border-line/60 rounded-lg p-3 text-xs text-muted space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-ink">
+              <Info className="size-3.5 text-primary" /> How to query the Brain:
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              Type any question or hypothesis into the box below (or click a quick prompt like <em>&ldquo;Cold weather MLB totals&rdquo;</em> or <em>&ldquo;NBA back-to-back rest fatigue&rdquo;</em>). The Brain scans historical database logs, evaluates sample sizes and Brier scores, and logs a verified analytical finding.
             </p>
           </div>
 

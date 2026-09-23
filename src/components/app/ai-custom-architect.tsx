@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { ScanRow, ParlayCandidate } from "@/lib/market/types";
 import { useParlaySlip, type ParlayLeg } from "@/lib/parlay-slip";
 import { formatAmerican } from "@/lib/market/hit-pct";
-import { evaluateParlay, americanToDecimal, decimalToAmerican, evPct } from "@/lib/market/engine";
+import { evaluateParlay, decimalToAmerican } from "@/lib/market/engine";
 import { cn } from "@/lib/utils";
 import { TicketLegAvatar } from "./ticket-leg-avatar";
 import {
@@ -17,6 +17,7 @@ import {
   Sliders,
   Flame,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 
 interface AiCustomArchitectProps {
@@ -37,9 +38,15 @@ const RECIPES: { id: Recipe; label: string; desc: string }[] = [
 export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectProps) {
   const [legCount, setLegCount] = useState<2 | 3 | 4>(2);
   const [recipe, setRecipe] = useState<Recipe>("all_market");
+  const [comboIndex, setComboIndex] = useState(0);
   const [addedSuccess, setAddedSuccess] = useState(false);
 
   const { addLeg } = useParlaySlip();
+
+  // Reset combo rotation when changing recipe or leg count
+  useEffect(() => {
+    setComboIndex(0);
+  }, [recipe, legCount]);
 
   // Combine rows and cached props into candidate pool
   const candidatePool = useMemo(() => {
@@ -93,8 +100,8 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
     );
   }, [rows, cachedProps]);
 
-  // Build the optimal combination for the selected recipe and leg count
-  const architectResult = useMemo(() => {
+  // Build the ranked combinations for the selected recipe and leg count
+  const allValidCandidates = useMemo(() => {
     // 1. Filter by recipe
     let eligible = candidatePool.filter((r) => {
       if (recipe === "game_lines") return !r.isProp && ["ml", "spread", "total"].includes(r.marketType);
@@ -120,9 +127,9 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
 
     // Sort by individual EV & value
     eligible.sort((a, b) => (b.evPct ?? 0) - (a.evPct ?? 0));
-    const seeds = eligible.slice(0, 14);
+    const seeds = eligible.slice(0, 16);
 
-    if (seeds.length < legCount) return null;
+    if (seeds.length < legCount) return [];
 
     // Helper for combinations
     function getCombos<T>(arr: T[], k: number): T[][] {
@@ -143,8 +150,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
     }
 
     const allCombos = getCombos(seeds, legCount);
-    let bestCand: ParlayCandidate | null = null;
-    let bestScore = -999;
+    const validCandidates: ParlayCandidate[] = [];
 
     for (const combo of allCombos) {
       // Must have unique events
@@ -180,15 +186,29 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       if ("ok" in evaluated && evaluated.ok === false) continue;
 
       const cand = evaluated as ParlayCandidate;
-      const score = (cand.score ?? 0) + (cand.combinedEv ?? 0) * 10;
-      if (score > bestScore) {
-        bestScore = score;
-        bestCand = cand;
+      validCandidates.push(cand);
+    }
+
+    // Sort valid candidates by overall score + EV
+    validCandidates.sort((a, b) => {
+      const scoreA = (a.score ?? 0) + (a.combinedEv ?? 0) * 10;
+      const scoreB = (b.score ?? 0) + (b.combinedEv ?? 0) * 10;
+      return scoreB - scoreA;
+    });
+
+    // Deduplicate combinations that share identical leg selections
+    const seenCombos = new Set<string>();
+    const uniqueCandidates: ParlayCandidate[] = [];
+    for (const c of validCandidates) {
+      const key = (c.legs || []).map((l: any) => l.selection).sort().join("|");
+      if (!seenCombos.has(key)) {
+        seenCombos.add(key);
+        uniqueCandidates.push(c);
       }
     }
 
     // Direct fallback with top unique-event seeds if all combos were strictly pruned
-    if (!bestCand && seeds.length >= legCount) {
+    if (uniqueCandidates.length === 0 && seeds.length >= legCount) {
       const uniqueSeeds: ScanRow[] = [];
       const seenEvents = new Set<string>();
       for (const s of seeds) {
@@ -201,17 +221,23 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       if (uniqueSeeds.length === legCount) {
         const evaluated = evaluateParlay(uniqueSeeds, undefined, "catalog");
         if (!("ok" in evaluated && evaluated.ok === false)) {
-          bestCand = evaluated as ParlayCandidate;
+          uniqueCandidates.push(evaluated as ParlayCandidate);
         }
       }
     }
 
-    return bestCand;
+    return uniqueCandidates;
   }, [candidatePool, legCount, recipe]);
 
+  // Selected candidate from rotation
+  const selectedCandidate = useMemo(() => {
+    if (allValidCandidates.length === 0) return null;
+    return allValidCandidates[comboIndex % allValidCandidates.length];
+  }, [allValidCandidates, comboIndex]);
+
   const handleAddAllToSlip = () => {
-    if (!architectResult?.legs) return;
-    for (const l of architectResult.legs) {
+    if (!selectedCandidate?.legs) return;
+    for (const l of selectedCandidate.legs) {
       const leg: ParlayLeg = {
         eventId: l.eventId,
         selection: l.selection,
@@ -222,6 +248,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
         sport: l.sport,
         home: l.home,
         away: l.away,
+        player: (l as any).player,
       };
       addLeg(leg);
     }
@@ -244,7 +271,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             Build With AI Custom Parlay Engine
           </h2>
           <p className="text-xs text-muted mt-0.5 max-w-2xl">
-            Choose your desired number of legs and target betting style. The AI quant engine tests all multi-leg correlation structures and solves for the optimal combination.
+            Choose your desired number of legs and target betting style. The AI quant engine tests all multi-leg correlation structures and solves for the optimal combinations.
           </p>
         </div>
       </div>
@@ -262,31 +289,30 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
                 key={count}
                 onClick={() => setLegCount(count as 2 | 3 | 4)}
                 className={cn(
-                  "py-2 px-3 rounded-lg border text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5",
+                  "py-2.5 px-3 rounded-lg border text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5",
                   legCount === count
                     ? "bg-primary text-black border-primary shadow-sm"
-                    : "bg-obsidian border-line text-muted hover:text-ink hover:border-line/90",
+                    : "bg-obsidian border-line text-muted hover:text-ink hover:border-line/80",
                 )}
               >
-                <Layers className="size-3.5" />
                 <span>{count} Legs</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Recipe Selector */}
+        {/* Recipe Preset Selector */}
         <div>
           <label className="text-xs font-mono font-bold text-muted uppercase tracking-wider block mb-2">
-            2. Select Strategy Recipe:
+            2. Choose Construction Style:
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {RECIPES.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setRecipe(r.id)}
                 className={cn(
-                  "p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[64px]",
+                  "p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between",
                   recipe === r.id
                     ? "bg-primary/10 border-primary ring-1 ring-primary/40 text-ink"
                     : "bg-obsidian border-line text-muted hover:text-ink hover:border-line/90",
@@ -301,19 +327,26 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       </div>
 
       {/* Synthesis Display Box */}
-      {architectResult ? (
+      {selectedCandidate ? (
         <div className="bg-obsidian border border-line rounded-xl p-4 sm:p-5 space-y-4">
           {/* Output Summary Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line/60 pb-4">
             <div>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
-                AI Architect Solved · {legCount} Legs
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
+                  AI Architect Solved · {legCount} Legs
+                </span>
+                {allValidCandidates.length > 1 && (
+                  <span className="text-[10px] font-mono text-muted bg-panel px-2 py-0.5 rounded border border-line">
+                    Combo {(comboIndex % allValidCandidates.length) + 1} of {allValidCandidates.length}
+                  </span>
+                )}
+              </div>
               <h3 className="text-lg font-bold text-ink mt-1">
-                {architectResult.title}
+                {selectedCandidate.title}
               </h3>
               <p className="text-xs text-muted mt-0.5">
-                {architectResult.reason}
+                {selectedCandidate.reason}
               </p>
             </div>
 
@@ -322,17 +355,17 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
               <div className="text-center">
                 <div className="text-[9px] text-muted font-mono uppercase">Payout</div>
                 <div className="text-sm font-bold font-mono text-ink mt-0.5">
-                  {formatAmerican(decimalToAmerican(architectResult.decimalPayout ?? 2))}
+                  {formatAmerican(decimalToAmerican(selectedCandidate.decimalPayout ?? 2))}
                 </div>
                 <div className="text-[10px] text-muted font-mono">
-                  {(architectResult.decimalPayout ?? 2).toFixed(2)}x
+                  {(selectedCandidate.decimalPayout ?? 2).toFixed(2)}x
                 </div>
               </div>
               <div className="w-px h-8 bg-line" />
               <div className="text-center">
                 <div className="text-[9px] text-muted font-mono uppercase">AI Chance</div>
                 <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
-                  {(architectResult.combinedFair * 100).toFixed(1)}%
+                  {(selectedCandidate.combinedFair * 100).toFixed(1)}%
                 </div>
                 <div className="text-[10px] text-muted font-mono">True Hit</div>
               </div>
@@ -340,7 +373,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
               <div className="text-center">
                 <div className="text-[9px] text-muted font-mono uppercase">Net Edge</div>
                 <div className="text-sm font-bold font-mono text-primary mt-0.5">
-                  +{((architectResult.combinedEv ?? 0.05) * 100).toFixed(1)}%
+                  +{((selectedCandidate.combinedEv ?? 0.05) * 100).toFixed(1)}%
                 </div>
                 <div className="text-[10px] text-muted font-mono">Quant EV</div>
               </div>
@@ -349,7 +382,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
 
           {/* Leg List Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {architectResult.legs.map((leg, idx) => (
+            {selectedCandidate.legs.map((leg, idx) => (
               <div
                 key={`${leg.eventId}-${idx}`}
                 className="bg-panel border border-line/70 rounded-lg p-3 flex items-center justify-between gap-3"
@@ -381,29 +414,52 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             ))}
           </div>
 
-          {/* Add All Button */}
-          <div className="pt-2 flex justify-end">
-            <button
-              onClick={handleAddAllToSlip}
-              className={cn(
-                "flex items-center gap-2 py-2.5 px-5 rounded-lg text-xs font-bold transition-all shadow-md",
-                addedSuccess
-                  ? "bg-emerald-500 text-black"
-                  : "bg-primary text-black hover:bg-primary/90",
-              )}
-            >
-              {addedSuccess ? (
-                <>
-                  <CheckCircle2 className="size-4" />
-                  <span>Added {legCount} Legs to Slip!</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="size-4" />
-                  <span>Add All {legCount} Legs to Parlay Slip</span>
-                </>
-              )}
-            </button>
+          {/* Action Bar: Generate New Combo + Add All Button */}
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-mono text-muted">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-panel border border-line text-ink">
+                <Sparkles className="size-3.5 text-primary" />
+                <span>Combo {allValidCandidates.length > 0 ? (comboIndex % allValidCandidates.length) + 1 : 1} of {Math.max(1, allValidCandidates.length)} available</span>
+              </span>
+              <span className="text-[11px] text-muted hidden md:inline">
+                Click &ldquo;Generate New Combo&rdquo; to rotate through alternatives
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setComboIndex((i) => i + 1)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-bold border border-line bg-panel hover:bg-obsidian text-ink hover:text-primary hover:border-primary/50 transition-colors shadow-sm"
+                title="Generate another algorithmic combination for this recipe"
+              >
+                <RefreshCw className="size-3.5 text-primary" />
+                <span>Generate New Combo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddAllToSlip}
+                className={cn(
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg text-xs font-bold transition-all shadow-md",
+                  addedSuccess
+                    ? "bg-emerald-500 text-black"
+                    : "bg-primary text-black hover:bg-primary/90",
+                )}
+              >
+                {addedSuccess ? (
+                  <>
+                    <CheckCircle2 className="size-4" />
+                    <span>Added {legCount} Legs to Slip!</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="size-4" />
+                    <span>Add All {legCount} Legs to Parlay Slip</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       ) : (

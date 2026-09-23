@@ -5,6 +5,8 @@ import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
 import { cn } from "@/lib/utils";
+import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 
 function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
   const startStr = leg?.start || quote?.start;
@@ -440,6 +442,30 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                                   {hit.brief?.weather && (
                                     <span>🌤️ {hit.brief.weather}</span>
                                   )}
+                                </div>
+
+                                {/* Quant Factor Waterfall Attribution */}
+                                <div className="mt-3 pt-2.5 border-t border-line/50 space-y-1.5">
+                                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted px-0.5">
+                                    <span>Quant Alpha Attribution</span>
+                                    <span className="text-[9px] font-mono text-primary font-normal">Orthogonal Factors</span>
+                                  </div>
+                                  <QuantFactorWaterfall
+                                    waterfall={computeQuantFactorWaterfall(
+                                      {
+                                        ...leg,
+                                        price: rawPrice,
+                                        hardRockPrice: rawPrice,
+                                        fairProb: legProb,
+                                        simFair: simFair ?? legProb,
+                                        marketType: leg.marketType,
+                                        selection: leg.selection,
+                                        sport: leg.sport,
+                                      },
+                                      hit.quote || hit.brief
+                                    )}
+                                    compact={true}
+                                  />
                                 </div>
                               </motion.div>
                             )}

@@ -4,12 +4,12 @@ import { Link } from "@tanstack/react-router";
 import { fetchRealPropsFn, getCachedPropsFn, lockPredictionFn } from "@/lib/market/server";
 import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
-import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star, Trash2 } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParlaySlip, isLegSelected, type ParlayLeg } from "@/lib/parlay-slip";
+import { useParlaySlip, isLegSelected, combinedOdds, type ParlayLeg } from "@/lib/parlay-slip";
 import { MarketTip } from "./market-tip";
 import { ProjectedScore, PublicSharpMeter, StreakBadge } from "./competitive-widgets";
 import { ticketHitPct } from "@/lib/market/hit-pct";
@@ -19,7 +19,7 @@ import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
   const [activeTab, setActiveTab] = useState("popular");
-  const { legs: sgpSlip, addLeg, removeLeg } = useParlaySlip();
+  const { legs: sgpSlip, addLeg, removeLeg, removeLegByIndex, clearAll } = useParlaySlip();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wager, setWager] = useState("50");
   const [finalOdds, setFinalOdds] = useState("");
@@ -161,15 +161,17 @@ export function GamePage({ eventId }: { eventId: string }) {
   const toggleLeg = (quote: any) => {
     const sel = quote.selection;
     const mkt = quote.marketType || quote.row?.marketType || "unknown";
+    const evId = quote.eventId || eventId;
+    const player = quote.player || quote.row?.player;
     // If already selected, remove it
-    if (isLegSelected(sgpSlip, sel, mkt)) {
-      removeLeg(sel, mkt);
+    if (isLegSelected(sgpSlip, sel, mkt, evId, player)) {
+      removeLeg(sel, mkt, evId, player);
     } else {
       // Add to global slip with mutual exclusivity on same event+market
       const rawP = quote.hardRockPrice || quote.consensusPrice || quote.price || quote.row?.hardRockPrice || -110;
       const am = isDecimal(rawP) ? toAmerican(rawP) : rawP;
       addLeg({
-        eventId: quote.eventId || eventId,
+        eventId: evId,
         selection: sel,
         marketType: mkt,
         side: quote.side,
@@ -179,7 +181,7 @@ export function GamePage({ eventId }: { eventId: string }) {
         sport: quote.sport || firstQuote?.sport,
         home: quote.home || firstQuote?.home,
         away: quote.away || firstQuote?.away,
-        player: quote.player || quote.row?.player,
+        player,
       });
     }
     setSaved(false);
@@ -189,6 +191,8 @@ export function GamePage({ eventId }: { eventId: string }) {
     sgpSlip,
     quote.selection,
     quote.marketType || quote.row?.marketType || "unknown",
+    quote.eventId || eventId,
+    quote.player || quote.row?.player,
   );
 
   const getAmOdds = (q: any) => {
@@ -214,31 +218,18 @@ export function GamePage({ eventId }: { eventId: string }) {
     return am < 0 ? (-am) / (-am + 100) : 100 / (am + 100);
   };
 
-  // Combined SGP math — legs now have .price (American) and .fairProb directly
-  const combinedProb = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => acc * (leg.fairProb || 0.5), 1) : 0;
+  // Combined SGP / Parlay math using copula correlation
+  const combo = combinedOdds(sgpSlip);
+  const combinedProb = combo.combinedProb;
   const hitProbPct = Math.round(combinedProb * 100);
+  const americanOdds = sgpSlip.length === 1 && sgpSlip[0].price
+    ? (sgpSlip[0].price > 0 ? `+${sgpSlip[0].price}` : `${sgpSlip[0].price}`)
+    : combo.american;
 
-  const vegasImplied = sgpSlip.length > 0 ? sgpSlip.reduce((acc, leg) => {
-    const am = leg.price || -110;
-    return acc * (am < 0 ? (-am) / (-am + 100) : 100 / (am + 100));
-  }, 1) : 0;
+  const decPayout = combo.decPayout;
+  const vegasImplied = decPayout > 1 ? 1 / decPayout : 0.5;
   const vegasPct = Math.round(vegasImplied * 100);
   const edgeVal = (hitProbPct - vegasPct).toFixed(1);
-
-  // For single bets, use the leg's actual price directly (no probability round-trip)
-  // For multi-leg parlays, compute combined American odds from combined probability
-  let americanOdds = "";
-  if (sgpSlip.length === 1) {
-    const am = sgpSlip[0].price || -110;
-    americanOdds = am > 0 ? `+${am}` : `${am}`;
-  } else if (sgpSlip.length > 1) {
-    const decPayout = 1 / (vegasImplied || 0.5);
-    americanOdds = decPayout >= 2.0
-      ? `+${Math.round((decPayout - 1) * 100)}`
-      : `-${Math.round(100 / (decPayout - 1))}`;
-  }
-
-  const decPayout = vegasImplied > 0 ? 1 / vegasImplied : 2;
 
   // Smart wager: quarter Kelly
   const kellyFraction = combinedProb > 0 && vegasImplied > 0
@@ -910,7 +901,13 @@ export function GamePage({ eventId }: { eventId: string }) {
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="font-mono text-primary">{getAmOdds(leg)}</span>
                           <span className="text-muted font-mono">{Math.round(getProb(leg) * 100)}%</span>
-                          <button onClick={() => toggleLeg(leg)} className="text-muted hover:text-red-400 p-0.5"><X className="size-3" /></button>
+                          <button
+                            onClick={() => removeLegByIndex(i)}
+                            className="text-muted hover:text-red-400 p-0.5 transition-colors"
+                            title="Remove leg from slip"
+                          >
+                            <X className="size-3" />
+                          </button>
                         </div>
                       </div>
                     );
@@ -920,7 +917,14 @@ export function GamePage({ eventId }: { eventId: string }) {
                 {/* Combined stats */}
                 <div className="px-4 pt-3 pb-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted">{sgpSlip.length === 1 ? "Straight Bet" : `${sgpSlip.length}-Leg SGP`} <span className="text-primary ml-2">{americanOdds}</span></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                      {sgpSlip.length === 1
+                        ? "Straight Bet"
+                        : combo.isCorrelated
+                          ? `${sgpSlip.length}-Leg SGP`
+                          : `${sgpSlip.length}-Leg Parlay`}
+                      <span className="text-primary ml-2">{americanOdds}</span>
+                    </span>
                     <span className="text-xs font-bold text-primary font-mono">{hitProbPct}% PROB</span>
                   </div>
                   <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
@@ -937,10 +941,19 @@ export function GamePage({ eventId }: { eventId: string }) {
 
                   <div className="flex items-center gap-2 mt-1">
                     <button
+                      onClick={() => clearAll()}
+                      className="h-12 px-4 bg-line/60 hover:bg-red-500/20 text-muted hover:text-red-400 border border-line rounded-lg font-bold transition-colors flex items-center justify-center gap-1.5 text-xs shrink-0"
+                      title="Discard entire parlay"
+                    >
+                      <Trash2 className="size-4" />
+                      <span>Discard</span>
+                    </button>
+                    <button
                       onClick={() => { setIsModalOpen(true); setFinalOdds(americanOdds); }}
                       className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                      Lock It In
+                      <ShieldCheck className="size-4" />
+                      <span>Lock It In</span>
                     </button>
                   </div>
                 </div>
