@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBrainStatsFn, batchGradeFn, getLatestAnalysisFn, runAnalysisFn, applySuggestionFn } from "@/lib/market/server";
+import { getBrainStatsFn, batchGradeFn, getLatestAnalysisFn, runAnalysisFn, applySuggestionFn, formulateSuggestionsFn } from "@/lib/market/server";
 import {
   getSuggestionsFn,
   getDynamicWeightsFn,
@@ -14,7 +14,7 @@ import {
   Brain, Activity, Target, TrendingUp, TrendingDown, Eye, Zap,
   RefreshCw, AlertTriangle, CheckCircle2, Info, BarChart2, Flame, Server,
   Cpu, ArrowRight, Sparkles, Check, X, Clock, HelpCircle, Send, Layers,
-  ChevronRight, ChevronDown, Sliders, ShieldCheck
+  ChevronRight, ChevronDown, Sliders, ShieldCheck, RotateCcw
 } from "lucide-react";
 import React, { useState } from "react";
 import { QuantFactorWaterfall } from "@/components/app/quant-factor-waterfall";
@@ -114,6 +114,7 @@ function Dashboard() {
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [hypothesisQuery, setHypothesisQuery] = useState("");
   const [selectedWaterfallSport, setSelectedWaterfallSport] = useState("MLB");
+  const [suggestionTab, setSuggestionTab] = useState<"pending" | "applied">("pending");
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["brain-stats"],
@@ -178,6 +179,14 @@ function Dashboard() {
     },
   });
 
+  const formulateMut = useMutation({
+    mutationFn: () => formulateSuggestionsFn(),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ["brain-suggestions"] });
+      alert(`Formulated ${res.created ?? 0} tuning proposals based on latest empirical tape.`);
+    },
+  });
+
   const submitHypoMut = useMutation({
     mutationFn: (query: string) => submitHypothesisFn({ data: { query } }),
     onSuccess: () => {
@@ -219,6 +228,7 @@ function Dashboard() {
   const wr = decided > 0 ? Math.round((stats.wins / decided) * 100) : 0;
   const hasPending = stats.pending > 0;
   const pendingSuggestions = (suggestions || []).filter((s: any) => s.status === "pending");
+  const appliedSuggestions = (suggestions || []).filter((s: any) => s.status === "accepted" || s.status === "auto_applied");
 
   return (
     <div className="space-y-8">
@@ -619,67 +629,168 @@ function Dashboard() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Active Brain Suggestions & Engine Actions */}
         <section className="bg-panel border border-line rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-sm font-bold text-ink">
-                <Brain className="size-4 text-emerald-400" /> Active Brain Suggestions ({pendingSuggestions.length})
+                <Brain className="size-4 text-emerald-400" /> Algorithmic Tuning Cockpit
               </div>
               <p className="text-xs text-muted mt-0.5">
-                The Brain proposes real algorithmic adjustments. Approve to apply them instantly to the engine.
+                The Brain proposes real parameter adjustments. Approve to apply immediately, or roll back anytime.
               </p>
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-              TWO-WAY
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => formulateMut.mutate()}
+                disabled={formulateMut.isPending}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 border border-primary/30 rounded-lg text-xs font-bold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                <Sparkles className={cn("size-3.5", formulateMut.isPending && "animate-spin")} />
+                {formulateMut.isPending ? "Formulating..." : "Formulate Proposals"}
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-            {pendingSuggestions.length === 0 ? (
-              <div className="p-6 text-center text-muted text-xs border border-dashed border-line rounded-xl">
-                No pending suggestions. The Brain will automatically formulate new proposals during the next grading sweep.
-              </div>
-            ) : (
-              pendingSuggestions.map((s: any) => (
-                <div key={s.id} className="bg-obsidian border border-line rounded-xl p-3.5 space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-bold text-ink">{s.title}</span>
-                    <span className="text-[9px] font-mono uppercase bg-line px-1.5 py-0.5 rounded text-muted shrink-0">
-                      Knob: {s.knob}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">{s.body}</p>
+          {/* Sub-Tabs: Pending vs Applied */}
+          <div className="flex items-center gap-2 border-b border-line/60 pb-2">
+            <button
+              onClick={() => setSuggestionTab("pending")}
+              className={cn(
+                "px-3 py-1 rounded-md text-xs font-bold font-mono transition-colors",
+                suggestionTab === "pending"
+                  ? "bg-primary text-obsidian shadow-sm"
+                  : "text-muted hover:text-ink"
+              )}
+            >
+              Pending ({pendingSuggestions.length})
+            </button>
+            <button
+              onClick={() => setSuggestionTab("applied")}
+              className={cn(
+                "px-3 py-1 rounded-md text-xs font-bold font-mono transition-colors",
+                suggestionTab === "applied"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                  : "text-muted hover:text-ink"
+              )}
+            >
+              Applied Tuning ({appliedSuggestions.length})
+            </button>
+          </div>
 
-                  {s.proposed && (
-                    <div className="text-[10px] font-mono bg-panel p-1.5 rounded text-emerald-400 border border-line">
-                      Proposed: {JSON.stringify(s.proposed)}
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 pt-1 border-t border-line/40">
-                    <button
-                      onClick={() => applyMut.mutate({ id: s.id, status: "accepted" })}
-                      disabled={applyMut.isPending}
-                      className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                    >
-                      <Check className="size-3" /> Approve
-                    </button>
-                    <button
-                      onClick={() => applyMut.mutate({ id: s.id, status: "rejected" })}
-                      disabled={applyMut.isPending}
-                      className="flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
-                    >
-                      <X className="size-3" /> Reject
-                    </button>
-                    <button
-                      onClick={() => applyMut.mutate({ id: s.id, status: "later" })}
-                      disabled={applyMut.isPending}
-                      className="flex items-center gap-1 px-2 py-1 bg-line text-muted text-xs rounded hover:bg-line/80 transition-colors disabled:opacity-50 ml-auto"
-                    >
-                      Later
-                    </button>
-                  </div>
+          <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            {suggestionTab === "pending" ? (
+              pendingSuggestions.length === 0 ? (
+                <div className="p-6 text-center text-muted text-xs border border-dashed border-line rounded-xl">
+                  No pending suggestions. Click &ldquo;Formulate Proposals&rdquo; above or wait for the next autonomous grading sweep.
                 </div>
-              ))
+              ) : (
+                pendingSuggestions.map((s: any) => (
+                  <div key={s.id} className="bg-obsidian border border-line rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-bold text-ink">{s.title}</span>
+                      <span className="text-[9px] font-mono uppercase bg-line px-1.5 py-0.5 rounded text-muted shrink-0">
+                        Knob: {s.knob}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed">{s.body}</p>
+
+                    {s.proposed && (
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono bg-panel p-2 rounded-lg text-emerald-400 border border-line">
+                        {s.knob === "sim_temperature" && s.proposed.simTemperature != null ? (
+                          <span>
+                            Sim Temperature: <strong className="text-muted">{s.proposed.priorTemperature ?? 1.0}</strong> &rarr; <strong className="text-primary font-bold">{s.proposed.simTemperature}</strong> ({s.proposed.sport})
+                          </span>
+                        ) : s.knob === "min_edge" && s.proposed.minEdgeIncrement != null ? (
+                          <span>
+                            Edge Floor: <strong className="text-primary font-bold">+{s.proposed.minEdgeIncrement}%</strong> ({s.proposed.sport})
+                          </span>
+                        ) : s.knob === "kelly" && s.proposed.multiplier != null ? (
+                          <span>
+                            Kelly Sizing: <strong className="text-primary font-bold">{s.proposed.multiplier}x Multiplier</strong> ({s.proposed.sport})
+                          </span>
+                        ) : s.proposed.chanceHaircut != null ? (
+                          <span>
+                            Chance Haircut: <strong className="text-amber-400 font-bold">-{Math.round(s.proposed.chanceHaircut * 100)}%</strong>
+                          </span>
+                        ) : (
+                          <span>Proposed: {JSON.stringify(s.proposed)}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1 border-t border-line/40">
+                      <button
+                        onClick={() => applyMut.mutate({ id: s.id, status: "accepted" })}
+                        disabled={applyMut.isPending}
+                        className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                      >
+                        <Check className="size-3" /> Approve
+                      </button>
+                      <button
+                        onClick={() => applyMut.mutate({ id: s.id, status: "rejected" })}
+                        disabled={applyMut.isPending}
+                        className="flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                      >
+                        <X className="size-3" /> Reject
+                      </button>
+                      <button
+                        onClick={() => applyMut.mutate({ id: s.id, status: "later" })}
+                        disabled={applyMut.isPending}
+                        className="flex items-center gap-1 px-2 py-1 bg-line text-muted text-xs rounded hover:bg-line/80 transition-colors disabled:opacity-50 ml-auto"
+                      >
+                        Later
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : (
+              appliedSuggestions.length === 0 ? (
+                <div className="p-6 text-center text-muted text-xs border border-dashed border-line rounded-xl">
+                  No applied tuning adjustments on record.
+                </div>
+              ) : (
+                appliedSuggestions.map((s: any) => (
+                  <div key={s.id} className="bg-obsidian border border-line rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-ink">{s.title}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                            ACTIVE
+                          </span>
+                          <span className="text-[9px] font-mono text-muted">
+                            Decided {s.decidedAt ? new Date(s.decidedAt).toLocaleDateString() : "recently"}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono uppercase bg-line px-1.5 py-0.5 rounded text-muted shrink-0">
+                        {s.knob}
+                      </span>
+                    </div>
+
+                    {s.proposed && (
+                      <div className="text-[10px] font-mono bg-panel p-2 rounded-lg text-muted border border-line">
+                        Applied: {JSON.stringify(s.proposed)}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1 border-t border-line/40">
+                      <span className="text-[10px] text-muted">Revert this adjustment to previous values:</span>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Roll back "${s.title}" and restore prior parameters?`)) {
+                            applyMut.mutate({ id: s.id, status: "revoked" });
+                          }
+                        }}
+                        disabled={applyMut.isPending}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 text-amber-400 text-xs font-bold rounded hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                      >
+                        <RotateCcw className="size-3" /> Rollback
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
             )}
           </div>
         </section>

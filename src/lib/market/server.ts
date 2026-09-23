@@ -1144,18 +1144,73 @@ export const applySuggestionFn = createServerFn({ method: "POST" })
             );
           }
 
+          if (proposed.minEdgeIncrement != null) {
+            await sql.query(
+              `UPDATE desk_tuning_raw SET min_edge = LEAST(6.0, GREATEST(1.5, COALESCE(min_edge, 3.5) + $1)) WHERE id = 1`,
+              [Number(proposed.minEdgeIncrement)],
+            );
+          }
+
           if (proposed.kelly != null) {
             await sql.query(
               `UPDATE desk_tuning_raw SET kelly = $1 WHERE id = 1`,
               [Number(proposed.kelly)],
             );
           }
+
+          if (proposed.multiplier != null && suggestion.knob === "kelly") {
+            await sql.query(
+              `UPDATE desk_tuning_raw SET kelly = LEAST(0.35, GREATEST(0.10, ROUND((COALESCE(kelly, 0.25) * $1)::numeric, 3))) WHERE id = 1`,
+              [Number(proposed.multiplier)],
+            );
+          }
+
+          if (proposed.simTemperature != null && proposed.sport) {
+            const { persistSimTemperature } = await import("@/lib/market/sim-temperature");
+            await persistSimTemperature(proposed.sport, Number(proposed.simTemperature));
+          }
+        }
+      }
+
+      // If revoked (Rollback), restore prior values
+      if (data.status === "revoked") {
+        const allSuggestions = await listSuggestions();
+        const suggestion = allSuggestions.find(s => s.id === data.id);
+        const proposed = (suggestion?.proposed || {}) as Record<string, any>;
+        if (proposed.priorTemperature != null && proposed.sport) {
+          const { persistSimTemperature } = await import("@/lib/market/sim-temperature");
+          await persistSimTemperature(proposed.sport, Number(proposed.priorTemperature));
+        }
+        if (proposed.minEdgeIncrement != null) {
+          await sql.query(
+            `UPDATE desk_tuning_raw SET min_edge = LEAST(6.0, GREATEST(1.5, COALESCE(min_edge, 3.5) - $1)) WHERE id = 1`,
+            [Number(proposed.minEdgeIncrement)],
+          );
+        }
+        if (proposed.chanceHaircut != null) {
+          await sql.query(
+            `UPDATE desk_tuning_raw SET chance_haircut = GREATEST(0, COALESCE(chance_haircut, 0) - $1) WHERE id = 1`,
+            [Number(proposed.chanceHaircut)],
+          );
         }
       }
 
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: String(e) };
+    }
+  });
+
+/** Admin: Manually trigger algorithmic tuning proposal formulation */
+export const formulateSuggestionsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      await assertAdmin(context.userId);
+      const { buildSuggestions } = await import("@/lib/market/suggestions");
+      return buildSuggestions();
+    } catch (e: any) {
+      return { ok: false, created: 0, error: String(e) };
     }
   });
 

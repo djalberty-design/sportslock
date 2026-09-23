@@ -473,3 +473,28 @@ This file documents every change made to the codebase in sequential order, detai
     - Added Section 2.5 in `dashboard.tsx` with live multi-sport switcher (`MLB`, `NBA`, `NFL`, `NHL`, `NCAAF`, `NCAAB`) in Overseer Mission Control.
 * **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
 
+---
+
+## Change 27: Automated Hyperparameter Tuning Proposals, Simulation Temperature Scaling & 1-Click Rollback
+* **Date**: September 23, 2026
+* **Files Modified**:
+  - `src/lib/market/sim-temperature.ts` [NEW]
+  - `src/lib/market/sim.ts`
+  - `src/lib/market/suggestions.ts`
+  - `src/lib/market/server.ts`
+  - `src/routes/admin/dashboard.tsx`
+* **Rationale**:
+  - Simulation Temperature Variance Scaling (`sim-temperature.ts`, `sim.ts`):
+    - Created `sim-temperature.ts` providing synchronous in-memory cached variance scaling with database persistence and safe bounds $[0.80, 1.25]$.
+    - Wired temperature scaling into `simWin`, `simCover`, and `simOver` in `sim.ts` to dynamically modulate normal CDF standard deviations according to sport tempo and variance characteristics.
+  - Automated Brier Score Audit & Proposal Formulation (`suggestions.ts`):
+    - Added automated Brier Score calibration analysis in `buildSuggestions`: identifies overconfident sports with Brier score $> 0.255$ and proposes widening temperature to expand distribution tails; identifies high-precision sports ($< 0.220$) and proposes tightening temperature to capture sharper signal.
+    - Added high-variance loss ratio audit proposing minimum edge floor tightening (+0.5%) on high-variance sports.
+  - Algorithmic Tuning Cockpit & Rollback Controls (`server.ts`, `dashboard.tsx`):
+    - Upgraded `applySuggestionFn` to persist simulation temperatures, edge floors, and Kelly sizing with strict parameter clamps.
+    - Added 1-click rollback functionality (`status: "revoked"`) that automatically restores prior parameter values.
+    - Added `formulateSuggestionsFn` and a &ldquo;Formulate Proposals&rdquo; manual trigger button in Section 3 of Overseer Mission Control.
+    - Added sub-tabbed proposal management (Pending vs Applied Tuning) with visual diff badges.
+* **Verification**: `npx tsc --noEmit` and `npm run build` both passed with exit code 0.
+
+

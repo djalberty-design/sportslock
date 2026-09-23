@@ -1,6 +1,7 @@
 import { normalCdf } from "./math.ts";
 import { leagueTotal, marginSigma, totalSigma, footballCoverProb } from "./chance.ts";
 import { DESK_VERSION } from "./rules.ts";
+import { getSimTemperature } from "./sim-temperature.ts";
 
 export type GameLatent = {
   eventId: string;
@@ -98,7 +99,9 @@ export function drawPaths(g: GameLatent, snapshotId: string, n?: number): GameLa
 export function simWin(paths: GameLatent[]): SimPrice {
   if (!paths.length) return { p: 0.5, n: 0, se: 0, ran: false };
   const g = paths[0];
-  const z = (g.muH - g.muA) / g.sigM;
+  const temp = getSimTemperature(g.sport || "");
+  const sigM = Math.max(0.1, g.sigM * temp);
+  const z = (g.muH - g.muA) / sigM;
   return { p: normalCdf(z), n: 1, se: 0, ran: true };
 }
 
@@ -109,14 +112,18 @@ export function simCover(paths: GameLatent[], homeLine: number): SimPrice {
     const discrete = footballCoverProb(homeLine, g.muH - g.muA, g.sport);
     return { p: discrete.p, n: 1, se: 0, ran: !discrete.empty };
   }
-  const z = (g.muH - g.muA + homeLine) / g.sigM;
+  const temp = getSimTemperature(g.sport || "");
+  const sigM = Math.max(0.1, g.sigM * temp);
+  const z = (g.muH - g.muA + homeLine) / sigM;
   return { p: normalCdf(z), n: 1, se: 0, ran: true };
 }
 
 export function simOver(paths: GameLatent[], line: number): SimPrice {
   if (!paths.length) return { p: 0.5, n: 0, se: 0, ran: false };
   const g = paths[0];
-  const z = (g.muH + g.muA - line) / g.sigT;
+  const temp = getSimTemperature(g.sport || "");
+  const sigT = Math.max(0.1, g.sigT * temp);
+  const z = (g.muH + g.muA - line) / sigT;
   return { p: normalCdf(z), n: 1, se: 0, ran: true };
 }
 

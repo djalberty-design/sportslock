@@ -282,6 +282,93 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
       }
     }
 
+    // ─── Automated Simulation Temperature Proposals (Brier Score Audit) ───
+    try {
+      const brierRows = await sql.query<{
+        sport: string;
+        brier_score: number;
+        sample_size: number;
+      }>(
+        `SELECT
+           sport,
+           AVG(POWER(model_probability - (CASE WHEN status = 'WIN' THEN 1.0 ELSE 0.0 END), 2))::numeric(10,4) as brier_score,
+           COUNT(*)::int as sample_size
+         FROM market_tape
+         WHERE recommended = true AND status IN ('WIN', 'LOSS')
+         GROUP BY sport`
+      );
+
+      const { getSimTemperature } = await import("./sim-temperature");
+      for (const b of brierRows) {
+        const sport = b.sport?.toUpperCase();
+        const n = Number(b.sample_size || 0);
+        const brier = Number(b.brier_score || 0);
+        if (!sport || n < 8) continue;
+
+        const currentTemp = getSimTemperature(sport);
+
+        // Overconfident / High Error (Brier > 0.255): Widen simulation temperature to introduce variance
+        if (brier > 0.255 && currentTemp < 1.20) {
+          const proposedTemp = Math.min(1.20, Math.round((currentTemp + 0.05) * 100) / 100);
+          if (await insertSuggestion({
+            fingerprint: `sim-temp-widen|${sport}`,
+            title: `${sport}: Widen Simulation Temperature (${currentTemp.toFixed(2)} → ${proposedTemp.toFixed(2)})`,
+            body: `${sport} displays elevated Brier Score (${brier.toFixed(3)} across n=${n} graded plays). Expanding simulation variance dampens outlier model overconfidence and aligns distribution tails with actual league volatility.`,
+            knob: "sim_temperature",
+            proposed: { sport, simTemperature: proposedTemp, priorTemperature: currentTemp },
+            evidence: { sport, brierScore: brier, n, currentTemp, proposedTemp },
+          })) created++;
+        } else if (brier < 0.220 && currentTemp > 0.85) {
+          // High Precision (Brier < 0.220): Tighten simulation temperature to capture sharp signal
+          const proposedTemp = Math.max(0.85, Math.round((currentTemp - 0.05) * 100) / 100);
+          if (await insertSuggestion({
+            fingerprint: `sim-temp-tighten|${sport}`,
+            title: `${sport}: Tighten Simulation Temperature (${currentTemp.toFixed(2)} → ${proposedTemp.toFixed(2)})`,
+            body: `${sport} displays exceptional empirical calibration (Brier Score ${brier.toFixed(3)} across n=${n} graded plays). Compressing simulation variance sharpens model edge and rewards high-confidence possessions.`,
+            knob: "sim_temperature",
+            proposed: { sport, simTemperature: proposedTemp, priorTemperature: currentTemp },
+            evidence: { sport, brierScore: brier, n, currentTemp, proposedTemp },
+          })) created++;
+        }
+      }
+
+      // ─── Kelly Sizing & Edge Floor Proposals ───
+      const highVarRows = await sql.query<{
+        sport: string;
+        variance_count: number;
+        total_count: number;
+      }>(
+        `SELECT
+           sport,
+           COUNT(*) FILTER (WHERE bucket = 'high_variance')::int as variance_count,
+           COUNT(*)::int as total_count
+         FROM market_tape
+         WHERE status = 'LOSS'
+         GROUP BY sport`
+      );
+
+      for (const h of highVarRows) {
+        const sport = h.sport?.toUpperCase();
+        const losses = Number(h.total_count || 0);
+        const varLosses = Number(h.variance_count || 0);
+        if (!sport || losses < 6) continue;
+        const varRate = varLosses / losses;
+
+        if (varRate >= 0.40) {
+          if (await insertSuggestion({
+            fingerprint: `edge-floor-tighten|${sport}`,
+            title: `${sport}: Tighten Minimum Edge Floor (+0.5%)`,
+            body: `${Math.round(varRate * 100)}% of graded losses in ${sport} are classified as high-variance coin flips. Tightening the minimum entry edge filters out marginal +EV plays that suffer from high variance drag.`,
+            knob: "min_edge",
+            proposed: { sport, minEdgeIncrement: 0.5 },
+            evidence: { sport, highVarianceRatio: Math.round(varRate * 100), gradedLosses: losses },
+          })) created++;
+        }
+      }
+    } catch {
+      // Graceful error isolation
+    }
+
     return { ok: true, created };
   } catch (err) {
     console.error("build suggestions failed:", err);
