@@ -558,7 +558,7 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
       home: withHome,
       precision: samplePrecision(n, 3.6, sport === "MLB" ? 40 : 8),
       family: "model",
-      note: usingSplits ? "Splits already include home-field." : "Season record plus home-field bump.",
+      note: usingSplits ? "Splits already include home-field (do not add it twice)." : "Season record plus home-field bump.",
     });
   }
 
@@ -614,8 +614,10 @@ export function buildChance(input: ChanceInput): ChanceReport | null {
       home: invLogit(logit(log5(Math.min(0.82, Math.max(0.18, hf)), Math.min(0.82, Math.max(0.18, af)))) + homeFieldLogit(sport) * 0.25),
       precision: ((nForm >= 8 ? 2.8 : 2.1) * damp) || 0,
       family: "context",
-      note: "Latest game counts most.",
+      note: `Live ESPN log: Latest game counts most (not a generated card)${damp < 1 ? " · Early-season damping applied." : "."}`,
     });
+  } else {
+    pushEmpty(layers, "form", "Last 10 scores (recency-weighted)", "No game logs available.");
   }
 
   const hm = dynamicMarginWp(homeFormEarly, sport);

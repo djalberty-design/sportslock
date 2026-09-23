@@ -1,4 +1,4 @@
-import { getSql } from "@/lib/db";
+import { getSql } from "../db.ts";
 
 export const ODDS_API_KEY = process.env.ODDS_API_KEY ?? "";
 

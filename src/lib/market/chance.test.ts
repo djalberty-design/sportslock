@@ -10,7 +10,7 @@ import {
   pythagoreanWp,
   spreadToWinProb,
 } from "./chance.ts";
-import { normalCdf } from "./math.ts";
+
 
 test("logit / invLogit round-trip near 0.6", () => {
   const p = 0.6;

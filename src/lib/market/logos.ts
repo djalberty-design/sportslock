@@ -1,6 +1,6 @@
 /** ESPN public team marks — same art Hard Rock shows next to the matchup. */
 
-import { NCAA_ID as NCAA_CATALOG } from "./ncaa-ids";
+import { NCAA_ID as NCAA_CATALOG } from "./ncaa-ids.ts";
 
 const LEAGUE_LOGO: Record<string, string> = {
   NFL: "nfl",

@@ -1,6 +1,6 @@
-import { getSql } from "@/lib/db";
-import { evPct } from "./engine";
-import type { ScanRow } from "./types";
+import { getSql } from "../db.ts";
+import { evPct } from "./engine.ts";
+import type { ScanRow } from "./types.ts";
 
 export type BrainOverride = {
   fingerprint: string;
