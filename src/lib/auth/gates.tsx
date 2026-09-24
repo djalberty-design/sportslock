@@ -74,14 +74,16 @@ export function UserButton({ compact }: { compact?: boolean } = {}) {
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   return (
     <div className="flex items-center gap-2 shrink-0">
-      {user.profileImageUrl ? (
-        <img src={user.profileImageUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
-      ) : (
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20 shrink-0">
-          {label.charAt(0).toUpperCase()}
-        </span>
-      )}
-      {!compact && <span className="text-sm font-medium hidden sm:inline max-w-[120px] truncate">{label}</span>}
+      <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity" title="User Profile & Settings">
+        {user.profileImageUrl ? (
+          <img src={user.profileImageUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+        ) : (
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20 shrink-0">
+            {label.charAt(0).toUpperCase()}
+          </span>
+        )}
+        {!compact && <span className="text-sm font-medium hidden sm:inline max-w-[120px] truncate">{label}</span>}
+      </Link>
       {authEnabled && !gateSession && !compact && (
         <button
           type="button"

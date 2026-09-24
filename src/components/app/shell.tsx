@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Beaker, Hexagon, Ticket, Settings, History } from "lucide-react";
+import { Activity, Beaker, Hexagon, Ticket, Settings, History, User } from "lucide-react";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
@@ -140,6 +140,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         
         <div className="p-3 border-t border-line/50 flex flex-col gap-2">
           <ThemeToggle />
+          <Link
+            to="/profile"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+              isActive(pathname, "/profile") ? "bg-primary/10 text-primary" : "text-muted hover:bg-line/50 hover:text-ink"
+            )}
+          >
+            <User className="size-5" />
+            <span className="font-medium">Profile & Bankroll</span>
+          </Link>
           <UserButton />
           {isAdmin && (
             <Link

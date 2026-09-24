@@ -15,6 +15,7 @@ import { Route as DeskRouteImport } from './routes/desk'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PicksRouteImport } from './routes/picks'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as TicketRouteImport } from './routes/ticket'
 import { Route as AdminActivityRouteImport } from './routes/admin/activity'
@@ -68,6 +69,11 @@ const LoginRoute = LoginRouteImport.update({
 const PicksRoute = PicksRouteImport.update({
   id: '/picks',
   path: '/picks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/picks': typeof PicksRoute
+  '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
   '/admin/activity': typeof AdminActivityRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/picks': typeof PicksRoute
+  '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
   '/admin/activity': typeof AdminActivityRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/picks': typeof PicksRoute
+  '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/ticket': typeof TicketRoute
   '/admin/activity': typeof AdminActivityRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/picks'
+    | '/profile'
     | '/results'
     | '/ticket'
     | '/admin/activity'
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/picks'
+    | '/profile'
     | '/results'
     | '/ticket'
     | '/admin/activity'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/picks'
+    | '/profile'
     | '/results'
     | '/ticket'
     | '/admin/activity'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
   PicksRoute: typeof PicksRoute
+  ProfileRoute: typeof ProfileRoute
   ResultsRoute: typeof ResultsRoute
   TicketRoute: typeof TicketRoute
   GameEventIdRoute: typeof GameEventIdRoute
@@ -450,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/picks'
       fullPath: '/picks'
       preLoaderRoute: typeof PicksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -662,6 +682,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
   PicksRoute: PicksRoute,
+  ProfileRoute: ProfileRoute,
   ResultsRoute: ResultsRoute,
   TicketRoute: TicketRoute,
   GameEventIdRoute: GameEventIdRoute,
