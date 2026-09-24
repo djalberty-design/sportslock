@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
@@ -14,6 +14,7 @@ import { resolveTeamLogo, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayer
 import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 import { calculateDynamicWager } from "@/lib/kelly";
 import { DistributionChart } from "@/components/quant/distribution-chart";
+import { AiAnalystDrawer } from "@/components/app/ai-analyst-drawer";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -264,6 +265,7 @@ function TheLab() {
   const [minStars, setMinStars] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
+  const [isAnalystOpen, setIsAnalystOpen] = useState(false);
 
   // Build unified bet pool from scan rows + cached props
   const allBets: LabBet[] = useMemo(() => {
@@ -512,11 +514,21 @@ function TheLab() {
           <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-ink flex flex-wrap items-center gap-2 sm:gap-3">
             The Lab <span className="text-[10px] sm:text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-normal uppercase">Multi-Model Parlay Builder</span>
           </h1>
-          {allBets.length > 0 && (
-            <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-              {allBets.length} Plays Analyzed
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAnalystOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-display font-bold text-xs uppercase tracking-wider transition-all shadow-sm shadow-primary/20 group cursor-pointer"
+            >
+              <Bot className="size-4 text-primary group-hover:scale-110 transition-transform" />
+              <span>Chat Quant AI</span>
+              <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
+            {allBets.length > 0 && (
+              <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                {allBets.length} Plays Analyzed
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-xs sm:text-sm text-muted">
           Every pregame bet ranked by Expected Value and Edge %. Filter by AI Model: 10k Monte Carlo Simulation, Player Prop Labs, Sharp Steam, or Periods.
@@ -826,6 +838,13 @@ function TheLab() {
           <p className="text-xs mt-2 text-muted/60">Bets appear here when the board is live and/or player props have been pulled.</p>
         </div>
       )}
+
+      {/* ── Conversational Quant Intelligence Drawer ── */}
+      <AiAnalystDrawer
+        isOpen={isAnalystOpen}
+        onClose={() => setIsAnalystOpen(false)}
+        scanRows={scan?.rows || []}
+      />
     </div>
   );
 }

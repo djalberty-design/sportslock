@@ -31,6 +31,7 @@ import { Route as AdminOverridesRouteImport } from './routes/admin/overrides'
 import { Route as AdminPredictionsRouteImport } from './routes/admin/predictions'
 import { Route as AdminSuggestionsRouteImport } from './routes/admin/suggestions'
 import { Route as AdminTerminalRouteImport } from './routes/admin/terminal'
+import { Route as ApiAiChatRouteImport } from './routes/api/ai-chat'
 import { Route as GameEventIdRouteImport } from './routes/game.$eventId'
 import { Route as ApiAdminStrategyRouteImport } from './routes/api/admin/strategy'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -152,6 +153,11 @@ const AdminTerminalRoute = AdminTerminalRouteImport.update({
   path: '/terminal',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiAiChatRoute = ApiAiChatRouteImport.update({
+  id: '/api/ai-chat',
+  path: '/api/ai-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GameEventIdRoute = GameEventIdRouteImport.update({
   id: '/game/$eventId',
   path: '/game/$eventId',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/admin/predictions': typeof AdminPredictionsRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/admin/terminal': typeof AdminTerminalRoute
+  '/api/ai-chat': typeof ApiAiChatRoute
   '/game/$eventId': typeof GameEventIdRoute
   '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/admin/predictions': typeof AdminPredictionsRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/admin/terminal': typeof AdminTerminalRoute
+  '/api/ai-chat': typeof ApiAiChatRoute
   '/game/$eventId': typeof GameEventIdRoute
   '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/admin/predictions': typeof AdminPredictionsRoute
   '/admin/suggestions': typeof AdminSuggestionsRoute
   '/admin/terminal': typeof AdminTerminalRoute
+  '/api/ai-chat': typeof ApiAiChatRoute
   '/game/$eventId': typeof GameEventIdRoute
   '/api/admin/strategy': typeof ApiAdminStrategyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/admin/predictions'
     | '/admin/suggestions'
     | '/admin/terminal'
+    | '/api/ai-chat'
     | '/game/$eventId'
     | '/api/admin/strategy'
     | '/api/auth/$'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/admin/predictions'
     | '/admin/suggestions'
     | '/admin/terminal'
+    | '/api/ai-chat'
     | '/game/$eventId'
     | '/api/admin/strategy'
     | '/api/auth/$'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/admin/predictions'
     | '/admin/suggestions'
     | '/admin/terminal'
+    | '/api/ai-chat'
     | '/game/$eventId'
     | '/api/admin/strategy'
     | '/api/auth/$'
@@ -422,6 +434,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResultsRoute: typeof ResultsRoute
   TicketRoute: typeof TicketRoute
+  ApiAiChatRoute: typeof ApiAiChatRoute
   GameEventIdRoute: typeof GameEventIdRoute
   ApiAdminStrategyRoute: typeof ApiAdminStrategyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -590,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTerminalRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/ai-chat': {
+      id: '/api/ai-chat'
+      path: '/api/ai-chat'
+      fullPath: '/api/ai-chat'
+      preLoaderRoute: typeof ApiAiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/game/$eventId': {
       id: '/game/$eventId'
       path: '/game/$eventId'
@@ -706,6 +726,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResultsRoute: ResultsRoute,
   TicketRoute: TicketRoute,
+  ApiAiChatRoute: ApiAiChatRoute,
   GameEventIdRoute: GameEventIdRoute,
   ApiAdminStrategyRoute: ApiAdminStrategyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
