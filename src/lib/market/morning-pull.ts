@@ -59,8 +59,8 @@ export async function probeEspnMorning(): Promise<EspnProbe[]> {
   return out;
 }
 
-export async function runMorningPull(): Promise<MorningPullResult> {
-  const mains = await fetchOddsApiMains(true);
+export async function runMorningPull(bypassDailyGuard = false): Promise<MorningPullResult> {
+  const mains = await fetchOddsApiMains(true, bypassDailyGuard);
   const eventCounts: Record<string, number> = {};
   const sports: string[] = [];
   for (const group of mains ?? []) {

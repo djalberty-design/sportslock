@@ -267,6 +267,15 @@ export const getOddsQuotaFn = createServerFn({ method: "GET" })
   return getOddsQuotaLive();
 });
 
+export const triggerMorningPullFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d?: { bypassDailyGuard?: boolean }) => d ?? {})
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { runMorningPull } = await import("@/lib/market/morning-pull");
+    return runMorningPull(data?.bypassDailyGuard ?? true);
+  });
+
 export const fetchRealPropsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { sportKey: string; eventId: string; force?: boolean }) => d)

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
-import { cn } from "@/lib/utils";
+import { cn, formatEasternTime } from "@/lib/utils";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 
@@ -12,10 +12,10 @@ function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
   const startStr = leg?.start || quote?.start;
   const dateObj = startStr ? new Date(startStr) : null;
   const timeFormatted = dateObj && !isNaN(dateObj.getTime())
-    ? dateObj.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    ? dateObj.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true }) + " ET"
     : null;
   const dateFormatted = dateObj && !isNaN(dateObj.getTime())
-    ? dateObj.toLocaleDateString([], { month: "short", day: "numeric" })
+    ? dateObj.toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })
     : null;
 
   let doubleheaderText: string | null = null;
@@ -209,7 +209,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                 {firstTeams.awayName || firstLeg?.away || "Away"} at {firstTeams.homeName || firstLeg?.home || "Home"}
               </span>
               <span className="text-[10px] text-muted flex items-center gap-2">
-                {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: "2-digit", minute:"2-digit"}) : "TODAY"}
+                {firstQuote?.start ? formatEasternTime(firstQuote.start) : "TODAY"}
                 {firstBrief?.weather && <span>&bull; {firstBrief.weather.replace(/[^\x20-\x7E]/g, "").trim()}</span>}
               </span>
             </div>

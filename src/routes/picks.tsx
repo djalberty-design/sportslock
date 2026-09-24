@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, formatEasternShort } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -650,7 +650,7 @@ function TheLab() {
               const isGameLine = b.isGameLine;
               const stars = b.lab.stars;
               const matchup = `${b.away} @ ${b.home}`;
-              const startTime = b.start ? new Date(b.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "";
+              const startTime = b.start ? formatEasternShort(b.start) : "";
               const sportLabel = (b.sport || "").replace("americanfootball_", "").replace("icehockey_", "").replace("baseball_", "").replace("basketball_", "").toUpperCase();
 
               const displayName = playerName || b.selection;

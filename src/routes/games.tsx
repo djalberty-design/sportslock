@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } from "lucide-react";
 import { resolveTeamLogo } from "@/lib/market/logos";
@@ -7,10 +7,11 @@ import { leagueOfficialName, stripWrongCollegeLogo } from "@/lib/market/logo-gua
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
-import { fetchRealPropsFn, getCachedPropsFn, getOddsQuotaFn } from "@/lib/market/server";
+import { fetchRealPropsFn, getCachedPropsFn, getOddsQuotaFn, triggerMorningPullFn } from "@/lib/market/server";
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
 import { sportLabel } from "@/lib/copy";
+import { formatEasternShort, getEasternQuotaBreakdown } from "@/lib/utils";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
@@ -20,6 +21,9 @@ function TheMatrix() {
   const [quota, setQuota] = useState<number | null>(null);
   const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
   const [cachedEvents, setCachedEvents] = useState<Set<string>>(new Set());
+  const [isPullingDaily, setIsPullingDaily] = useState(false);
+
+  const quotaInfo = useMemo(() => getEasternQuotaBreakdown(quota), [quota]);
 
   const SPORT_KEY: Record<string, string> = {
     NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
@@ -30,6 +34,22 @@ function TheMatrix() {
   useEffect(() => {
     if (isAdmin) getOddsQuotaFn().then(setQuota).catch(() => {});
   }, [isAdmin]);
+
+  const handlePullDaily = async () => {
+    if (!confirm("Run off-schedule Odds API pull for all active sports (NFL, NCAAF, MLB)? This will update today's game lines on the board.")) return;
+    setIsPullingDaily(true);
+    try {
+      const res = await triggerMorningPullFn({ data: { bypassDailyGuard: true } });
+      alert(`Daily lines pulled successfully! Active sports: ${res.sports.join(", ")}`);
+      query.refetch();
+      const q = await getOddsQuotaFn();
+      if (q != null) setQuota(q);
+    } catch (e: any) {
+      alert("Failed to pull daily lines: " + (e?.message || String(e)));
+    } finally {
+      setIsPullingDaily(false);
+    }
+  };
 
   const handleFetchProps = async (eventId: string, sport: string) => {
     const sportKey = SPORT_KEY[sport];
@@ -179,10 +199,28 @@ function TheMatrix() {
           <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
             <LayoutGrid className="size-6 text-primary" /> Matchups
           </h1>
-          {isAdmin && quota != null && (
-            <span className="text-xs font-mono bg-panel border border-line rounded-md px-2 py-1 text-muted">
-              API: {quota} / 500
-            </span>
+          {isAdmin && quota != null && quotaInfo && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePullDaily}
+                disabled={isPullingDaily}
+                className="px-2.5 py-1 text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                title="Trigger off-schedule Odds API pull for today's active games"
+              >
+                <Zap className="size-3" />
+                {isPullingDaily ? "Pulling..." : "Pull Daily Lines"}
+              </button>
+              <div
+                className="text-xs font-mono bg-panel border border-line rounded-md px-2.5 py-1 flex items-center gap-2"
+                title={`Monthly Free Tier: 500 requests · Quota: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days remaining)\nAvailable Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+              >
+                <span className={quotaInfo.propsAvail < 20 ? "text-red-400 font-bold" : quotaInfo.propsAvail < 80 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                  ⚡ {quotaInfo.propsAvail} props avail
+                </span>
+                <span className="text-muted/50">|</span>
+                <span className="text-muted font-normal">Quota: {quota}/500</span>
+              </div>
+            </div>
           )}
         </div>
         {snapshot?.sourceNote && (
@@ -196,7 +234,7 @@ function TheMatrix() {
 
       <div className="flex flex-col gap-6">
         {games.map(g => {
-          const startTime = g.start ? new Date(g.start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "Upcoming";
+          const startTime = g.start ? formatEasternShort(g.start) : "Upcoming";
           const livePeriod = formatLivePeriod({ sport: g.sport, period: g.period, clock: g.clock, statusText: g.statusText });
           const lean = matchupLean(g);
           const awayMark = mark(g.sport, g.awayLogo, g.awayAbbr, g.away);

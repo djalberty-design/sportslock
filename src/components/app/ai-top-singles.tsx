@@ -355,10 +355,10 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
           const dateObj = r.start ? new Date(r.start) : null;
           const isValidDate = Boolean(dateObj && !isNaN(dateObj.getTime()));
           const dateFormatted = isValidDate
-            ? dateObj!.toLocaleDateString([], { month: "short", day: "numeric" })
+            ? dateObj!.toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })
             : null;
           const timeFormatted = isValidDate
-            ? dateObj!.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            ? dateObj!.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true }) + " ET"
             : null;
           const startFormatted = isValidDate ? `${dateFormatted} · ${timeFormatted}` : null;
 

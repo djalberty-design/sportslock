@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/morning-pull",
-      "schedule": "5 10 * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/autopsy",

@@ -7,7 +7,7 @@ import { useAccess } from "@/lib/use-access";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star, Trash2 } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { espnLogoUrl } from "@/lib/market/logos";
-import { cn } from "@/lib/utils";
+import { cn, formatEasternTime, formatEasternDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, combinedOdds, type ParlayLeg } from "@/lib/parlay-slip";
 import { MarketTip } from "./market-tip";
@@ -756,7 +756,7 @@ export function GamePage({ eventId }: { eventId: string }) {
                 <span className="text-xl font-display font-bold text-ink">{firstQuoteRef?.awayAbbr || "AWAY"} @ {firstQuoteRef?.homeAbbr || "HOME"}</span>
                 <span className="text-xs text-muted flex items-center gap-1 mt-0.5">
                   {gameBrief?.weather && <CloudSun className="size-3" />}
-                  {gameBrief?.weather ? gameBrief.weather.replace(/[^\x20-\x7E]/g, "").trim() : "Dome"} &bull; {firstQuote?.start ? new Date(firstQuote.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Upcoming"}
+                  {gameBrief?.weather ? gameBrief.weather.replace(/[^\x20-\x7E]/g, "").trim() : "Dome"} &bull; {firstQuote?.start ? formatEasternTime(firstQuote.start) : "Upcoming"}
                 </span>
              </div>
           </div>
@@ -781,31 +781,48 @@ export function GamePage({ eventId }: { eventId: string }) {
           </div>
         )}
 
-        {/* Admin: Pull Player Props button — always visible at top */}
+        {/* Admin: Pull Player Props button — strictly manual, clearly shows DB Cache status */}
         {isAdmin && (
-          <div className="flex items-center gap-3 mb-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2.5">
-            <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
-            <div className="flex-1 text-xs">
-              <span className="font-bold text-ink">Admin:</span>{" "}
-              <span className="text-muted">
-                {propsFetched
-                  ? `✅ ${fetchedProps.length} player props loaded${propsCacheTime ? ` · ${(() => { const mins = Math.round((Date.now() - new Date(propsCacheTime).getTime()) / 60000); return mins < 1 ? "just now" : mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`; })()}` : ""}`
-                  : "Pull player props from Odds API (uses 1 request)"}
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+            <div className="flex items-start sm:items-center gap-2.5">
+              <ShieldCheck className="size-4 text-emerald-500 shrink-0 mt-0.5 sm:mt-0" />
+              <div className="text-xs">
+                <span className="font-bold text-ink">Admin:</span>{" "}
+                {propsFetched ? (
+                  <span>
+                    <span className="text-emerald-400 font-semibold">Database Cache:</span>{" "}
+                    <span className="text-ink font-semibold">{fetchedProps.length} player props loaded</span>{" "}
+                    <span className="text-muted font-mono text-[11px]">(0 API requests used · Free)</span>
+                    {propsCacheTime && (
+                      <span className="text-muted block sm:inline sm:ml-2">
+                        · Pulled {formatEasternDateTime(propsCacheTime)}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted">
+                    No props in cache. Props are strictly manual — click button to pull for 1 API request.
+                  </span>
+                )}
+              </div>
             </div>
             {propsFetched ? (
               <button
-                onClick={() => { if (confirm("This uses 1 API request. Refresh props?")) handleFetchRealProps(); }}
+                onClick={() => {
+                  if (confirm("Manual Admin Action: This will consume 1 Odds API request from your monthly quota to pull fresh player props for this game. Proceed?")) {
+                    handleFetchRealProps();
+                  }
+                }}
                 disabled={isFetchingProps}
-                className="px-4 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-bold uppercase tracking-wider rounded border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                className="px-3.5 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-bold uppercase tracking-wider rounded border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 whitespace-nowrap self-start sm:self-auto cursor-pointer"
               >
-                {isFetchingProps ? "Pulling..." : "Refresh (1 Req)"}
+                {isFetchingProps ? "Pulling..." : "Re-pull Props (1 Req)"}
               </button>
             ) : (
               <button
                 onClick={handleFetchRealProps}
                 disabled={isFetchingProps}
-                className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-xs font-bold uppercase tracking-wider rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 text-xs font-bold uppercase tracking-wider rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 whitespace-nowrap self-start sm:self-auto cursor-pointer"
               >
                 {isFetchingProps ? "Pulling..." : "Pull Props (1 Req)"}
               </button>

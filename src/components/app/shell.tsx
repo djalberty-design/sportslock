@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
 import { getOddsQuotaFn } from "@/lib/market/server";
-import { cn, formatKickoff } from "@/lib/utils";
+import { cn, formatKickoff, getEasternQuotaBreakdown } from "@/lib/utils";
 import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 
@@ -51,27 +51,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [isAdmin]);
 
-  // Real sport season schedule → active daily pulls needed
+  // Real sport season schedule → active daily pulls needed formulate available prop pulls
   const quotaInfo = useMemo(() => {
-    if (quota == null) return null;
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-indexed
-    // Count active sports this month (matches getActiveSports in odds-api.ts)
-    let activeSports = 0;
-    if (month >= 9 || month <= 2) activeSports++; // NFL: Sep-Feb (reg+playoffs)
-    if (month >= 8 || month <= 1) activeSports++; // NCAAF: Aug-Jan
-    if (month >= 3 && month <= 11) activeSports++; // MLB: Mar-Nov (reg+playoffs)
-    if (month >= 10 || month <= 6) activeSports++; // NBA: Oct-Jun
-    if (month >= 10 || month <= 6) activeSports++; // NHL: Oct-Jun
-    if (month >= 11 || month <= 4) activeSports++; // NCAAB: Nov-Apr
-
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = daysInMonth - now.getDate();
-    const reservedForDaily = daysLeft * activeSports;
-    const propsAvail = Math.max(0, quota - reservedForDaily);
-    const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const resetLabel = resetDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return { propsAvail, activeSports, daysLeft, reservedForDaily, resetLabel };
+    return getEasternQuotaBreakdown(quota);
   }, [quota]);
 
   return (
@@ -82,14 +64,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             <DeskStamp />
           </div>
           {isAdmin && quota != null && quotaInfo && (
-            <div className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]" title={`${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days = ${quotaInfo.reservedForDaily} reserved for daily pulls. Resets ${quotaInfo.resetLabel}.`}>
+            <div
+              className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]"
+              title={`Monthly Free Tier: 500 requests · Quota Remaining: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+            >
               <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
-                ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls</span><span className="sm:hidden">props</span>
+                ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls avail</span><span className="sm:hidden">props</span>
               </span>
               <span className="text-muted/40 hidden sm:inline">|</span>
-              <span className="text-muted/60 font-mono hidden sm:inline">{quota}/500</span>
+              <span className="text-muted/70 font-mono hidden sm:inline" title="API Quota Remaining">{quota}/500</span>
               <span className="text-muted/40 hidden md:inline">|</span>
-              <span className="text-muted/50 hidden md:inline">resets {quotaInfo.resetLabel}</span>
+              <span className="text-muted/50 hidden md:inline">{quotaInfo.reservedForDaily} daily reserved ({quotaInfo.activeSportNames.join("/")})</span>
+              <span className="text-muted/40 hidden lg:inline">|</span>
+              <span className="text-muted/50 hidden lg:inline">resets {quotaInfo.resetLabel}</span>
             </div>
           )}
         </div>

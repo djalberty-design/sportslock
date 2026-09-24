@@ -1,5 +1,5 @@
 {
-  "url": "http://127.0.0.1:8080/",
+  "url": "http://127.0.0.1:8080/ticket",
   "viewports": {
     "desktop": {
       "width": 1280,
@@ -7,13 +7,13 @@
       "status": 200,
       "title": "Sports Lock",
       "hasCanvas": false,
-      "bodyTextLen": 21,
-      "bodyTextHash": "7fe10f29b28ec368e20c767f599e2e4e12beaf829f6886c6f60d35c33dd21aaf",
-      "bodyTextPrefix": "Loading SportsLock...",
+      "bodyTextLen": 161,
+      "bodyTextHash": "c870990929843d2f05c1574e307ae47ef8a67558a62908b10900d28357721387",
+      "bodyTextPrefix": "SportsLock AI Research-grade sports betting intelligence. Sign i",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
-      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\app-builder-preview.png"
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\ticket-preview.png"
     },
     "mobile": {
       "width": 390,
@@ -27,12 +27,12 @@
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
-      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\app-builder-preview-mobile.png"
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\ticket-preview-mobile.png"
     }
   },
   "brandWarnings": [
     "BRAND NOTE: no custom public/og.jpg — the platform will serve the og.grok.me placeholder. Custom cards are the default for games of every kind (DOM board/word games included), whimsical apps, creative tools, and brand-forward pages — only plain utilities (converters, CRUD trackers, admin dashboards) keep the placeholder. If this app is not a plain utility, finish the brand-asset pass per \\workspace\\.grok\\skills\\og\\SKILL.md."
   ],
   "authWarnings": [],
-  "verdictFile": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\app-builder-preview.json"
+  "verdictFile": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\ticket-preview.json"
 }

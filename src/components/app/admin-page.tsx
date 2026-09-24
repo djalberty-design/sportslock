@@ -5,8 +5,9 @@ import { LedgerPanel } from "./ledger-panel";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ADMIN_POWERS, OWNER_ADMIN_EMAIL } from "@/lib/admin";
-import { getOddsQuotaFn } from "@/lib/market/server";
+import { getOddsQuotaFn, triggerMorningPullFn } from "@/lib/market/server";
 import { useAccess } from "@/lib/use-access";
+import { getEasternQuotaBreakdown } from "@/lib/utils";
 import {
   addAllowlistEmail,
   decideAccessRequest,
@@ -33,10 +34,26 @@ export function AdminPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRootAdmin = pathname === "/admin";
   const quotaQuery = useQuery({ queryKey: ["odds-quota"], queryFn: () => getOddsQuotaFn(), refetchInterval: 30000 });
+  const [isPullingDaily, setIsPullingDaily] = useState(false);
+  const quotaInfo = getEasternQuotaBreakdown(quotaQuery.data ?? null);
+
+  const handlePullDaily = async () => {
+    if (!confirm("Run off-schedule Odds API pull for all active sports (NFL, NCAAF, MLB)? This will update today's game lines on the board.")) return;
+    setIsPullingDaily(true);
+    try {
+      const res = await triggerMorningPullFn({ data: { bypassDailyGuard: true } });
+      alert(`Daily lines pulled successfully! Active sports: ${res.sports.join(", ")}`);
+      quotaQuery.refetch();
+    } catch (e: any) {
+      alert("Failed to pull daily lines: " + (e?.message || String(e)));
+    } finally {
+      setIsPullingDaily(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <header className="max-w-2xl flex justify-between items-start">
+      <header className="max-w-2xl flex justify-between items-start gap-4">
         <div>
           <p className="text-sm text-emerald-500">Owner desk &bull; {OWNER_ADMIN_EMAIL}</p>
           <h1 className="font-display mt-1 text-3xl text-ink md:text-4xl">Admin settings</h1>
@@ -44,10 +61,24 @@ export function AdminPage() {
             Allowlist, algorithm knobs, master ledger, and feed health.
           </p>
         </div>
-        <div className="bg-paper border border-line p-3 rounded-xl flex flex-col items-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-muted">Odds API Quota</span>
+        <div className="bg-paper border border-line p-3 rounded-xl flex flex-col items-center shrink-0 min-w-[180px]">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Odds API Quota</span>
           <span className="text-2xl font-display text-emerald-500">{quotaQuery.data !== null && quotaQuery.data !== undefined ? quotaQuery.data : "---"}</span>
-          <span className="text-[10px] uppercase tracking-wider text-muted mt-1">/ 500 Remaining</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted mt-0.5">/ 500 Remaining</span>
+          {quotaInfo && (
+            <div className="text-[10px] font-mono text-center text-muted/80 mt-2 border-t border-line/50 pt-1.5 w-full space-y-0.5">
+              <div className="text-emerald-400 font-bold">⚡ {quotaInfo.propsAvail} Prop Pulls Avail</div>
+              <div>{quotaInfo.reservedForDaily} reserved ({quotaInfo.activeSports} sports × {quotaInfo.daysLeft}d)</div>
+              <div>Resets {quotaInfo.resetLabel}</div>
+            </div>
+          )}
+          <button
+            onClick={handlePullDaily}
+            disabled={isPullingDaily}
+            className="mt-2.5 w-full py-1 px-2 text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded hover:bg-emerald-500/20 transition-colors disabled:opacity-50 cursor-pointer text-center"
+          >
+            {isPullingDaily ? "Pulling..." : "Pull Daily Lines"}
+          </button>
         </div>
       </header>
 

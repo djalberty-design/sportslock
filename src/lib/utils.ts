@@ -106,3 +106,124 @@ export function matchupLine(away: string, home: string): string {
   return `${away} (away) at ${home} (home)`;
 }
 
+/** Format time strictly in Eastern Time (America/New_York): e.g. "7:00 PM ET" */
+export function formatEasternTime(input?: string | number | Date | null): string {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (!Number.isFinite(d.getTime())) return "";
+  const time = d.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${time} ET`;
+}
+
+/** Format short date strictly in Eastern Time (America/New_York): e.g. "Sep 24" */
+export function formatEasternDate(input?: string | number | Date | null): string {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (!Number.isFinite(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** Format short game start strictly in Eastern Time: e.g. "Today 8:15 PM ET" or "Thu 8:15 PM ET" */
+export function formatEasternShort(input?: string | number | Date | null, now = new Date()): string {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (!Number.isFinite(d.getTime())) return "";
+  const isToday = isTodayEt(d.toISOString(), now);
+  const time = d.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  if (isToday) {
+    return `Today ${time} ET`;
+  }
+  const day = d.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  });
+  return `${day} ${time} ET`;
+}
+
+/** Format full date & time strictly in Eastern Time: e.g. "Thu, Sep 24, 7:00 PM ET" */
+export function formatEasternDateTime(input?: string | number | Date | null): string {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (!Number.isFinite(d.getTime())) return "";
+  const dateStr = d.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timeStr = d.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr}, ${timeStr} ET`;
+}
+
+export type QuotaBreakdown = {
+  quota: number | null;
+  propsAvail: number;
+  activeSports: number;
+  activeSportNames: string[];
+  daysLeft: number;
+  reservedForDaily: number;
+  resetLabel: string;
+  monthlyPropsBudget: number;
+};
+
+/** Formulate available player prop pulls based on active sports and remaining month days in Eastern Time */
+export function getEasternQuotaBreakdown(quota: number | null, now = new Date()): QuotaBreakdown | null {
+  if (quota == null) return null;
+  const parts = etParts(now);
+  const month = parseInt(parts.month, 10);
+  const day = parseInt(parts.day, 10);
+  const year = parseInt(parts.year, 10);
+
+  const activeSportNames: string[] = [];
+  if (month >= 9 || month <= 2) activeSportNames.push("NFL");
+  if (month >= 8 || month <= 1) activeSportNames.push("NCAAF");
+  if (month >= 3 && month <= 11) activeSportNames.push("MLB");
+  if (month >= 10 || month <= 6) activeSportNames.push("NBA");
+  if (month >= 10 || month <= 6) activeSportNames.push("NHL");
+  if (month >= 11 || month <= 4) activeSportNames.push("NCAAB");
+
+  const activeSports = activeSportNames.length;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const daysLeft = Math.max(1, daysInMonth - day + 1);
+  const reservedForDaily = daysLeft * activeSports;
+  const propsAvail = Math.max(0, quota - reservedForDaily);
+  const monthlyPropsBudget = Math.max(0, 500 - (daysInMonth * activeSports));
+
+  const resetDate = new Date(year, month, 1);
+  const resetLabel = resetDate.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+  });
+
+  return {
+    quota,
+    propsAvail,
+    activeSports,
+    activeSportNames,
+    daysLeft,
+    reservedForDaily,
+    resetLabel,
+    monthlyPropsBudget,
+  };
+}
+

@@ -1,4 +1,5 @@
 import { getSql } from "../db.ts";
+import { etDayKey, nowEtDayKey } from "./slate-day.ts";
 
 export const ODDS_API_KEY = process.env.ODDS_API_KEY ?? "";
 
@@ -104,9 +105,12 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
   try {
     const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/${path}/scoreboard`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      console.warn(`[odds-api] ESPN returned non-ok status ${res.status} for ${sportKey}, defaulting to active calendar check`);
+      return true;
+    }
     const json = await res.json();
     const seasonType = json?.season?.type;
     // 1 = preseason (EXCLUDE), 2 = regular season (INCLUDE), 3 = postseason/playoffs (INCLUDE)
@@ -116,7 +120,8 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
     }
     if (seasonType === 2 || seasonType === 3) return true;
     return Boolean(json?.events && json.events.length > 0 && seasonType !== 1);
-  } catch {
+  } catch (err) {
+    console.warn(`[odds-api] ESPN probe failed for ${sportKey}, defaulting to active:`, err);
     return true; // Fallback to calendar if ESPN network fails
   }
 }
@@ -220,11 +225,16 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
       return cached.data;
     }
 
-    // STRICT ONCE-PER-DAY GUARD:
-    // Even if force=true, if a pull succeeded within the last 18 hours, do not burn quota
+    // STRICT ONCE-PER-DAY 5:00 AM ET GUARD:
+    // A daily pull belongs to a calendar day in Eastern Time (America/New_York).
+    // If today's pull has already completed TODAY in Eastern Time, do not re-pull
     // unless bypassDailyGuard is explicitly requested.
-    if (force && !bypassDailyGuard && age < 18 * 60 * 60 * 1000) {
-      console.log(`[odds-api] Daily pull already completed ${Math.round(age / 3600000)}h ago. Quota guard active: returning cached mains.`);
+    const cachedEtDay = etDayKey(cached.fetchedAt);
+    const currentEtDay = nowEtDayKey();
+    const alreadyPulledToday = cachedEtDay === currentEtDay;
+
+    if (force && !bypassDailyGuard && alreadyPulledToday) {
+      console.log(`[odds-api] Daily pull already completed today (${currentEtDay} ET, ${Math.round(age / 3600000)}h ago). Quota guard active: returning cached mains.`);
       globalCache.mains = cached.data;
       globalCache.mainsLastFetch = cached.fetchedAt.getTime();
       return cached.data;
@@ -271,6 +281,7 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
 }
 
 export async function fetchOddsApiProps(sportKey: string, eventId: string, force = false) {
+  console.log(`[odds-api] ⚡ fetchOddsApiProps invoked: sport=${sportKey}, event=${eventId}, force=${force}`);
   if (!force && globalCache.props[eventId]) {
     return globalCache.props[eventId];
   }
