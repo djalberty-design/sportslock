@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Beaker, Hexagon, Ticket, Settings, History, User } from "lucide-react";
+import { Activity, Beaker, Hexagon, Ticket, Settings, History, User, Scale } from "lucide-react";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
@@ -11,6 +11,7 @@ import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 const TABS = [
   { to: "/", label: "AI Picks", icon: Hexagon },
   { to: "/picks", label: "The Lab", icon: Beaker },
+  { to: "/arbitrage", label: "Arbitrage", icon: Scale },
   { to: "/games", label: "Matchups", icon: Activity },
   { to: "/ticket", label: "My Action", icon: Ticket },
   { to: "/results", label: "Track Record", icon: History },

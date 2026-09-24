@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ArbitrageRouteImport } from './routes/arbitrage'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as LoginRouteImport } from './routes/login'
@@ -49,6 +50,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArbitrageRoute = ArbitrageRouteImport.update({
+  id: '/arbitrage',
+  path: '/arbitrage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeskRoute = DeskRouteImport.update({
@@ -200,6 +206,7 @@ const ApiCronSweepLedgerRoute = ApiCronSweepLedgerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/arbitrage': typeof ArbitrageRoute
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/arbitrage': typeof ArbitrageRoute
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/arbitrage': typeof ArbitrageRoute
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/arbitrage'
     | '/desk'
     | '/games'
     | '/login'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/arbitrage'
     | '/desk'
     | '/games'
     | '/login'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/arbitrage'
     | '/desk'
     | '/games'
     | '/login'
@@ -402,6 +414,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  ArbitrageRoute: typeof ArbitrageRoute
   DeskRoute: typeof DeskRoute
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/arbitrage': {
+      id: '/arbitrage'
+      path: '/arbitrage'
+      fullPath: '/arbitrage'
+      preLoaderRoute: typeof ArbitrageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desk': {
@@ -678,6 +698,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  ArbitrageRoute: ArbitrageRoute,
   DeskRoute: DeskRoute,
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
