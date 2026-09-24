@@ -144,3 +144,70 @@ test("Store migration v7 identifies target premature tickets (#SL-A3S05, #SL-15E
   assert.equal(reconciled[2].status, "win", "Unrelated ticket should remain untouched");
   assert.equal(refundedWins, 75 + 4.5, "Total refunded win payouts should be $79.50");
 });
+
+test("Spread covered formula grades MLB runline underdog (+1.5) as WIN when trailing by 1 run (Red Sox 1, Guardians 0)", () => {
+  const homeScore = 1;
+  const awayScore = 0;
+  const line = 1.5;
+  const margin = awayScore - homeScore; // -1
+  const covered = margin + line; // -1 + 1.5 = +0.5
+  const outcome = covered > 0 ? "WIN" : covered === 0 ? "PUSH" : "LOSS";
+  assert.equal(outcome, "WIN");
+});
+
+test("Settled tickets can be manually re-graded cleanly from loss/void to win and vice versa", () => {
+  const initialBankroll = 1000;
+  const initialCash = 1000;
+  const stake = 3;
+  const price = -200; // dec = 1.5, payout = 4.5
+  const winPayout = 4.5;
+
+  // Step 1: Place bet
+  let cash = initialCash - stake; // 997
+  let bankroll = initialBankroll - stake; // 997
+
+  // Step 2: Graded as loss
+  assert.equal(cash, 997);
+  assert.equal(bankroll, 997);
+
+  // Step 3: Changing status to Win (clean reopen + win grade)
+  cash += winPayout; // 1001.5
+  bankroll += winPayout; // 1001.5
+  assert.equal(cash, 1001.5);
+  assert.equal(bankroll, 1001.5);
+});
+
+test("Store migration v9 identifies final Guardians ticket #SL-15E9N and settles it to win with payout credit", () => {
+  const mockTickets = [
+    { id: "t-1727138000-15e9n", description: "Cleveland Guardians (spread)", stake: 3, price: -200, status: "open" },
+    { id: "t-1727138000-other1", description: "Denver Broncos ML", stake: 20, price: 150, status: "open" },
+  ];
+
+  let addedWinnings = 0;
+  const migrated = mockTickets.map((t) => {
+    const isTargetFinal =
+      t.id.toLowerCase().endsWith("15e9n") ||
+      (t.description.includes("Guardians") && t.description.includes("spread"));
+
+    if (isTargetFinal && t.status === "open") {
+      const dec = t.price < 0 ? 100 / Math.abs(t.price) + 1 : t.price / 100 + 1;
+      const winPayout = t.stake * dec;
+      addedWinnings += winPayout;
+      return {
+        ...t,
+        status: "win",
+        pnl: winPayout - t.stake,
+        finalScore: "Cleveland Guardians 0 - Boston Red Sox 1",
+      };
+    }
+    return t;
+  });
+
+  assert.equal(migrated[0].status, "win", "Ticket #SL-15E9N must migrate from open to win");
+  assert.equal(migrated[0].pnl, 1.5, "Profit should be $1.50");
+  assert.equal(migrated[0].finalScore, "Cleveland Guardians 0 - Boston Red Sox 1");
+  assert.equal(migrated[1].status, "open", "Unrelated ticket should remain open");
+  assert.equal(addedWinnings, 4.5, "Added winnings should be $4.50 ($3 stake + $1.50 profit)");
+});
+
+

@@ -54,20 +54,6 @@ export function DeskPage() {
   const brier = ledgerBrier(entries);
   const haircuts = pendingLayerHaircuts(entries);
 
-  // Auto-reconcile premature series tickets on load (#SL-A3S05, #SL-15E9N)
-  useEffect(() => {
-    for (const t of paperTickets) {
-      const isTarget =
-        t.id?.toLowerCase().endsWith("a3s05") ||
-        t.id?.toLowerCase().endsWith("15e9n") ||
-        ((t.description?.includes("Pirates") || t.description?.includes("Guardians")) &&
-          t.status === "win");
-      if (isTarget && t.status === "win") {
-        reopen(t.id);
-      }
-    }
-  }, [paperTickets, reopen]);
-
   // Automated ticket settlement on mount and every 30 seconds
   useEffect(() => {
     if (!open.length) return;
@@ -226,12 +212,8 @@ export function DeskPage() {
                 });
               }
 
-              const isTargetLive =
-                t.id?.toLowerCase().endsWith("a3s05") ||
-                t.id?.toLowerCase().endsWith("15e9n");
-
               const lu = liveUpdatesMap[t.id];
-              const isLive = isTicketOpen && (Boolean(lu) || Boolean(matchQuote?.inPlay) || isTargetLive);
+              const isLive = isTicketOpen && (Boolean(lu) || Boolean(matchQuote?.inPlay));
               const isFinal = Boolean(matchQuote?.statusText?.toLowerCase().includes("final") || (matchQuote as any)?.complete);
               const liveScore = lu
                 ? `${lu.awayScore} - ${lu.homeScore}`
@@ -598,7 +580,7 @@ function HardRockTicketCard({
                 <div className="text-[10px] text-muted font-bold px-1.5 py-0.5 uppercase tracking-wider">
                   Manual Override
                 </div>
-                {isOpen && (
+                {isOpen ? (
                   <>
                     <button
                       onClick={() => {
@@ -628,18 +610,52 @@ function HardRockTicketCard({
                       Mark as Push
                     </button>
                   </>
-                )}
-                {!isOpen && (
-                  <button
-                    onClick={() => {
-                      if (onReopen) onReopen(ticket.id);
-                      else onGrade(ticket.id, "open");
-                      setShowOverride(false);
-                    }}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-amber-500/20 text-amber-400 font-semibold cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Clock className="size-3" /> Reopen Ticket (Move to Live)
-                  </button>
+                ) : (
+                  <>
+                    {!isWon && (
+                      <button
+                        onClick={() => {
+                          onGrade(ticket.id, "win", price);
+                          setShowOverride(false);
+                        }}
+                        className="w-full text-left px-2 py-1 rounded hover:bg-emerald-500/20 text-emerald-400 font-semibold cursor-pointer"
+                      >
+                        Change to Hit (Win)
+                      </button>
+                    )}
+                    {!isLost && (
+                      <button
+                        onClick={() => {
+                          onGrade(ticket.id, "loss", price);
+                          setShowOverride(false);
+                        }}
+                        className="w-full text-left px-2 py-1 rounded hover:bg-red-500/20 text-red-400 font-semibold cursor-pointer"
+                      >
+                        Change to Miss (Loss)
+                      </button>
+                    )}
+                    {!isVoid && (
+                      <button
+                        onClick={() => {
+                          onGrade(ticket.id, "void");
+                          setShowOverride(false);
+                        }}
+                        className="w-full text-left px-2 py-1 rounded hover:bg-line text-muted cursor-pointer"
+                      >
+                        Change to Push
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (onReopen) onReopen(ticket.id);
+                        else onGrade(ticket.id, "open");
+                        setShowOverride(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded hover:bg-amber-500/20 text-amber-400 font-semibold cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Clock className="size-3" /> Reopen Ticket (Move to Live)
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => {

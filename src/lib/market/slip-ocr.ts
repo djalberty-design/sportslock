@@ -284,6 +284,7 @@ export async function processAndGradeTicket(imageUrl: any): Promise<GradedTicket
   let rawText = "";
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Tesseract = (await import("tesseract.js")).default;
     const result = await (Tesseract as any).recognize(imageUrl, "eng");
     rawText = result.data.text;
   } catch (err) {

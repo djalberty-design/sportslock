@@ -36,6 +36,8 @@ const ESPN_SCOREBOARD: { sport: string; path: string }[] = [
   { sport: "NCAAF", path: "football/college-football" },
   { sport: "NBA", path: "basketball/nba" },
   { sport: "NCAAB", path: "basketball/mens-college-basketball" },
+  { sport: "MLB", path: "baseball/mlb" },
+  { sport: "NHL", path: "hockey/nhl" },
 ];
 
 function compact(s?: string | null): string {

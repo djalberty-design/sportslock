@@ -320,9 +320,31 @@ export const useDeskStore = create<DeskState>()(
           get().reopenTicket(id);
           return;
         }
-        const s = get();
-        const ticket = s.paperTickets.find((x) => x.id === id);
-        if (!ticket || ticket.status !== "open") return;
+        let s = get();
+        let ticket = s.paperTickets.find((x) => x.id === id);
+        if (!ticket) return;
+        if (ticket.status === result) {
+          if (extra?.finalScore || extra?.legs) {
+            set({
+              paperTickets: s.paperTickets.map((x) =>
+                x.id === id
+                  ? {
+                      ...x,
+                      finalScore: extra?.finalScore ?? x.finalScore,
+                      legs: extra?.legs ?? x.legs,
+                    }
+                  : x,
+              ),
+            });
+          }
+          return;
+        }
+        if (ticket.status !== "open") {
+          get().reopenTicket(id);
+          s = get();
+          ticket = s.paperTickets.find((x) => x.id === id);
+          if (!ticket) return;
+        }
         let pnl = 0;
         if (result === "void") pnl = ticket.stake;
         else if (result === "loss") pnl = 0;
@@ -454,7 +476,7 @@ export const useDeskStore = create<DeskState>()(
       name: BRAND.persist,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 8, // Bumped to 8 for user profile, bankroll economics, and preferences
+      version: 9, // Bumped to 9 for auto-settling final ticket #SL-15E9N to WON
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Record<string, unknown>;
         if (version < 2) {
@@ -528,6 +550,40 @@ export const useDeskStore = create<DeskState>()(
           if (p.goldDropAlerts == null) p.goldDropAlerts = true;
           if (p.hedgeWarnings == null) p.hedgeWarnings = true;
           if (p.dailyRecapAlerts == null) p.dailyRecapAlerts = true;
+        }
+        if (version < 9) {
+          if (Array.isArray(p.paperTickets)) {
+            let addedWinnings = 0;
+            p.paperTickets = p.paperTickets.map((t: any) => {
+              const isTargetFinal =
+                t.id?.toLowerCase().endsWith("15e9n") ||
+                ((t.description?.includes("Guardians") || t.selection?.includes("Guardians")) &&
+                  (t.description?.includes("spread") || t.marketType === "spread"));
+
+              if (isTargetFinal && t.status === "open") {
+                const dec =
+                  t.price != null
+                    ? t.price >= 0
+                      ? t.price / 100 + 1
+                      : 100 / Math.abs(t.price) + 1
+                    : 1.5;
+                const winPayout = (Number(t.stake) || 3) * dec;
+                addedWinnings += winPayout;
+                return {
+                  ...t,
+                  status: "win",
+                  pnl: Math.round((winPayout - (Number(t.stake) || 3)) * 100) / 100,
+                  finalScore: "Cleveland Guardians 0 - Boston Red Sox 1",
+                  settledAt: new Date().toISOString(),
+                };
+              }
+              return t;
+            });
+            if (addedWinnings > 0) {
+              p.paperCash = Math.round(((Number(p.paperCash) || 0) + addedWinnings) * 100) / 100;
+              p.liveBankroll = Math.round(((Number(p.liveBankroll) || 0) + addedWinnings) * 100) / 100;
+            }
+          }
         }
         return p as DeskState;
       },
