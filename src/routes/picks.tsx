@@ -243,6 +243,7 @@ function BetAvatar({
 function TheLab() {
   const { picks, scan } = useDeskDecision();
   const sportFilter = useDeskStore((s) => s.sportFilter);
+  const setSportFilter = useDeskStore((s) => s.setSportFilter);
   const totalBankroll = useDeskStore((s) => s.totalBankroll);
   const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
   const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
@@ -416,11 +417,21 @@ function TheLab() {
     return applySportFilter(allBets, sportFilter);
   }, [allBets, sportFilter]);
 
-  // Available sports
+  // Available sports and counts across all bets
   const liveSports = useMemo(() =>
     [...new Set(allBets.map(b => b.sport).filter(Boolean))],
     [allBets]
   );
+
+  const sportCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: allBets.length };
+    for (const b of allBets) {
+      if (b.sport) {
+        counts[b.sport] = (counts[b.sport] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [allBets]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -454,12 +465,19 @@ function TheLab() {
 
     // Search
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       items = items.filter(b =>
         (b.player || "").toLowerCase().includes(q) ||
         b.selection.toLowerCase().includes(q) ||
         b.home.toLowerCase().includes(q) ||
-        b.away.toLowerCase().includes(q)
+        b.away.toLowerCase().includes(q) ||
+        b.marketType.toLowerCase().includes(q) ||
+        (b.sport || "").toLowerCase().includes(q) ||
+        (b.sport === "MLB" && (q === "baseball" || q === "mlb")) ||
+        (b.sport === "NFL" && (q === "football" || q === "nfl")) ||
+        (b.sport === "NCAAF" && (q === "college" || q === "cfb" || q === "ncaaf" || q === "college football")) ||
+        (b.sport === "NBA" && (q === "basketball" || q === "nba")) ||
+        (b.sport === "NHL" && (q === "hockey" || q === "nhl"))
       );
     }
 
@@ -557,6 +575,62 @@ function TheLab() {
         <div className="flex flex-col gap-3 pb-24">
           {/* Filter bar */}
           <div className="flex flex-col gap-2 sticky top-[calc(5.25rem+env(safe-area-inset-top,0px))] md:top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
+            {/* Row 0: Sport Selection in sticky bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-b border-line/40 pb-1.5">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider mr-1 shrink-0">Sport:</span>
+              <button
+                type="button"
+                onClick={() => setSportFilter("ALL")}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shrink-0 flex items-center gap-1.5",
+                  !sportFilter || sportFilter === "ALL"
+                    ? "bg-neon text-obsidian border-neon font-black shadow-sm"
+                    : "bg-panel border-line text-muted hover:text-ink hover:border-primary/40"
+                )}
+              >
+                <span>🌐 All Sports</span>
+                <span className={cn("text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold",
+                  !sportFilter || sportFilter === "ALL" ? "bg-obsidian/20 text-obsidian" : "bg-line text-muted"
+                )}>
+                  {allBets.length}
+                </span>
+              </button>
+              {liveSports.map((s) => {
+                const count = sportCounts[s] || 0;
+                const active = sportFilter === s;
+                const icon = s === "MLB" ? "⚾" : s === "NFL" ? "🏈" : s === "NCAAF" ? "🏈" : s === "NBA" ? "🏀" : s === "NHL" ? "🏒" : "🎯";
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSportFilter(s)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shrink-0 flex items-center gap-1.5",
+                      active
+                        ? "bg-neon text-obsidian border-neon font-black shadow-sm"
+                        : "bg-panel border-line text-muted hover:text-ink hover:border-primary/40"
+                    )}
+                  >
+                    <span>{icon} {s}</span>
+                    <span className={cn("text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold",
+                      active ? "bg-obsidian/20 text-obsidian" : "bg-line text-muted"
+                    )}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+              {sportFilter && sportFilter !== "ALL" && (
+                <button
+                  type="button"
+                  onClick={() => setSportFilter("ALL")}
+                  className="px-2 py-0.5 text-[9px] text-primary hover:underline font-mono shrink-0 ml-auto flex items-center gap-1"
+                >
+                  <span>Reset to All Sports ×</span>
+                </button>
+              )}
+            </div>
+
             {/* Row 1: Bet type tabs */}
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {TAB_LABELS.map(({ key, label }) => (
@@ -637,7 +711,15 @@ function TheLab() {
 
           {/* Results count */}
           <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wider px-1">
-            <span>{displayBets.length} bet{displayBets.length !== 1 ? "s" : ""} · Sorted by {SORT_OPTIONS.find(s => s.key === sortMode)?.label}</span>
+            <span className="flex items-center gap-2">
+              <span>{displayBets.length} bet{displayBets.length !== 1 ? "s" : ""}</span>
+              {sportFilter && sportFilter !== "ALL" && (
+                <span className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-mono font-bold lowercase">
+                  filtered to {sportFilter}
+                </span>
+              )}
+              <span>· Sorted by {SORT_OPTIONS.find(s => s.key === sortMode)?.label}</span>
+            </span>
             <span className="text-[9px] text-muted/60">Pregame only · EV = (Hit% × Payout) − 1</span>
           </div>
 
@@ -705,6 +787,17 @@ function TheLab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-bold text-ink truncate">{displayName}</span>
+
+                        {/* Sport Badge */}
+                        <span className={cn(
+                          "text-[8px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 border",
+                          b.sport === "MLB" ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30" :
+                          b.sport === "NFL" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
+                          b.sport === "NCAAF" ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
+                          "bg-primary/10 text-primary border-primary/20"
+                        )}>
+                          {b.sport === "MLB" ? "⚾ MLB" : b.sport === "NFL" ? "🏈 NFL" : b.sport === "NCAAF" ? "🏈 NCAAF" : b.sport}
+                        </span>
 
                         {/* Model Badge */}
                         {b.modelType === "prop" && (

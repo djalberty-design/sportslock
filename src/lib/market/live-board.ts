@@ -952,9 +952,10 @@ function overlayOddsApiMains(quotes: QuoteLine[], oddsApiData: any[]): QuoteLine
       return (gHome.includes(qHome) || qHome.includes(gHome)) && (gAway.includes(qAway) || qAway.includes(gAway));
     });
     if (matchingGame && matchingGame.bookmakers) {
-      let bookmaker = matchingGame.bookmakers.find((b: any) => b.key === 'hardrock') || 
+      let bookmaker = matchingGame.bookmakers.find((b: any) => b.key === 'hardrock' || b.key === 'hardrockbet' || b.key === 'hardrockbet_fl') || 
                       matchingGame.bookmakers.find((b: any) => b.key === 'draftkings') ||
-                      matchingGame.bookmakers.find((b: any) => b.key === 'fanduel');
+                      matchingGame.bookmakers.find((b: any) => b.key === 'fanduel') ||
+                      matchingGame.bookmakers[0];
       if (!bookmaker || !bookmaker.markets) continue;
       const ml = bookmaker.markets.find((m: any) => m.key === 'h2h');
       const sp = bookmaker.markets.find((m: any) => m.key === 'spreads');
@@ -1011,11 +1012,12 @@ function quotesFromOddsApi(oddsApiData: any[]): QuoteLine[] {
 
       // Pick best available bookmaker: Hard Rock > DraftKings > FanDuel
       const bookmaker =
-        g.bookmakers?.find((b: any) => b.key === "hardrock") ||
+        g.bookmakers?.find((b: any) => b.key === "hardrock" || b.key === "hardrockbet" || b.key === "hardrockbet_fl") ||
         g.bookmakers?.find((b: any) => b.key === "draftkings") ||
-        g.bookmakers?.find((b: any) => b.key === "fanduel");
+        g.bookmakers?.find((b: any) => b.key === "fanduel") ||
+        g.bookmakers?.[0];
 
-      const isHardRock = bookmaker?.key === "hardrock";
+      const isHardRock = bookmaker?.key === "hardrock" || bookmaker?.key === "hardrockbet" || bookmaker?.key === "hardrockbet_fl";
 
       // Extract spread and total for base
       const spMarket = bookmaker?.markets?.find((m: any) => m.key === "spreads");
