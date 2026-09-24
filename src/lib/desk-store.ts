@@ -10,6 +10,7 @@ import type { DeskMood } from "./market/picks";
 import { DEFAULTS } from "./market/universe";
 import { isCollegePlayerBet } from "./market/florida";
 import { etParts, startOfEtWeekMonday } from "./utils";
+import { calculateDynamicWager, type RiskProfileMode } from "./kelly";
 
 export type PlacePaperInput = Omit<PaperTicket, "id" | "createdAt" | "venue"> & { fastLog?: boolean;
   status?: PaperTicket["status"];
@@ -94,6 +95,27 @@ export type DeskState = {
   setSportFilter: (sport: string) => void;
   confirmSlateFromTable: (table: string, sport: string) => number;
   loadSampleSlate: () => void;
+  // User Profile & Personalization Preferences
+  totalBankroll: number;
+  baseUnitSize: number;
+  riskProfileMode: RiskProfileMode;
+  defaultSportsbook: string;
+  favoriteTeams: string[];
+  favoriteLeagues: string[];
+  activeSportsbooks: string[];
+  steamAlerts: boolean;
+  goldDropAlerts: boolean;
+  hedgeWarnings: boolean;
+  dailyRecapAlerts: boolean;
+  setTotalBankroll: (n: number) => void;
+  setBaseUnitSize: (n: number) => void;
+  setRiskProfileMode: (m: RiskProfileMode) => void;
+  setDefaultSportsbook: (sb: string) => void;
+  setFavoriteTeams: (teams: string[]) => void;
+  setFavoriteLeagues: (leagues: string[]) => void;
+  setActiveSportsbooks: (books: string[]) => void;
+  setNotificationSettings: (settings: { steamAlerts?: boolean; goldDropAlerts?: boolean; hedgeWarnings?: boolean; dailyRecapAlerts?: boolean }) => void;
+  setUserPreferences: (prefs: Partial<DeskState>) => void;
 };
 
 const initialAnchors = () => {
@@ -148,6 +170,32 @@ export const useDeskStore = create<DeskState>()(
       adminEmail: "",
       hiddenPickIds: [],
       pinnedPickId: null,
+      totalBankroll: DEFAULTS.liveBankroll,
+      baseUnitSize: 25.00,
+      riskProfileMode: "balanced" as RiskProfileMode,
+      defaultSportsbook: "hardrockbet_fl",
+      favoriteTeams: [],
+      favoriteLeagues: ["NFL", "NBA", "MLB"],
+      activeSportsbooks: ["hardrockbet_fl", "draftkings", "fanduel"],
+      steamAlerts: true,
+      goldDropAlerts: true,
+      hedgeWarnings: true,
+      dailyRecapAlerts: true,
+      setTotalBankroll: (n) => {
+        const val = Math.max(10, Math.round(n * 100) / 100);
+        set({ totalBankroll: val, liveBankroll: val });
+      },
+      setBaseUnitSize: (n) => {
+        const val = Math.max(1, Math.round(n * 100) / 100);
+        set({ baseUnitSize: val });
+      },
+      setRiskProfileMode: (m) => set({ riskProfileMode: m }),
+      setDefaultSportsbook: (sb) => set({ defaultSportsbook: sb }),
+      setFavoriteTeams: (teams) => set({ favoriteTeams: teams }),
+      setFavoriteLeagues: (leagues) => set({ favoriteLeagues: leagues }),
+      setActiveSportsbooks: (books) => set({ activeSportsbooks: books }),
+      setNotificationSettings: (settings) => set((s) => ({ ...s, ...settings })),
+      setUserPreferences: (prefs) => set((s) => ({ ...s, ...prefs })),
       markHydrated: () => set({ hydrated: true }),
       setLiveBankroll: (n) => {
         const v = Math.max(0, n);
@@ -406,7 +454,7 @@ export const useDeskStore = create<DeskState>()(
       name: BRAND.persist,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 7, // Bumped to 7 for auto-reconciliation of live series game tickets
+      version: 8, // Bumped to 8 for user profile, bankroll economics, and preferences
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Record<string, unknown>;
         if (version < 2) {
@@ -468,6 +516,19 @@ export const useDeskStore = create<DeskState>()(
             }
           }
         }
+        if (version < 8) {
+          if (p.totalBankroll == null) p.totalBankroll = Number(p.liveBankroll) || 1000;
+          if (p.baseUnitSize == null) p.baseUnitSize = 25;
+          if (p.riskProfileMode == null) p.riskProfileMode = "balanced";
+          if (p.defaultSportsbook == null) p.defaultSportsbook = "hardrockbet_fl";
+          if (!Array.isArray(p.favoriteTeams)) p.favoriteTeams = [];
+          if (!Array.isArray(p.favoriteLeagues)) p.favoriteLeagues = ["NFL", "NBA", "MLB"];
+          if (!Array.isArray(p.activeSportsbooks)) p.activeSportsbooks = ["hardrockbet_fl", "draftkings", "fanduel"];
+          if (p.steamAlerts == null) p.steamAlerts = true;
+          if (p.goldDropAlerts == null) p.goldDropAlerts = true;
+          if (p.hedgeWarnings == null) p.hedgeWarnings = true;
+          if (p.dailyRecapAlerts == null) p.dailyRecapAlerts = true;
+        }
         return p as DeskState;
       },
       partialize: (s) => ({
@@ -507,6 +568,17 @@ export const useDeskStore = create<DeskState>()(
         adminEmail: s.adminEmail,
         hiddenPickIds: s.hiddenPickIds,
         pinnedPickId: s.pinnedPickId,
+        totalBankroll: s.totalBankroll,
+        baseUnitSize: s.baseUnitSize,
+        riskProfileMode: s.riskProfileMode,
+        defaultSportsbook: s.defaultSportsbook,
+        favoriteTeams: s.favoriteTeams,
+        favoriteLeagues: s.favoriteLeagues,
+        activeSportsbooks: s.activeSportsbooks,
+        steamAlerts: s.steamAlerts,
+        goldDropAlerts: s.goldDropAlerts,
+        hedgeWarnings: s.hedgeWarnings,
+        dailyRecapAlerts: s.dailyRecapAlerts,
       }),
     },
   ),
@@ -523,6 +595,20 @@ export function selectWeeklyHalt(_s: Pick<DeskState, "liveBankroll">): boolean {
 export function selectUnit(s: Pick<DeskState, "liveBankroll" | "unitPct" | "stakeDollars">): number {
   if (Number.isFinite(s.stakeDollars) && s.stakeDollars > 0) return s.stakeDollars;
   return unitDollars(s.liveBankroll, s.unitPct);
+}
+
+export function selectCalculatedWager(
+  s: Pick<DeskState, "totalBankroll" | "baseUnitSize" | "riskProfileMode">,
+  fairProb?: number,
+  bookOdds?: number,
+) {
+  return calculateDynamicWager({
+    totalBankroll: s.totalBankroll,
+    baseUnitSize: s.baseUnitSize,
+    riskMode: s.riskProfileMode,
+    fairProb,
+    bookOdds,
+  });
 }
 
 export function selectIsAdmin(s: Pick<DeskState, "adminEmail">): boolean {
