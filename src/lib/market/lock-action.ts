@@ -29,6 +29,7 @@ export function paperFromLock(input: {
   home?: string;
   away?: string;
   kind?: PlacePaperInput["kind"];
+  legs?: any[];
 }): PlacePaperInput {
   return {
     kind: input.kind ?? (input.gameIds.length > 1 ? "parlay" : "main"),
@@ -43,6 +44,7 @@ export function paperFromLock(input: {
     away: input.away,
     fastLog: true,
     status: "open",
+    legs: input.legs,
   };
 }
 

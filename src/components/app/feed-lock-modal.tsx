@@ -87,6 +87,26 @@ export function FeedLockModal({
         away: firstTeams.awayName || first?.away,
         start: first?.start || matchSnapshotEvent(snapshot, first).quote?.start || undefined,
         kind: legs.length > 1 ? "parlay" : "main",
+        legs: legs.map((leg: any) => {
+          const tms = resolveLegTeam(leg, matchSnapshotEvent(snapshot, leg).quote);
+          return {
+            eventId: String(leg.eventId || ""),
+            selection: String(leg.selection || selectionLabel(leg, snapshot)),
+            marketType: String(leg.marketType || "ml"),
+            point: leg.point,
+            price: Number(leg.price) || -110,
+            fairProb: Number(leg.fairProb || 0.5),
+            home: tms.homeName || leg.home,
+            away: tms.awayName || leg.away,
+            sport: leg.sport,
+            player: leg.player,
+            headshot: leg.headshot,
+            homeLogo: leg.homeLogo,
+            awayLogo: leg.awayLogo,
+            isProp: Boolean(leg.player || leg.headshot || leg.isProp),
+            status: "open",
+          };
+        }),
       }));
       if (!res.ok) {
         setLockErr(res.error);

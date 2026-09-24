@@ -264,12 +264,17 @@ export function GamePage({ eventId }: { eventId: string }) {
   const handleLockIn = async () => {
     setIsSaving(true);
     try {
+      const finalOddsNum = finalOdds ? (parseInt(finalOdds, 10) || -110) : (parseInt(americanOdds, 10) || -110);
+      const wagerAmount = (wager !== "" && !isNaN(parseFloat(wager)) && parseFloat(wager) > 0)
+        ? parseFloat(wager)
+        : (baseUnitSize || 50);
+
       const legs = sgpSlip.map(q => ({
         eventId: q.eventId || eventId,
         selection: q.selection,
         marketType: q.marketType || "unknown",
         point: q.point,
-        price: parseInt(finalOdds || americanOdds) || q.price || -110,
+        price: q.hardRockPrice || q.consensusPrice || q.price || -110,
         fairProb: q.fairProb || 0.5,
         home: q.home || firstQuote?.home || "",
         away: q.away || firstQuote?.away || "",
@@ -288,22 +293,13 @@ export function GamePage({ eventId }: { eventId: string }) {
         ? `${legs[0].selection} (${formatMarketName(legs[0].marketType, legs[0].selection)})`
         : `${legs.length}-leg parlay: ${legs.map(l => l.selection).join(" + ")}`;
 
-      // Add to local paper tickets (shows in My Action)
-      const combinedPrice = legs.length === 1
-        ? legs[0].price
-        : legs.reduce((acc, l) => {
-            const dec = l.price > 0 ? (l.price / 100) + 1 : (100 / Math.abs(l.price)) + 1;
-            return acc * dec;
-          }, 1);
-      const americanCombined = legs.length === 1
-        ? legs[0].price
-        : (combinedPrice >= 2 ? Math.round((combinedPrice - 1) * 100) : Math.round(-100 / (combinedPrice - 1)));
-
       placePaper({
         kind: legs.length === 1 ? "main" : "parlay",
         description: desc,
-        stake: wagerNum || 50,
-        price: americanCombined,
+        stake: wagerAmount,
+        price: finalOddsNum,
+        livePrice: finalOddsNum,
+        postedPrice: finalOddsNum,
         status: "open",
         gameIds: [...new Set(legs.map(l => l.eventId))],
         chance: legs.reduce((acc, l) => acc * l.fairProb, 1),
@@ -342,6 +338,10 @@ export function GamePage({ eventId }: { eventId: string }) {
       // Also log to server
       await lockPredictionFn({ data: { legs } });
       setSaved(true);
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSaved(false);
+      }, 1200);
     } catch (e) {
       console.error(e);
     }

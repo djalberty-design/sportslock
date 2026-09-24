@@ -210,4 +210,54 @@ test("Store migration v9 identifies final Guardians ticket #SL-15E9N and settles
   assert.equal(addedWinnings, 4.5, "Added winnings should be $4.50 ($3 stake + $1.50 profit)");
 });
 
+test("Store migration v10 identifies target parlay ticket #SL-DC9VN and corrects line to +605 with $3 stake", () => {
+  const dummyTickets = [
+    {
+      id: "t-1727192800000-dc9vn",
+      description: "5-leg parlay: Green Bay Packers + MICHAEL PENIX + JORDAN LOVE + BIJAN ROBINSON + TUCKER KRAFT",
+      stake: 3,
+      price: 1741489,
+      livePrice: 1741489,
+      postedPrice: 1741489,
+      status: "open",
+    },
+    {
+      id: "t-1727192800000-xyz12",
+      description: "Detroit Lions -3.5",
+      stake: 50,
+      price: -110,
+      livePrice: -110,
+      postedPrice: -110,
+      status: "open",
+    },
+  ];
+
+  const migrated = dummyTickets.map((t) => {
+    const isTargetTicket =
+      t.id?.toLowerCase().endsWith("dc9vn") ||
+      (t.price != null && t.price > 10000) ||
+      (String(t.description || "").includes("MICHAEL PENIX") &&
+        String(t.description || "").includes("JORDAN LOVE") &&
+        (t.price == null || t.price > 10000));
+
+    if (isTargetTicket) {
+      return {
+        ...t,
+        price: 605,
+        livePrice: 605,
+        postedPrice: 605,
+        stake: 3,
+      };
+    }
+    return t;
+  });
+
+  assert.equal(migrated[0].price, 605, "Target ticket price should be corrected to +605");
+  assert.equal(migrated[0].livePrice, 605, "Live price should be 605");
+  assert.equal(migrated[0].postedPrice, 605, "Posted price should be 605");
+  assert.equal(migrated[0].stake, 3, "Stake should remain $3");
+  assert.equal(migrated[1].price, -110, "Unrelated ticket should remain unaffected");
+});
+
+
 

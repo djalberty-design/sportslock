@@ -14,6 +14,7 @@ export function ParlayBar() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [customStake, setCustomStake] = useState<string>("");
+  const [customOdds, setCustomOdds] = useState<string>("");
   const placePaper = useDeskStore((s) => s.placePaperTicket);
   const totalBankroll = useDeskStore((s) => s.totalBankroll);
   const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
@@ -25,19 +26,21 @@ export function ParlayBar() {
   const label = isSingle ? "BET" : `${legs.length}L`;
 
   const numericOdds = typeof american === "number" ? american : parseInt(american, 10) || -110;
+  const finalOddsNum = customOdds ? (parseInt(customOdds, 10) || numericOdds) : numericOdds;
   const dynWager = calculateDynamicWager({
     totalBankroll,
     baseUnitSize,
     riskMode: riskProfileMode,
     fairProb: combinedProb,
-    bookOdds: numericOdds,
+    bookOdds: finalOddsNum,
   });
 
   const stakeAmount = customStake !== "" && Number.isFinite(Number(customStake)) && Number(customStake) > 0
     ? Number(customStake)
     : dynWager.wagerDollars;
 
-  const potentialPayout = (stakeAmount * decPayout).toFixed(2);
+  const decOdds = finalOddsNum > 0 ? (finalOddsNum / 100) + 1 : (100 / Math.abs(finalOddsNum)) + 1;
+  const potentialPayout = (stakeAmount * (customOdds ? decOdds : decPayout)).toFixed(2);
 
   const handleLockIn = useCallback(async () => {
     if (legs.length === 0 || saving) return;
@@ -83,7 +86,9 @@ export function ParlayBar() {
         kind: legData.length === 1 ? "main" : "parlay",
         description: desc,
         stake: stakeAmount,
-        price: americanCombined,
+        price: finalOddsNum,
+        livePrice: finalOddsNum,
+        postedPrice: finalOddsNum,
         status: "open",
         gameIds: [...new Set(legData.map(l => l.eventId))],
         chance: legData.reduce((acc, l) => acc * l.fairProb, 1),
@@ -122,13 +127,15 @@ export function ParlayBar() {
       setSaved(true);
       setTimeout(() => {
         clearAll();
+        setCustomOdds("");
+        setCustomStake("");
         setSaved(false);
       }, 1200);
     } catch (e) {
       console.error("Lock-in error:", e);
     }
     setSaving(false);
-  }, [legs, saving, placePaper, clearAll, stakeAmount]);
+  }, [legs, saving, placePaper, clearAll, stakeAmount, finalOddsNum]);
 
   if (legs.length === 0) return null;
 
@@ -138,17 +145,30 @@ export function ParlayBar() {
       {expanded && (
         <div className="bg-obsidian/95 backdrop-blur-xl border-t border-line max-h-[35vh] overflow-y-auto">
           <div className="max-w-2xl mx-auto px-3 py-2 space-y-1">
-            <div className="flex items-center justify-between pb-1 border-b border-line/60 text-[11px]">
-              <span className="text-muted">
-                Kelly Suggestion ({riskProfileMode}): <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setCustomStake(String(dynWager.wagerDollars))}
-                className="text-primary hover:underline text-[10px] font-bold"
-              >
-                Reset to Rec
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-line/60 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted">
+                  Kelly ({riskProfileMode}): <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCustomStake(String(dynWager.wagerDollars))}
+                  className="text-primary hover:underline text-[10px] font-bold"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted text-[10px] uppercase font-bold">Hard Rock Line:</span>
+                <input
+                  type="text"
+                  placeholder={String(american)}
+                  value={customOdds}
+                  onChange={(e) => setCustomOdds(e.target.value)}
+                  className="w-16 bg-panel border border-line rounded px-1.5 py-0.5 text-[11px] font-mono font-bold text-primary focus:outline-none focus:border-primary text-center"
+                  title="Manually adjust final odds if Hard Rock offers a different line"
+                />
+              </div>
             </div>
             {legs.map((leg, i) => (
               <div key={`${leg.selection}-${leg.marketType}`} className="flex items-center justify-between gap-2 bg-panel rounded px-2.5 py-1.5">

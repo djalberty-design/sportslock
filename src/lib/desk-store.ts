@@ -82,6 +82,7 @@ export type DeskState = {
   rollAnchorsIfNeeded: () => void;
   placePaperTicket: (t: PlacePaperInput) => PlacePaperResult;
   gradeTicket: (id: string, result: "win" | "loss" | "void", closePrice?: number, extra?: { finalScore?: string; legs?: any[] }) => void;
+  updateTicket: (id: string, patch: Partial<PaperTicket>) => void;
   reopenTicket: (id: string) => void;
   dismissTicket: (id: string) => void;
   confirmParsed: (ticket: ParsedTicket) => void;
@@ -204,7 +205,42 @@ export const useDeskStore = create<DeskState>()(
       setActiveSportsbooks: (books) => set({ activeSportsbooks: books }),
       setNotificationSettings: (settings) => set((s) => ({ ...s, ...settings })),
       setUserPreferences: (prefs) => set((s) => ({ ...s, ...prefs })),
-      markHydrated: () => set({ hydrated: true }),
+      markHydrated: () => {
+        const s = get();
+        if (Array.isArray(s.paperTickets)) {
+          const hasTarget = s.paperTickets.some(
+            (t) =>
+              t.id?.toLowerCase().endsWith("dc9vn") ||
+              (t.price != null && t.price > 10000) ||
+              (String(t.description || "").includes("MICHAEL PENIX") &&
+                String(t.description || "").includes("JORDAN LOVE") &&
+                (t.price == null || t.price > 10000))
+          );
+          if (hasTarget) {
+            set({
+              paperTickets: s.paperTickets.map((t) => {
+                const isTarget =
+                  t.id?.toLowerCase().endsWith("dc9vn") ||
+                  (t.price != null && t.price > 10000) ||
+                  (String(t.description || "").includes("MICHAEL PENIX") &&
+                    String(t.description || "").includes("JORDAN LOVE") &&
+                    (t.price == null || t.price > 10000));
+                if (isTarget) {
+                  return {
+                    ...t,
+                    price: 605,
+                    livePrice: 605,
+                    postedPrice: 605,
+                    stake: 3,
+                  };
+                }
+                return t;
+              }),
+            });
+          }
+        }
+        set({ hydrated: true });
+      },
       setLiveBankroll: (n) => {
         const v = Math.max(0, n);
         const s = get();
@@ -386,6 +422,19 @@ export const useDeskStore = create<DeskState>()(
           liveBankroll: Math.max(0, Math.round((s.liveBankroll + pnl) * 100) / 100),
         });
       },
+      updateTicket: (id, patch) => {
+        set((s) => ({
+          paperTickets: s.paperTickets.map((x) => {
+            if (x.id !== id) return x;
+            const updated = { ...x, ...patch };
+            if (patch.price !== undefined) {
+              if (patch.livePrice === undefined) updated.livePrice = patch.price;
+              if (patch.postedPrice === undefined) updated.postedPrice = patch.price;
+            }
+            return updated;
+          }),
+        }));
+      },
       reopenTicket: (id) => {
         const s = get();
         const ticket = s.paperTickets.find((x) => x.id === id);
@@ -484,7 +533,7 @@ export const useDeskStore = create<DeskState>()(
       name: BRAND.persist,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 9, // Bumped to 9 for auto-settling final ticket #SL-15E9N to WON
+      version: 10, // Bumped to 10 for auto-healing parlay ticket #SL-DC9VN to +605 with $3 stake
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Record<string, unknown>;
         if (version < 2) {
@@ -591,6 +640,29 @@ export const useDeskStore = create<DeskState>()(
               p.paperCash = Math.round(((Number(p.paperCash) || 0) + addedWinnings) * 100) / 100;
               p.liveBankroll = Math.round(((Number(p.liveBankroll) || 0) + addedWinnings) * 100) / 100;
             }
+          }
+        }
+        if (version < 10) {
+          if (Array.isArray(p.paperTickets)) {
+            p.paperTickets = p.paperTickets.map((t: any) => {
+              const isTargetTicket =
+                t.id?.toLowerCase().endsWith("dc9vn") ||
+                (t.price != null && t.price > 10000) ||
+                (String(t.description || "").includes("MICHAEL PENIX") &&
+                  String(t.description || "").includes("JORDAN LOVE") &&
+                  (t.price == null || t.price > 10000));
+
+              if (isTargetTicket) {
+                return {
+                  ...t,
+                  price: 605,
+                  livePrice: 605,
+                  postedPrice: 605,
+                  stake: 3,
+                };
+              }
+              return t;
+            });
           }
         }
         return p as DeskState;

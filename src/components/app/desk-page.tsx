@@ -19,6 +19,7 @@ import { getHardRockUrl } from "@/lib/market/hard-rock-links";
 import { TicketLegAvatar } from "./ticket-leg-avatar";
 import { teamsMatch } from "@/lib/market/live-scores";
 import { formatMarketName, cleanDescription } from "@/lib/market/logos";
+import { parseAmericanInput } from "@/lib/market/book-price";
 import {
   CheckCircle2,
   XCircle,
@@ -29,6 +30,9 @@ import {
   MoreVertical,
   Trash2,
   Zap,
+  Edit3,
+  Save,
+  X,
 } from "lucide-react";
 
 export function DeskPage() {
@@ -305,6 +309,8 @@ function HardRockTicketCard({
 }) {
   const [showOverride, setShowOverride] = useState(false);
   const [expandedLegs, setExpandedLegs] = useState(true);
+  const updateTicket = useDeskStore((s) => s.updateTicket);
+  const [isEditing, setIsEditing] = useState(false);
 
   const price = ticket.livePrice ?? ticket.price ?? -110;
   const pay = profitOnStake(ticket.stake, price);
@@ -312,6 +318,26 @@ function HardRockTicketCard({
   const isLost = ticket.status === "loss";
   const isVoid = ticket.status === "void";
   const isOpen = ticket.status === "open";
+
+  const [editOdds, setEditOdds] = useState(String(price > 0 ? `+${price}` : price));
+  const [editWager, setEditWager] = useState(String(ticket.stake));
+
+  useEffect(() => {
+    setEditOdds(String(price > 0 ? `+${price}` : price));
+    setEditWager(String(ticket.stake));
+  }, [price, ticket.stake]);
+
+  const handleSaveEdit = () => {
+    const parsedOdds = parseAmericanInput(editOdds) ?? (parseInt(editOdds, 10) || price);
+    const parsedStake = parseFloat(editWager) || ticket.stake;
+    updateTicket(ticket.id, {
+      price: parsedOdds,
+      livePrice: parsedOdds,
+      postedPrice: parsedOdds,
+      stake: parsedStake,
+    });
+    setIsEditing(false);
+  };
 
   const rawDesc = ticket.description || "";
   const isParlay = ticket.kind === "parlay" || (ticket.legs && ticket.legs.length > 1) || rawDesc.toLowerCase().includes("parlay");
@@ -529,48 +555,123 @@ function HardRockTicketCard({
           </div>
         )}
 
-        {/* Hard Rock Financial Summary Strip */}
-        <div className="pt-2 border-t border-line/60">
-          <div className="grid grid-cols-3 gap-2 py-2 px-3 rounded-lg bg-obsidian/60 text-xs">
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted font-bold">Total Wager</div>
-              <div className="font-mono font-bold text-ink text-sm mt-0.5">
-                {formatBetUsd(ticket.stake)}
+        {/* Hard Rock Financial Summary Strip / Editor */}
+        {isEditing ? (
+          <div className="pt-2 border-t border-line/60">
+            <div className="p-3 rounded-lg bg-obsidian border border-primary/40 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-primary">
+                <span className="flex items-center gap-1.5"><Edit3 className="size-3.5" /> Adjust Odds &amp; Wager</span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="text-muted hover:text-ink cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted font-bold">Total Odds</div>
-              <div className="font-mono font-bold text-ink text-sm mt-0.5">
-                {formatAmerican(price)}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted tracking-wider block mb-1">Total Odds (American)</label>
+                  <input
+                    type="text"
+                    value={editOdds}
+                    onChange={(e) => setEditOdds(e.target.value)}
+                    placeholder="+605"
+                    className="w-full bg-panel border border-line rounded px-2.5 py-1.5 text-xs font-mono font-bold text-ink focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted tracking-wider block mb-1">Total Wager ($)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editWager}
+                    onChange={(e) => setEditWager(e.target.value)}
+                    placeholder="3"
+                    className="w-full bg-panel border border-line rounded px-2.5 py-1.5 text-xs font-mono font-bold text-ink focus:outline-none focus:border-primary"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wider text-muted font-bold">
-                {isWon ? "Paid" : "Potential Payout"}
-              </div>
-              <div className={cn("font-mono font-bold text-sm mt-0.5", isWon ? "text-emerald-400 text-base" : "text-ink")}>
-                {formatBetUsd(pay.total)}
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-muted text-[11px]">
+                  New Payout: <strong className="font-mono text-ink">${(profitOnStake(parseFloat(editWager) || 0, parseAmericanInput(editOdds) ?? (parseInt(editOdds, 10) || price)).total).toFixed(2)}</strong>
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-2.5 py-1 rounded text-[11px] font-semibold text-muted hover:text-ink hover:bg-line/40 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEdit}
+                    className="px-3 py-1 rounded text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Save className="size-3" /> Save Changes
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        ) : (
+          <div className="pt-2 border-t border-line/60">
+            <div
+              onClick={() => {
+                setEditOdds(String(price > 0 ? `+${price}` : price));
+                setEditWager(String(ticket.stake));
+                setIsEditing(true);
+              }}
+              className="grid grid-cols-3 gap-2 py-2 px-3 rounded-lg bg-obsidian/60 text-xs hover:bg-obsidian/90 transition-colors cursor-pointer group"
+              title="Click to edit odds or wager"
+            >
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted font-bold flex items-center gap-1">
+                  Total Wager <Edit3 className="size-2.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                </div>
+                <div className="font-mono font-bold text-ink text-sm mt-0.5">
+                  {formatBetUsd(ticket.stake)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted font-bold flex items-center gap-1">
+                  Total Odds <Edit3 className="size-2.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                </div>
+                <div className="font-mono font-bold text-ink text-sm mt-0.5">
+                  {formatAmerican(price)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] uppercase tracking-wider text-muted font-bold">
+                  {isWon ? "Paid" : "Potential Payout"}
+                </div>
+                <div className={cn("font-mono font-bold text-sm mt-0.5", isWon ? "text-emerald-400 text-base" : "text-ink")}>
+                  {formatBetUsd(pay.total)}
+                </div>
+              </div>
+            </div>
 
-          {/* Won celebration note */}
-          {isWon && (
-            <div className="mt-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2.5 py-1 flex items-center justify-between">
-              <span>✓ Bet Settled & Won</span>
-              <span>+{formatBetUsd(pay.profit)} Profit</span>
-            </div>
-          )}
-          {isLost && (
-            <div className="mt-2 text-xs text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/25 rounded px-2.5 py-1.5 flex items-center justify-between font-semibold">
-              <span className="flex items-center gap-1.5">
-                <XCircle className="size-3.5 text-red-600 dark:text-red-400" />
-                Bet Settled &amp; Lost
-              </span>
-              <span className="text-red-600 dark:text-red-400 font-mono font-bold">-{formatBetUsd(ticket.stake)}</span>
-            </div>
-          )}
-        </div>
+            {/* Won celebration note */}
+            {isWon && (
+              <div className="mt-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2.5 py-1 flex items-center justify-between">
+                <span>✓ Bet Settled & Won</span>
+                <span>+{formatBetUsd(pay.profit)} Profit</span>
+              </div>
+            )}
+            {isLost && (
+              <div className="mt-2 text-xs text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/25 rounded px-2.5 py-1.5 flex items-center justify-between font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <XCircle className="size-3.5 text-red-600 dark:text-red-400" />
+                  Bet Settled &amp; Lost
+                </span>
+                <span className="text-red-600 dark:text-red-400 font-mono font-bold">-{formatBetUsd(ticket.stake)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer Actions: Hard Rock Bet deep link & optional subtle override */}
         <div className="flex items-center justify-between pt-1">
@@ -597,6 +698,17 @@ function HardRockTicketCard({
                 <div className="text-[10px] text-muted font-bold px-1.5 py-0.5 uppercase tracking-wider">
                   Manual Override
                 </div>
+                <button
+                  onClick={() => {
+                    setEditOdds(String(price > 0 ? `+${price}` : price));
+                    setEditWager(String(ticket.stake));
+                    setIsEditing(true);
+                    setShowOverride(false);
+                  }}
+                  className="w-full text-left px-2 py-1 rounded hover:bg-primary/20 text-primary font-semibold cursor-pointer flex items-center gap-1.5"
+                >
+                  <Edit3 className="size-3" /> Edit Odds &amp; Wager
+                </button>
                 {isOpen ? (
                   <>
                     <button
