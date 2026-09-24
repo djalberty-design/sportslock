@@ -16,6 +16,7 @@ import { ticketHitPct } from "@/lib/market/hit-pct";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 import { calculateDynamicWager } from "@/lib/kelly";
+import { DistributionChart } from "@/components/quant/distribution-chart";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
@@ -499,26 +500,17 @@ export function GamePage({ eventId }: { eventId: string }) {
         </div>
         <AnimatePresence>
           {isExp && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="bg-obsidian border border-t-0 border-line rounded-b-lg px-4 py-3 grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Our AI says</div>
-                  <div className="text-lg font-mono font-bold text-primary">{probPct}%</div>
-                  <div className="text-[9px] text-muted">chance to hit</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Vegas says</div>
-                  <div className="text-lg font-mono font-bold text-ink">{Math.round(vProb * 100)}%</div>
-                  <div className="text-[9px] text-muted">implied odds</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted mb-1 uppercase tracking-wider">Your edge</div>
-                  <div className={cn("text-lg font-mono font-bold", parseFloat(edgePct) > 0 ? "text-emerald-400" : "text-red-400")}>
-                    {parseFloat(edgePct) > 0 ? "+" : ""}{edgePct}%
-                  </div>
-                  <div className="text-[9px] text-muted">{parseFloat(edgePct) > 0 ? "value bet" : "bad value"}</div>
-                </div>
-              </div>
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2 mt-2">
+              <DistributionChart
+                title={playerName ? `${playerName} Quant Distribution` : `${q.selection} Distribution`}
+                subtitle="10,000 Monte Carlo path simulations vs Market Line & Historical Form"
+                line={typeof q.point === "number" && Number.isFinite(q.point) ? q.point : parseFloat(String(q.point || "")) || 20.5}
+                fairProb={probPct / 100}
+                marketProb={vProb}
+                isOver={/over/i.test(q.selection) || /over/i.test(String(q.marketType || "")) || !/under/i.test(q.selection)}
+                unit={mType === "total" ? "pts" : ""}
+                marketType={mType}
+              />
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles } from "lucide-react";
+import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
@@ -12,6 +13,7 @@ import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
 import { resolveTeamLogo, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
 import { calculateDynamicWager } from "@/lib/kelly";
+import { DistributionChart } from "@/components/quant/distribution-chart";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -261,6 +263,7 @@ function TheLab() {
   const [sortMode, setSortMode] = useState<SortMode>("ev");
   const [minStars, setMinStars] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
 
   // Build unified bet pool from scan rows + cached props
   const allBets: LabBet[] = useMemo(() => {
@@ -765,10 +768,43 @@ function TheLab() {
                       >
                         Rec: ${dyn.wagerDollars}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedBetId(expandedBetId === b.id ? null : b.id);
+                        }}
+                        className="ml-auto text-[9px] font-mono font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 hover:bg-primary/15 px-2 py-0.5 rounded border border-primary/25 transition-colors shrink-0"
+                      >
+                        <Activity className="size-2.5" />
+                        <span>{expandedBetId === b.id ? "Hide Sim" : "Sim & Form"}</span>
+                        {expandedBetId === b.id ? <ChevronUp className="size-2.5" /> : <ChevronDown className="size-2.5" />}
+                      </button>
                     </div>
                     <p className="text-[9px] text-muted italic ml-0.5">
                       {b.lab.label} — {b.lab.hitPct >= 70 ? "wins most of the time" : b.lab.hitPct >= 55 ? "better than a coin flip" : b.lab.hitPct >= 45 ? "could go either way" : b.lab.hitPct >= 30 ? "lower chance, bigger payout" : "risky but high reward"}
                     </p>
+                    <AnimatePresence>
+                      {expandedBetId === b.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="mt-3 pt-2 border-t border-line/60 overflow-hidden"
+                        >
+                          <DistributionChart
+                            title={`${displayName} — Quant Distribution & Form`}
+                            subtitle="10,000 Monte Carlo Simulation Trials vs Market Line & Historical Performance"
+                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : 21.5}
+                            fairProb={b.fairProb}
+                            marketProb={b.chance}
+                            isOver={/over/i.test(b.selection) || !/under/i.test(b.selection)}
+                            unit={b.marketType === "total" ? "pts" : ""}
+                            marketType={b.isProp ? "prop" : b.marketType}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               );
