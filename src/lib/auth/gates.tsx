@@ -1,9 +1,12 @@
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { Link, Navigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { GROK_PROVIDERS, authEnabled, signIn, signOut } from "./client";
 import { hasGateSessionMarker } from "./gate-session-marker";
 import { resolveSignInGateState } from "./sign-in-gate";
 import { useCurrentUser, useCurrentUserState } from "./use-current-user";
+import { useDeskStore } from "@/lib/desk-store";
+import { getUserProfileDataFn } from "@/lib/profile-api";
 
 const subscribeToNothing = () => () => {};
 const noGateSessionOnServer = () => false;
@@ -58,6 +61,28 @@ export function SignInButtons() {
 
 export function UserButton({ compact }: { compact?: boolean } = {}) {
   const user = useCurrentUser();
+  const storeDisplayName = useDeskStore((s) => s.displayName);
+  const storeAvatarUrl = useDeskStore((s) => s.avatarUrl);
+  const setStoreDisplayName = useDeskStore((s) => s.setDisplayName);
+  const setStoreAvatarUrl = useDeskStore((s) => s.setAvatarUrl);
+
+  const { data: profileData } = useQuery({
+    queryKey: ["user-profile-data"],
+    queryFn: () => getUserProfileDataFn(),
+    staleTime: 60_000,
+    enabled: !!user,
+  });
+
+  // Sync profile data to store on initial query resolution if store is unset
+  useEffect(() => {
+    if (profileData?.profile?.avatarUrl && !storeAvatarUrl) {
+      setStoreAvatarUrl(profileData.profile.avatarUrl);
+    }
+    if (profileData?.profile?.displayName && !storeDisplayName) {
+      setStoreDisplayName(profileData.profile.displayName);
+    }
+  }, [profileData, storeAvatarUrl, storeDisplayName, setStoreAvatarUrl, setStoreDisplayName]);
+
   const [signingOut, setSigningOut] = useState(false);
   const gateSession = useSyncExternalStore(
     subscribeToNothing,
@@ -71,12 +96,20 @@ export function UserButton({ compact }: { compact?: boolean } = {}) {
       </Link>
     );
   }
-  const label = user.displayName ?? user.primaryEmail ?? "Account";
+
+  const avatar = storeAvatarUrl || profileData?.profile?.avatarUrl || user.profileImageUrl;
+  const label = storeDisplayName || profileData?.profile?.displayName || user.displayName || user.primaryEmail?.split("@")[0] || "User";
+
   return (
     <div className="flex items-center gap-2 shrink-0">
       <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity" title="User Profile & Settings">
-        {user.profileImageUrl ? (
-          <img src={user.profileImageUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+        {avatar ? (
+          <img
+            src={avatar}
+            alt={label}
+            className="h-8 w-8 rounded-full object-cover bg-panel ring-1 ring-line shrink-0"
+            onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+          />
         ) : (
           <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20 shrink-0">
             {label.charAt(0).toUpperCase()}

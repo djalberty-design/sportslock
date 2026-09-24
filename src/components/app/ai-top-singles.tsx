@@ -362,13 +362,31 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
             : null;
           const startFormatted = isValidDate ? `${dateFormatted} · ${timeFormatted}` : null;
 
+          const selText = (() => {
+            if (r.player) return r.selection;
+            const legTeam = resolveLegTeam(r);
+            const isHome = r.side === "home";
+            const isAway = r.side === "away";
+            const teamName = isHome ? (legTeam.homeName || r.home) : isAway ? (legTeam.awayName || r.away) : (!/^(home|away|over|under)/i.test(r.selection) ? r.selection : (legTeam.homeName || r.home));
+            if (r.marketType === "spread") {
+              const pt = r.point != null ? (r.point > 0 ? `+${r.point}` : `${r.point}`) : "";
+              return `${teamName} ${pt}`.trim();
+            }
+            if (r.marketType === "ml") return teamName;
+            if (r.marketType === "total") {
+              const isUnder = r.side === "under" || /\bunder\b/i.test(r.selection);
+              return `${isUnder ? "Under" : "Over"} ${r.point ?? ""}`.trim();
+            }
+            return r.selection;
+          })();
+
           const handleToggleSlip = () => {
             if (inSlip) {
               removeLeg(r.selection, r.marketType, r.eventId, r.player);
             } else {
               const leg: ParlayLeg = {
                 eventId: r.eventId,
-                selection: r.selection,
+                selection: r.marketType === "spread" && !r.player ? selText : r.selection,
                 marketType: r.marketType,
                 side: r.side,
                 point: r.point,
@@ -407,7 +425,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                       {matchupText}
                     </div>
                     <div className="text-sm font-bold text-ink leading-snug line-clamp-2 min-h-[38px] flex items-center">
-                      {r.selection}
+                      {selText}
                     </div>
                     {startFormatted ? (
                       <div className="text-[10px] text-muted font-mono flex items-center gap-1 mt-1">

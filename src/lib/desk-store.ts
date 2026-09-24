@@ -96,6 +96,8 @@ export type DeskState = {
   confirmSlateFromTable: (table: string, sport: string) => number;
   loadSampleSlate: () => void;
   // User Profile & Personalization Preferences
+  displayName?: string;
+  avatarUrl?: string;
   totalBankroll: number;
   baseUnitSize: number;
   riskProfileMode: RiskProfileMode;
@@ -107,6 +109,8 @@ export type DeskState = {
   goldDropAlerts: boolean;
   hedgeWarnings: boolean;
   dailyRecapAlerts: boolean;
+  setDisplayName: (name: string) => void;
+  setAvatarUrl: (url: string) => void;
   setTotalBankroll: (n: number) => void;
   setBaseUnitSize: (n: number) => void;
   setRiskProfileMode: (m: RiskProfileMode) => void;
@@ -170,6 +174,8 @@ export const useDeskStore = create<DeskState>()(
       adminEmail: "",
       hiddenPickIds: [],
       pinnedPickId: null,
+      displayName: undefined,
+      avatarUrl: undefined,
       totalBankroll: DEFAULTS.liveBankroll,
       baseUnitSize: 25.00,
       riskProfileMode: "balanced" as RiskProfileMode,
@@ -181,6 +187,8 @@ export const useDeskStore = create<DeskState>()(
       goldDropAlerts: true,
       hedgeWarnings: true,
       dailyRecapAlerts: true,
+      setDisplayName: (name) => set({ displayName: name }),
+      setAvatarUrl: (url) => set({ avatarUrl: url }),
       setTotalBankroll: (n) => {
         const val = Math.max(10, Math.round(n * 100) / 100);
         set({ totalBankroll: val, liveBankroll: val });
@@ -624,6 +632,8 @@ export const useDeskStore = create<DeskState>()(
         adminEmail: s.adminEmail,
         hiddenPickIds: s.hiddenPickIds,
         pinnedPickId: s.pinnedPickId,
+        displayName: s.displayName,
+        avatarUrl: s.avatarUrl,
         totalBankroll: s.totalBankroll,
         baseUnitSize: s.baseUnitSize,
         riskProfileMode: s.riskProfileMode,

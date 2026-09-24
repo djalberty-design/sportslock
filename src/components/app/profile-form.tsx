@@ -91,6 +91,8 @@ export function ProfileForm() {
 
       // Synchronize Zustand store
       store.setUserPreferences({
+        displayName: data.profile.displayName || undefined,
+        avatarUrl: data.profile.avatarUrl || undefined,
         totalBankroll: data.preferences.totalBankroll,
         liveBankroll: data.preferences.totalBankroll,
         baseUnitSize: data.preferences.baseUnitSize,
@@ -129,6 +131,8 @@ export function ProfileForm() {
     },
     onSuccess: () => {
       // Sync local Zustand state instantly
+      store.setDisplayName(displayName);
+      store.setAvatarUrl(avatarUrl);
       store.setTotalBankroll(totalBankroll);
       store.setBaseUnitSize(baseUnitSize);
       store.setRiskProfileMode(riskMode);

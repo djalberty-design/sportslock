@@ -1,27 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
 import { AiTopSingles } from "@/components/app/ai-top-singles";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
-import { Sparkles, Activity } from "lucide-react";
+import { Sparkles, Activity, Calendar } from "lucide-react";
 import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
+import { cn, isTodayEt } from "@/lib/utils";
 import {
   applyMixFilter,
   applyRibbonSportFilter,
   applySlateDayFilter,
   buildFeedParlays,
   snapshotSports,
+  ribbonLegs,
   type MixFilter,
 } from "@/lib/market/feed-mix";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
+function isPickToday(pick: any, snapshot: any): boolean {
+  const legs = ribbonLegs(pick);
+  if (!legs.length) {
+    const start = pick?.row?.start || pick?.start;
+    return isTodayEt(start) || Boolean(pick?.row?.inPlay || pick?.inPlay);
+  }
+  return legs.every((leg: any) => {
+    if (leg?.inPlay) return true;
+    const start = leg?.start || snapshot?.quotes?.find((q: any) => q.eventId === leg?.eventId)?.start || snapshot?.briefs?.find((b: any) => b.eventId === leg?.eventId)?.start;
+    return isTodayEt(start);
+  });
+}
+
 function SportsLockCommandCenter() {
   const { picks, snapshot, scan } = useDeskDecision();
   const sportFilter = useDeskStore((s) => s.sportFilter);
   const [mixFilter, setMixFilter] = useState<MixFilter>("ALL");
+  const [todayOnly, setTodayOnly] = useState(false);
   const [cachedProps, setCachedProps] = useState<any[]>([]);
 
   useEffect(() => {
@@ -36,8 +52,24 @@ function SportsLockCommandCenter() {
     applyRibbonSportFilter(applySlateDayFilter(feed, snapshot), sportFilter),
     mixFilter,
   );
-  const gold = filtered.filter((p: any) => p.feedLane === "gold");
-  const catalog = filtered.filter((p: any) => p.feedLane !== "gold");
+
+  const todayFiltered = useMemo(() => {
+    if (!todayOnly) return filtered;
+    return filtered.filter((p: any) => isPickToday(p, snapshot));
+  }, [filtered, todayOnly, snapshot]);
+
+  const gold = todayFiltered.filter((p: any) => p.feedLane === "gold");
+  const catalog = todayFiltered.filter((p: any) => p.feedLane !== "gold");
+
+  const singlesRows = useMemo(() => {
+    if (!todayOnly) return scan?.rows || [];
+    return (scan?.rows || []).filter(r => isTodayEt(r.start) || r.inPlay);
+  }, [scan?.rows, todayOnly]);
+
+  const singlesProps = useMemo(() => {
+    if (!todayOnly) return cachedProps;
+    return cachedProps.filter(p => isTodayEt(p.start || (p.row as any)?.start) || p.inPlay);
+  }, [cachedProps, todayOnly]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-4 sm:pt-0">
@@ -50,16 +82,41 @@ function SportsLockCommandCenter() {
       </div>
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
-        <MixFilterBar value={mixFilter} onChange={setMixFilter} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex-1 min-w-[240px]">
+            <MixFilterBar value={mixFilter} onChange={setMixFilter} />
+          </div>
+          <button
+            type="button"
+            onClick={() => setTodayOnly(!todayOnly)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 flex items-center gap-1.5 shadow-sm",
+              todayOnly
+                ? "bg-amber-400 text-obsidian border-amber-400 font-extrabold shadow-amber-400/20"
+                : "bg-panel text-muted border-line hover:text-ink hover:border-amber-400/40"
+            )}
+            title="Filter AI Picks and Top Singles strictly to today's games in Eastern Time"
+          >
+            <Calendar className="size-3.5" />
+            <span>Today's Games Only</span>
+            {todayOnly && <span className="size-1.5 rounded-full bg-obsidian animate-pulse" />}
+          </button>
+        </div>
       </div>
       {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
-      <AiTopSingles rows={scan?.rows || []} cachedProps={cachedProps} />
+      <AiTopSingles rows={singlesRows} cachedProps={singlesProps} />
 
       {gold.length === 0 && catalog.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-line rounded-xl">
           <Activity className="size-8 text-muted mb-3" />
-          <p className="text-ink font-medium">No ranked parlays on this mix.</p>
-          <p className="text-muted text-sm mt-1">Wait for more pregame mains, or clear the sport filter.</p>
+          <p className="text-ink font-medium">
+            {todayOnly ? "No ranked parlays found for today's games only." : "No ranked parlays on this mix."}
+          </p>
+          <p className="text-muted text-sm mt-1">
+            {todayOnly
+              ? "Toggle off 'Today's Games Only' to see upcoming slates, or clear the sport filter."
+              : "Wait for more pregame mains, or clear the sport filter."}
+          </p>
           {sportFilter && sportFilter !== "ALL" ? (
             <div className="mt-4 max-w-lg text-left">
               <SportSeasonNote sport={sportFilter} />

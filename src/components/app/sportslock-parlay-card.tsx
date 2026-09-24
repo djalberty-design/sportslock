@@ -141,8 +141,14 @@ function displaySelection(leg: any, teams: { homeName?: string; awayName?: strin
   const sel = String(leg?.selection || "").trim();
   if (!sel) return teams.homeName || "Pick";
   if (/^(over|under)\s/i.test(sel) || /\b[ouO]\s?\d/.test(sel)) return sel;
-  if (sel.length <= 4 && teams.side === "home" && teams.homeName) return teams.homeName;
-  if (sel.length <= 4 && teams.side === "away" && teams.awayName) return teams.awayName;
+  if (/^home(\s*[-+]?\d+(\.\d+)?)?$/i.test(sel) || (sel.length <= 4 && teams.side === "home")) {
+    const pt = leg?.point != null ? (leg.point > 0 ? ` +${leg.point}` : ` ${leg.point}`) : (sel.match(/[-+]?\d+(\.\d+)?/)?.[0] ? ` ${sel.match(/[-+]?\d+(\.\d+)?/)?.[0]}` : "");
+    return `${teams.homeName || "Home"}${pt}`;
+  }
+  if (/^away(\s*[-+]?\d+(\.\d+)?)?$/i.test(sel) || (sel.length <= 4 && teams.side === "away")) {
+    const pt = leg?.point != null ? (leg.point > 0 ? ` +${leg.point}` : ` ${leg.point}`) : (sel.match(/[-+]?\d+(\.\d+)?/)?.[0] ? ` ${sel.match(/[-+]?\d+(\.\d+)?/)?.[0]}` : "");
+    return `${teams.awayName || "Away"}${pt}`;
+  }
   return sel;
 }
 

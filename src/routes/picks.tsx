@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity, Bot } from "lucide-react";
+import { Target, Star, TrendingUp, Plus, Check, Clock, Zap, Flame, User, Layers, Sparkles, ChevronDown, ChevronUp, Activity, Bot, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, formatEasternShort } from "@/lib/utils";
+import { cn, formatEasternShort, isTodayEt } from "@/lib/utils";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -149,7 +149,23 @@ function formatPropLabel(b: LabBet): string {
   }
 
   if (side && pt) {
-    return `${side} ${pt} ${readableStat}`;
+    if (player) {
+      return `${side} ${pt} ${readableStat}`;
+    }
+    const legTeam = resolveLegTeam({
+      sport: b.sport,
+      home: b.home,
+      away: b.away,
+      homeAbbr: b.homeAbbr,
+      awayAbbr: b.awayAbbr,
+      homeLogo: b.homeLogo,
+      awayLogo: b.awayLogo,
+      selection: b.selection,
+      side: b.side,
+    });
+    const teamName = b.side === "home" ? (legTeam.homeName || b.home) : (legTeam.awayName || b.away);
+    const ptText = typeof pt === "number" ? (pt > 0 ? `+${pt}` : `${pt}`) : pt;
+    return `${teamName || side} ${ptText}`;
   }
 
   if (cleanSel && cleanSel.toLowerCase() !== "yes" && cleanSel.toLowerCase() !== "no") {
@@ -261,6 +277,7 @@ function TheLab() {
 
   // Filter & sort state
   const [tab, setTab] = useState<BetTab>("all");
+  const [todayOnly, setTodayOnly] = useState(false);
   const [modelFilter, setModelFilter] = useState<ModelFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("ev");
   const [minStars, setMinStars] = useState(0);
@@ -433,20 +450,26 @@ function TheLab() {
     return counts;
   }, [allBets]);
 
+  // Today's games filter (calendar date in Eastern Time)
+  const todayFiltered = useMemo(() => {
+    if (!todayOnly) return sportFiltered;
+    return sportFiltered.filter(b => isTodayEt(b.start) || b.inPlay);
+  }, [sportFiltered, todayOnly]);
+
   // Tab counts
   const tabCounts = useMemo(() => {
-    const counts = { all: sportFiltered.length, lines: 0, props: 0, periods: 0 };
-    for (const b of sportFiltered) {
+    const counts = { all: todayFiltered.length, lines: 0, props: 0, periods: 0 };
+    for (const b of todayFiltered) {
       if (b.isGameLine) counts.lines++;
       else if (b.isProp) counts.props++;
       else if (b.isPeriod) counts.periods++;
     }
     return counts;
-  }, [sportFiltered]);
+  }, [todayFiltered]);
 
   // Filter + sort
   const displayBets = useMemo(() => {
-    let items = sportFiltered;
+    let items = todayFiltered;
 
     // Tab filter
     if (tab !== "all") {
@@ -631,19 +654,36 @@ function TheLab() {
               )}
             </div>
 
-            {/* Row 1: Bet type tabs */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-              {TAB_LABELS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  className={cn("px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors border shrink-0",
-                    tab === key ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
-                  )}
-                >
-                  {label} ({tabCounts[key]})
-                </button>
-              ))}
+            {/* Row 1: Bet type tabs + Today Only toggle */}
+            <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+              <div className="flex gap-1.5 shrink-0">
+                {TAB_LABELS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTab(key)}
+                    className={cn("px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors border shrink-0",
+                      tab === key ? "bg-primary text-primary-foreground border-primary" : "bg-panel border-line text-muted hover:border-primary/30"
+                    )}
+                  >
+                    {label} ({tabCounts[key]})
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setTodayOnly(!todayOnly)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border shrink-0 flex items-center gap-1.5 shadow-sm ml-auto",
+                  todayOnly
+                    ? "bg-amber-400 text-obsidian border-amber-400 font-extrabold shadow-amber-400/20"
+                    : "bg-panel border-line text-muted hover:text-ink hover:border-amber-400/50"
+                )}
+                title="Filter to games scheduled for today's calendar date in Eastern Time"
+              >
+                <Calendar className="size-3" />
+                <span>Today Only</span>
+                {todayOnly && <span className="size-1.5 rounded-full bg-obsidian animate-pulse" />}
+              </button>
             </div>
 
             {/* Row 2: AI Model Filter Pills */}
@@ -735,13 +775,6 @@ function TheLab() {
               const startTime = b.start ? formatEasternShort(b.start) : "";
               const sportLabel = (b.sport || "").replace("americanfootball_", "").replace("icehockey_", "").replace("baseball_", "").replace("basketball_", "").toUpperCase();
 
-              const displayName = playerName || b.selection;
-              const subtitle = playerName
-                ? formatPropLabel(b)
-                : isGameLine ? marketLabel(b.marketType) : "";
-
-              const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
-
               // Resolve team logo accurately using resolveLegTeam
               const legTeam = resolveLegTeam({
                 sport: b.sport,
@@ -754,7 +787,45 @@ function TheLab() {
                 selection: b.selection,
                 side: b.side,
               });
-              const logoUrl = legTeam.selectionLogo || legTeam.homeLogo || legTeam.awayLogo;
+
+              const isHome = b.side === "home";
+              const isAway = b.side === "away";
+              const teamName = isHome
+                ? (legTeam.homeName || b.home || "Home Team")
+                : isAway
+                  ? (legTeam.awayName || b.away || "Away Team")
+                  : (!/^(home|away|over|under)/i.test(b.selection) ? b.selection : (legTeam.homeName || b.home || "Team"));
+
+              let displayName = "";
+              let subtitle = "";
+
+              if (playerName) {
+                displayName = playerName;
+                subtitle = formatPropLabel(b);
+              } else {
+                if (b.marketType === "spread") {
+                  const pt = b.point != null ? (b.point > 0 ? `+${b.point}` : `${b.point}`) : "";
+                  displayName = `${teamName} ${pt}`.trim();
+                  subtitle = b.sport === "MLB" ? "Run Line" : b.sport === "NHL" ? "Puck Line" : "Spread";
+                } else if (b.marketType === "ml") {
+                  displayName = teamName;
+                  subtitle = "Moneyline";
+                } else if (b.marketType === "total") {
+                  const isUnder = b.side === "under" || /\bunder\b/i.test(b.selection);
+                  displayName = `${isUnder ? "Under" : "Over"} ${b.point ?? ""}`.trim();
+                  subtitle = b.sport === "MLB" ? "Game Total Runs" : b.sport === "NHL" ? "Game Total Goals" : "Game Total";
+                } else {
+                  displayName = teamName;
+                  subtitle = marketLabel(b.marketType);
+                }
+              }
+
+              const initials = playerName ? playerName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "";
+              const logoUrl = isHome
+                ? (legTeam.homeLogo || b.homeLogo)
+                : isAway
+                  ? (legTeam.awayLogo || b.awayLogo)
+                  : (legTeam.selectionLogo || legTeam.homeLogo || legTeam.awayLogo);
 
               const dyn = calculateDynamicWager({
                 totalBankroll,

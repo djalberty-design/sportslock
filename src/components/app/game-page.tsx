@@ -6,7 +6,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star, Trash2 } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { espnLogoUrl } from "@/lib/market/logos";
+import { espnLogoUrl, resolveLegTeam } from "@/lib/market/logos";
 import { cn, formatEasternTime, formatEasternDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, combinedOdds, type ParlayLeg } from "@/lib/parlay-slip";
@@ -186,6 +186,10 @@ export function GamePage({ eventId }: { eventId: string }) {
         sport: quote.sport || firstQuote?.sport,
         home: quote.home || firstQuote?.home,
         away: quote.away || firstQuote?.away,
+        homeLogo: quote.homeLogo || firstQuote?.homeLogo || homeLogo,
+        awayLogo: quote.awayLogo || firstQuote?.awayLogo || awayLogo,
+        homeAbbr: quote.homeAbbr || firstQuote?.homeAbbr || firstQuoteRef?.homeAbbr,
+        awayAbbr: quote.awayAbbr || firstQuote?.awayAbbr || firstQuoteRef?.awayAbbr,
         player,
       });
     }
@@ -365,44 +369,103 @@ export function GamePage({ eventId }: { eventId: string }) {
     const mTypeLower = String(q.marketType || q.row?.marketType || "").toLowerCase();
     const rawSel = String(q.selection || "");
 
-    // Intelligent prop label formatting
-    let label = "";
-    if (mTypeLower.includes("anytime_td") || mTypeLower.includes("touchdown") || /anytime\s*touchdown/i.test(rawSel) || /to score a touchdown/i.test(rawSel)) {
-      label = "Anytime Touchdown";
-    } else if (mTypeLower.includes("2_or_more_td") || /2\+\s*touchdowns/i.test(rawSel)) {
-      label = "2+ Touchdowns";
-    } else if (mTypeLower.includes("first_td") || /first\s*touchdown/i.test(rawSel)) {
-      label = "First Touchdown";
-    } else {
-      let clean = rawSel;
-      if (playerName && clean.toLowerCase().includes(playerName.toLowerCase())) {
-        clean = clean.replace(new RegExp(playerName, "i"), "").trim();
-      }
-      clean = clean.replace(/^(yes|no)\s+/i, "").trim();
-      const readableMarket = PROP_LABEL[mTypeLower]?.replace(/^[^\s]+\s/, "") || mTypeLower.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      
-      if (/^(over|under)\s+\d+(\.\d+)?\s+[a-z]/i.test(clean)) {
-        label = clean.replace(/\b\w/g, c => c.toUpperCase());
-      } else if (/^(over|under)\s+\d+(\.\d+)?$/i.test(clean)) {
-        label = `${clean} ${readableMarket}`;
-      } else if (q.side && q.point != null) {
-        const side = q.side.charAt(0).toUpperCase() + q.side.slice(1).toLowerCase();
-        label = `${side} ${q.point} ${readableMarket}`;
-      } else if (clean && clean.toLowerCase() !== "yes" && clean.toLowerCase() !== "no") {
-        label = clean;
+    // Resolve team info and logos for game lines and props
+    const isGameLine = !playerName;
+    const teamInfo = resolveLegTeam({
+      sport: q.sport || firstQuote?.sport,
+      home: q.home || firstQuote?.home,
+      away: q.away || firstQuote?.away,
+      homeAbbr: q.homeAbbr || firstQuote?.homeAbbr || firstQuoteRef?.homeAbbr,
+      awayAbbr: q.awayAbbr || firstQuote?.awayAbbr || firstQuoteRef?.awayAbbr,
+      homeLogo: q.homeLogo || firstQuote?.homeLogo || homeLogo,
+      awayLogo: q.awayLogo || firstQuote?.awayLogo || awayLogo,
+      selection: q.selection,
+      side: q.side,
+    });
+
+    const isHome = q.side === "home";
+    const isAway = q.side === "away";
+    const sportName = (q.sport || firstQuote?.sport || "").toUpperCase();
+
+    const resolvedTeamName = isHome
+      ? (teamInfo.homeName || q.home || firstQuote?.home || "Home Team")
+      : isAway
+        ? (teamInfo.awayName || q.away || firstQuote?.away || "Away Team")
+        : (!/^(home|away|over|under)/i.test(rawSel) ? rawSel : (teamInfo.homeName || q.home || "Team"));
+
+    const resolvedTeamLogo = isHome
+      ? (teamInfo.homeLogo || homeLogo)
+      : isAway
+        ? (teamInfo.awayLogo || awayLogo)
+        : (teamInfo.selectionLogo || homeLogo || awayLogo);
+
+    const teamAbbr = isHome
+      ? (teamInfo.homeAbbr || firstQuoteRef?.homeAbbr || "HOME")
+      : isAway
+        ? (teamInfo.awayAbbr || firstQuoteRef?.awayAbbr || "AWAY")
+        : (teamInfo.homeAbbr || firstQuoteRef?.homeAbbr || "GAME");
+
+    let mainTitle = "";
+    let subTitle = "";
+
+    if (playerName) {
+      mainTitle = playerName;
+      if (mTypeLower.includes("anytime_td") || mTypeLower.includes("touchdown") || /anytime\s*touchdown/i.test(rawSel) || /to score a touchdown/i.test(rawSel)) {
+        subTitle = "Anytime Touchdown";
+      } else if (mTypeLower.includes("2_or_more_td") || /2\+\s*touchdowns/i.test(rawSel)) {
+        subTitle = "2+ Touchdowns";
+      } else if (mTypeLower.includes("first_td") || /first\s*touchdown/i.test(rawSel)) {
+        subTitle = "First Touchdown";
       } else {
-        label = readableMarket || "Player Prop";
+        let clean = rawSel;
+        if (clean.toLowerCase().includes(playerName.toLowerCase())) {
+          clean = clean.replace(new RegExp(playerName, "i"), "").trim();
+        }
+        clean = clean.replace(/^(yes|no)\s+/i, "").trim();
+        const readableMarket = PROP_LABEL[mTypeLower]?.replace(/^[^\s]+\s/, "") || mTypeLower.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        
+        if (/^(over|under)\s+\d+(\.\d+)?\s+[a-z]/i.test(clean)) {
+          subTitle = clean.replace(/\b\w/g, c => c.toUpperCase());
+        } else if (/^(over|under)\s+\d+(\.\d+)?$/i.test(clean)) {
+          subTitle = `${clean} ${readableMarket}`;
+        } else if (clean && clean.toLowerCase() !== "yes" && clean.toLowerCase() !== "no") {
+          subTitle = clean;
+        } else {
+          subTitle = readableMarket || "Player Prop";
+        }
+      }
+    } else {
+      // Game lines (Spread, Moneyline, Total, Periods)
+      if (mTypeLower === "spread") {
+        const pointVal = q.point ?? (isHome ? firstQuote?.homeSpread : undefined);
+        const pt = pointVal != null ? (pointVal > 0 ? `+${pointVal}` : `${pointVal}`) : "";
+        mainTitle = `${resolvedTeamName} ${pt}`.trim();
+        subTitle = sportName === "MLB" ? "Run Line" : sportName === "NHL" ? "Puck Line" : "Spread";
+      } else if (mTypeLower === "ml" || mTypeLower === "moneyline" || mTypeLower === "h2h") {
+        mainTitle = resolvedTeamName;
+        subTitle = "Moneyline";
+      } else if (mTypeLower === "total" || mTypeLower === "totals") {
+        const isUnder = q.side === "under" || /\bunder\b/i.test(rawSel);
+        const pt = q.point ?? firstQuote?.total ?? "";
+        mainTitle = `${isUnder ? "Under" : "Over"} ${pt}`.trim();
+        subTitle = sportName === "MLB" ? "Game Total Runs" : sportName === "NHL" ? "Game Total Goals" : "Game Total";
+      } else {
+        if (q.side && q.point != null) {
+          const pt = q.point > 0 ? `+${q.point}` : `${q.point}`;
+          mainTitle = `${resolvedTeamName} ${pt}`.trim();
+        } else {
+          mainTitle = resolvedTeamName;
+        }
+        subTitle = PROP_LABEL[mTypeLower]?.replace(/^[^\s]+\s/, "") || mTypeLower.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Game Line";
       }
     }
 
-    const pointText = q.point ? (q.point > 0 ? `+${q.point}` : q.point) : "";
     // Use enriched headshot from ESPN roster, fallback to brief map
     const headshotUrl = q.headshot
       || (q.row as any)?.headshot
       || (playerName ? headshotMap.get(playerName.toLowerCase()) : undefined)
       || (playerName ? headshotMap.get(playerName.split(" ").pop()?.toLowerCase() || "") : undefined);
     const mType = q.marketType || q.row?.marketType || "";
-    const mLabel = PROP_LABEL[mType]?.replace(/^[^\s]+\s/, "") || mType.replace(/^player_/, "").replace(/_/g, " ");
     
     const statParts = [];
     if (q.stats != null && q.stats !== "") {
@@ -449,23 +512,27 @@ export function GamePage({ eventId }: { eventId: string }) {
               <div className="shrink-0 size-10 rounded-full bg-line/50 ring-1 ring-line flex items-center justify-center text-muted text-xs font-bold">
                 {playerName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
               </div>
-            ) : null}
+            ) : resolvedTeamLogo ? (
+              <div className="shrink-0 size-10 rounded-full bg-panel ring-1 ring-line flex items-center justify-center p-1 overflow-hidden">
+                <img
+                  src={resolvedTeamLogo}
+                  className="size-full object-contain"
+                  alt={resolvedTeamName}
+                  onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                />
+              </div>
+            ) : (
+              <div className="shrink-0 size-10 rounded-full bg-line/50 ring-1 ring-line flex items-center justify-center text-muted text-xs font-bold font-mono">
+                {teamAbbr.slice(0, 4)}
+              </div>
+            )}
             <div className="flex flex-col min-w-0">
-              {playerName ? (
-                <>
-                  <span className="font-bold text-ink text-sm truncate flex items-center gap-1">
-                    {playerName}
-                    {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
-                  </span>
-                  <span className="text-muted text-xs truncate">{label}</span>
-                  {statLine && <span className="text-[10px] text-muted">{statLine}</span>}
-                </>
-              ) : (
-                <span className="font-bold text-ink text-sm truncate flex items-center gap-1">
-                  {label} {pointText}
-                  {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
-                </span>
-              )}
+              <span className="font-bold text-ink text-sm truncate flex items-center gap-1">
+                {mainTitle}
+                {isHigh && <Star className="size-3 text-amber-400 fill-amber-400 shrink-0" />}
+              </span>
+              <span className="text-muted text-xs truncate">{subTitle}</span>
+              {playerName && statLine && <span className="text-[10px] text-muted">{statLine}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
