@@ -1,6 +1,5 @@
 /** Free on-device slip reader. No xAI key. OCR text in, ticket fields out. */
 import type { MarketType, ParsedTicket } from "./types.ts";
-import Tesseract from "tesseract.js";
 import { combineParlayFair, type JointLeg } from "./joint-grade.ts";
 
 const SPORTS = ["NFL", "NBA", "MLB", "NHL", "NCAAF", "NCAAB", "CFB", "CBB"] as const;
