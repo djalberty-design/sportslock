@@ -417,6 +417,7 @@ export type ParsedTicket = {
   player?: string;
   confidence: number;
   confirmed: boolean;
+  eventId?: string;
 };
 
 export type PaperTicketLeg = {

@@ -63,12 +63,22 @@ export function ScreenshotIngest({
   const [locked, setLocked] = useState<PaperTicket | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
   const [editFields, setEditFields] = useState(false);
+  const [detectedBook, setDetectedBook] = useState<string | null>(null);
+  const [ocrExecutionMs, setOcrExecutionMs] = useState<number | null>(null);
+  const [extractedStake, setExtractedStake] = useState<number | null>(null);
+  const [extractedPayout, setExtractedPayout] = useState<number | null>(null);
+  const [isOcrImport, setIsOcrImport] = useState(false);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     setBusy(true);
     setLocked(null);
     setLockError(null);
+    setOcrExecutionMs(null);
+    setDetectedBook(null);
+    setExtractedStake(null);
+    setExtractedPayout(null);
+    setIsOcrImport(false);
     try {
       let b64: string;
       let mime = file.type || "image/jpeg";
@@ -84,6 +94,48 @@ export function ScreenshotIngest({
         const buf = await file.arrayBuffer();
         b64 = bytesToB64(new Uint8Array(buf));
       }
+
+      // Phase 6: Sub-500ms Edge Vision 2.0 Pipeline (ticket / auto mode)
+      if (kind === "ticket" || kind === "auto") {
+        try {
+          const edgeRes = await fetch("/api/ocr/slip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              image: b64,
+              mime,
+              candidates:
+                scan?.rows?.map((r) => ({
+                  eventId: r.eventId,
+                  home: r.home,
+                  away: r.away,
+                  sport: r.sport,
+                })) || [],
+            }),
+          }).then((r) => r.json()).catch(() => null);
+
+          if (edgeRes && edgeRes.ok && edgeRes.legs && edgeRes.legs.length > 0) {
+            setOcrExecutionMs(edgeRes.executionMs);
+            setDetectedBook(edgeRes.sportsbook);
+            setExtractedStake(edgeRes.stake);
+            setExtractedPayout(edgeRes.payout);
+            setNote(edgeRes.note);
+            setEditFields(true);
+            setIsOcrImport(true);
+            if (edgeRes.legs.length > 1) {
+              setLegs(edgeRes.legs.map((f: any) => ({ ...f, confirmed: false })));
+              setDraft(EMPTY);
+            } else {
+              setLegs([]);
+              setDraft({ ...edgeRes.legs[0], confirmed: false });
+            }
+            return;
+          }
+        } catch {
+          // Fall through to parseTicketImage
+        }
+      }
+
       const res = await parseTicketImage({ data: { image: b64, mime, kind } });
       if (!res.ok) {
         // Tier 2: client-side Tesseract OCR when xAI is unavailable (BIBLE §OCR fallback)
@@ -94,6 +146,7 @@ export function ScreenshotIngest({
             setLegs([]);
             setDraft({ ...deviceParsed, confirmed: false });
             setEditFields(true);
+            setIsOcrImport(true);
             setNote("On-device OCR. Check every field — fix anything it missed, then save to Log.");
             return;
           }
@@ -174,6 +227,9 @@ export function ScreenshotIngest({
     }
     ready.forEach((l) => confirmParsed({ ...l, confirmed: true, confidence: Math.max(l.confidence, 1) }));
     const payload = buildLockPayload(ready, scan?.rows ?? [], unit);
+    if (isOcrImport) {
+      payload.description = `[OCR Import] ${payload.description}`;
+    }
     const r = place(payload);
     if (!r.ok) {
       setLockError(r.error);
@@ -216,6 +272,11 @@ export function ScreenshotIngest({
     setLegs([]);
     setLockError(null);
     setEditFields(false);
+    setDetectedBook(null);
+    setOcrExecutionMs(null);
+    setExtractedStake(null);
+    setExtractedPayout(null);
+    setIsOcrImport(false);
     setNote("Photograph the Hard Rock Bet Florida screen. We read the live price. Then you confirm it on Log.");
   }
 
@@ -301,11 +362,28 @@ export function ScreenshotIngest({
       ) : null}
 
       {preview && !locked ? (
-        <img
-          src={preview}
-          alt="Uploaded ticket, contest, or slate"
-          className="mt-3 max-h-48 w-full rounded-md object-contain outline outline-1 -outline-offset-1 outline-gold/20"
-        />
+        <div className="mt-3 space-y-2">
+          <img
+            src={preview}
+            alt="Uploaded ticket, contest, or slate"
+            className="max-h-48 w-full rounded-md object-contain outline outline-1 -outline-offset-1 outline-gold/20"
+          />
+          {ocrExecutionMs != null && (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="flex size-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="font-bold text-emerald-400">Vision 2.0 Edge ({ocrExecutionMs}ms)</span>
+                <span className="text-muted/60">•</span>
+                <span className="text-ink font-semibold">{detectedBook || "Hard Rock Bet"}</span>
+              </div>
+              {extractedStake != null && (
+                <div className="text-primary font-bold">
+                  Stake: ${extractedStake.toFixed(2)} → Payout: ${extractedPayout?.toFixed(2) ?? ""}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : null}
 
       {locked ? (

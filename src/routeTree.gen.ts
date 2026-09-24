@@ -42,6 +42,7 @@ import { Route as ApiCronGradePropsRouteImport } from './routes/api/cron/grade-p
 import { Route as ApiCronMorningPullRouteImport } from './routes/api/cron/morning-pull'
 import { Route as ApiCronSweepRouteImport } from './routes/api/cron/sweep'
 import { Route as ApiCronSweepLedgerRouteImport } from './routes/api/cron/sweep-ledger'
+import { Route as ApiOcrSlipRouteImport } from './routes/api/ocr/slip'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -208,6 +209,11 @@ const ApiCronSweepLedgerRoute = ApiCronSweepLedgerRouteImport.update({
   path: '/api/cron/sweep-ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOcrSlipRoute = ApiOcrSlipRouteImport.update({
+  id: '/api/ocr/slip',
+  path: '/api/ocr/slip',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
   '/api/cron/sweep': typeof ApiCronSweepRoute
   '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
+  '/api/ocr/slip': typeof ApiOcrSlipRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
   '/api/cron/sweep': typeof ApiCronSweepRoute
   '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
+  '/api/ocr/slip': typeof ApiOcrSlipRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/api/cron/morning-pull': typeof ApiCronMorningPullRoute
   '/api/cron/sweep': typeof ApiCronSweepRoute
   '/api/cron/sweep-ledger': typeof ApiCronSweepLedgerRoute
+  '/api/ocr/slip': typeof ApiOcrSlipRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/api/cron/morning-pull'
     | '/api/cron/sweep'
     | '/api/cron/sweep-ledger'
+    | '/api/ocr/slip'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/api/cron/morning-pull'
     | '/api/cron/sweep'
     | '/api/cron/sweep-ledger'
+    | '/api/ocr/slip'
   id:
     | '__root__'
     | '/'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/api/cron/morning-pull'
     | '/api/cron/sweep'
     | '/api/cron/sweep-ledger'
+    | '/api/ocr/slip'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -445,6 +457,7 @@ export interface RootRouteChildren {
   ApiCronMorningPullRoute: typeof ApiCronMorningPullRoute
   ApiCronSweepRoute: typeof ApiCronSweepRoute
   ApiCronSweepLedgerRoute: typeof ApiCronSweepLedgerRoute
+  ApiOcrSlipRoute: typeof ApiOcrSlipRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -680,6 +693,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronSweepLedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ocr/slip': {
+      id: '/api/ocr/slip'
+      path: '/api/ocr/slip'
+      fullPath: '/api/ocr/slip'
+      preLoaderRoute: typeof ApiOcrSlipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -737,6 +757,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronMorningPullRoute: ApiCronMorningPullRoute,
   ApiCronSweepRoute: ApiCronSweepRoute,
   ApiCronSweepLedgerRoute: ApiCronSweepLedgerRoute,
+  ApiOcrSlipRoute: ApiOcrSlipRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
