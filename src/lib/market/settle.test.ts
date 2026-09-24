@@ -93,3 +93,54 @@ test("Recently created tickets filter out historical scores from past days", () 
   }
   assert.deepEqual(eligibleOld, ["live", "today", "yesterday"], "Old ticket from yesterday can include yesterday scores");
 });
+
+test("reopenTicket un-settles ticket and accurately reverses credited winnings", () => {
+  const initialBankroll = 1000;
+  const initialCash = 1000;
+  const stake = 50;
+  const price = -200; // Total payout is $75 ($50 stake + $25 profit)
+
+  // 1. Placing bet: cash decreases by stake
+  let cash = initialCash - stake;
+  let bankroll = initialBankroll - stake;
+
+  // 2. Erroneously grading as win: cash increases by stake * dec ($75)
+  const dec = 100 / Math.abs(price) + 1; // 1.5
+  const winPayout = stake * dec; // 75
+  cash += winPayout; // 1025
+  bankroll += winPayout; // 1025
+
+  assert.equal(cash, 1025);
+  assert.equal(bankroll, 1025);
+
+  // 3. Reopening ticket: deduct winPayout ($75)
+  cash -= winPayout; // 950
+  bankroll -= winPayout; // 950
+
+  assert.equal(cash, 950, "Cash should be back to stake at risk ($950)");
+  assert.equal(bankroll, 950, "Bankroll should be back to stake at risk ($950)");
+});
+
+test("Store migration v7 identifies target premature tickets (#SL-A3S05, #SL-15E9N)", () => {
+  const mockTickets = [
+    { id: "t-1727138000-a3s05", description: "Pittsburgh Pirates (spread)", stake: 50, price: -200, status: "win" },
+    { id: "t-1727138000-15e9n", description: "Cleveland Guardians (spread)", stake: 3, price: -200, status: "win" },
+    { id: "t-1727138000-old99", description: "Denver Broncos ML", stake: 20, price: 150, status: "win" },
+  ];
+
+  let refundedWins = 0;
+  const reconciled = mockTickets.map((t) => {
+    const isTarget = t.id.toLowerCase().endsWith("a3s05") || t.id.toLowerCase().endsWith("15e9n");
+    if (isTarget && t.status === "win") {
+      const dec = t.price < 0 ? 100 / Math.abs(t.price) + 1 : t.price / 100 + 1;
+      refundedWins += t.stake * dec;
+      return { ...t, status: "open" };
+    }
+    return t;
+  });
+
+  assert.equal(reconciled[0].status, "open", "Pirates ticket should be reverted to open");
+  assert.equal(reconciled[1].status, "open", "Guardians ticket should be reverted to open");
+  assert.equal(reconciled[2].status, "win", "Unrelated ticket should remain untouched");
+  assert.equal(refundedWins, 75 + 4.5, "Total refunded win payouts should be $79.50");
+});

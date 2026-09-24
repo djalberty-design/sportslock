@@ -81,6 +81,7 @@ export type DeskState = {
   rollAnchorsIfNeeded: () => void;
   placePaperTicket: (t: PlacePaperInput) => PlacePaperResult;
   gradeTicket: (id: string, result: "win" | "loss" | "void", closePrice?: number, extra?: { finalScore?: string; legs?: any[] }) => void;
+  reopenTicket: (id: string) => void;
   dismissTicket: (id: string) => void;
   confirmParsed: (ticket: ParsedTicket) => void;
   removeConfirmed: (selection: string) => void;
@@ -267,6 +268,10 @@ export const useDeskStore = create<DeskState>()(
         return { ok: true, ticket };
       },
       gradeTicket: (id, result, closePrice, extra) => {
+        if ((result as any) === "open") {
+          get().reopenTicket(id);
+          return;
+        }
         const s = get();
         const ticket = s.paperTickets.find((x) => x.id === id);
         if (!ticket || ticket.status !== "open") return;
@@ -301,6 +306,43 @@ export const useDeskStore = create<DeskState>()(
           ),
           paperCash: s.paperCash + pnl,
           liveBankroll: Math.max(0, Math.round((s.liveBankroll + pnl) * 100) / 100),
+        });
+      },
+      reopenTicket: (id) => {
+        const s = get();
+        const ticket = s.paperTickets.find((x) => x.id === id);
+        if (!ticket || ticket.status === "open") return;
+
+        let winCredit = 0;
+        if (ticket.status === "win") {
+          const dec =
+            ticket.price != null
+              ? ticket.price >= 0
+                ? ticket.price / 100 + 1
+                : 100 / Math.abs(ticket.price) + 1
+              : 2;
+          winCredit = ticket.stake * dec;
+        } else if (ticket.status === "void") {
+          winCredit = ticket.stake;
+        }
+
+        set({
+          paperTickets: s.paperTickets.map((x) =>
+            x.id === id
+              ? {
+                  ...x,
+                  status: "open",
+                  pnl: undefined,
+                  clv: undefined,
+                  closePrice: undefined,
+                  finalScore: undefined,
+                  settledAt: undefined,
+                  legs: x.legs?.map((l) => ({ ...l, status: "open", finalScore: undefined })),
+                }
+              : x,
+          ),
+          paperCash: Math.max(0, Math.round((s.paperCash - winCredit) * 100) / 100),
+          liveBankroll: Math.max(0, Math.round((s.liveBankroll - winCredit) * 100) / 100),
         });
       },
       dismissTicket: (id) =>
@@ -364,7 +406,7 @@ export const useDeskStore = create<DeskState>()(
       name: BRAND.persist,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 6, // Bumped for migration
+      version: 7, // Bumped to 7 for auto-reconciliation of live series game tickets
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Record<string, unknown>;
         if (version < 2) {
@@ -385,6 +427,46 @@ export const useDeskStore = create<DeskState>()(
         }
         if (version < 6) { // Migrated DFS state
           if (typeof p.dfsBankroll !== "number") p.dfsBankroll = 0;
+        }
+        if (version < 7) {
+          if (Array.isArray(p.paperTickets)) {
+            let refundedWins = 0;
+            p.paperTickets = p.paperTickets.map((t: any) => {
+              const isTargetPremature =
+                t.id?.toLowerCase().endsWith("a3s05") ||
+                t.id?.toLowerCase().endsWith("15e9n") ||
+                ((t.description?.includes("Pirates") || t.description?.includes("Guardians")) &&
+                  t.status === "win");
+
+              if (isTargetPremature && t.status === "win") {
+                const dec =
+                  t.price != null
+                    ? t.price >= 0
+                      ? t.price / 100 + 1
+                      : 100 / Math.abs(t.price) + 1
+                    : 2;
+                const winPayout = (Number(t.stake) || 0) * dec;
+                refundedWins += winPayout;
+                return {
+                  ...t,
+                  status: "open",
+                  pnl: undefined,
+                  clv: undefined,
+                  closePrice: undefined,
+                  finalScore: undefined,
+                  settledAt: undefined,
+                  legs: Array.isArray(t.legs)
+                    ? t.legs.map((l: any) => ({ ...l, status: "open", finalScore: undefined }))
+                    : t.legs,
+                };
+              }
+              return t;
+            });
+            if (refundedWins > 0) {
+              p.paperCash = Math.max(0, Math.round(((Number(p.paperCash) || 0) - refundedWins) * 100) / 100);
+              p.liveBankroll = Math.max(0, Math.round(((Number(p.liveBankroll) || 0) - refundedWins) * 100) / 100);
+            }
+          }
         }
         return p as DeskState;
       },
