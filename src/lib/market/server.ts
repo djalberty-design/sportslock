@@ -621,11 +621,15 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
               ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""} ${statLabel}`
               : `${outcome.name} ${outcome.point ?? ""} ${statLabel}`;
 
+            const fullEventId = data.eventId.startsWith("oddsapi-") ? data.eventId : `oddsapi-${sport}-${rawId}`;
+            const propStartTime = event.commence_time || brief?.start || "";
+
             const prop: any = {
-              eventId: data.eventId,
+              eventId: fullEventId,
               sport,
               home,
               away,
+              start: propStartTime,
               selection: selectionWithStat.trim(),
               player: playerName,
               marketType: mkt.key || "prop",
@@ -689,18 +693,53 @@ export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
   .handler(async (): Promise<{ ok: boolean; props: any[] }> => {
     try {
       const sql = await getSql();
-      const rows = await sql<{ data: any; fetched_at: string }>`
-        SELECT data, fetched_at FROM odds_api_cache
-        WHERE key LIKE 'enriched-props:%'
-        AND fetched_at > NOW() - INTERVAL '48 hours'
-        ORDER BY fetched_at DESC
-      `;
+      const [rows, mainsRows] = await Promise.all([
+        sql<{ data: any; fetched_at: string }>`
+          SELECT data, fetched_at FROM odds_api_cache
+          WHERE key LIKE 'enriched-props:%'
+          AND fetched_at > NOW() - INTERVAL '48 hours'
+          ORDER BY fetched_at DESC
+        `,
+        sql<{ data: any }>`
+          SELECT data FROM odds_api_cache WHERE key = 'mains'
+        `,
+      ]);
+
+      const startByEventId = new Map<string, string>();
+      const startByMatchup = new Map<string, string>();
+      if (mainsRows?.[0]?.data && Array.isArray(mainsRows[0].data)) {
+        for (const grp of mainsRows[0].data) {
+          if (Array.isArray(grp?.data)) {
+            for (const ev of grp.data) {
+              if (ev?.commence_time) {
+                if (ev.id) startByEventId.set(ev.id, ev.commence_time);
+                if (ev.home_team && ev.away_team) {
+                  startByMatchup.set(`${ev.away_team.toLowerCase()}|${ev.home_team.toLowerCase()}`, ev.commence_time);
+                }
+              }
+            }
+          }
+        }
+      }
+
       const now = Date.now();
       const allProps: any[] = [];
       for (const row of rows) {
         if (Array.isArray(row.data)) {
           const fetchedAge = now - new Date(row.fetched_at).getTime();
           for (const p of row.data) {
+            if (!p.start) {
+              const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
+              const mKey = (p.away && p.home) ? `${p.away.toLowerCase()}|${p.home.toLowerCase()}` : "";
+              p.start = (rawId && startByEventId.get(rawId))
+                || (p.eventId && startByEventId.get(p.eventId))
+                || (mKey && startByMatchup.get(mKey))
+                || "";
+            }
+            if (p.eventId && !p.eventId.startsWith("oddsapi-") && p.sport) {
+              p.eventId = `oddsapi-${p.sport}-${p.eventId}`;
+            }
+
             // Server-side pregame filter: skip props whose game has already started
             if (p.start) {
               const startMs = new Date(p.start).getTime();

@@ -188,12 +188,53 @@ function BetAvatar({
   logoUrl,
   initials,
   playerName,
+  isTotal,
+  awayLogo,
+  homeLogo,
+  awayName,
+  homeName,
 }: {
   headshot?: string;
   logoUrl?: string | null;
   initials?: string;
   playerName?: string;
+  isTotal?: boolean;
+  awayLogo?: string | null;
+  homeLogo?: string | null;
+  awayName?: string;
+  homeName?: string;
 }) {
+  if (isTotal) {
+    return (
+      <div className="flex items-center -space-x-2 shrink-0">
+        <span className="relative size-7 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-line ring-2 ring-panel flex items-center justify-center text-[9px] font-bold text-muted">
+            {awayName?.charAt(0) || "A"}
+          </span>
+          {awayLogo && (
+            <img
+              src={awayLogo}
+              alt={awayName || "Away"}
+              className="absolute inset-0 size-7 rounded-full object-contain p-0.5 bg-panel ring-2 ring-panel"
+            />
+          )}
+        </span>
+        <span className="relative size-7 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-line ring-2 ring-panel flex items-center justify-center text-[9px] font-bold text-muted">
+            {homeName?.charAt(0) || "H"}
+          </span>
+          {homeLogo && (
+            <img
+              src={homeLogo}
+              alt={homeName || "Home"}
+              className="absolute inset-0 size-7 rounded-full object-contain p-0.5 bg-panel ring-2 ring-panel"
+            />
+          )}
+        </span>
+      </div>
+    );
+  }
+
   const [headshot, setHeadshot] = useState<string | undefined>(
     initialHeadshot || (playerName ? resolvePlayerHeadshotSync(playerName) || undefined : undefined)
   );
@@ -301,8 +342,10 @@ function TheLab() {
     const rows = scan?.rows || [];
 
     for (const r of rows) {
-      if (r.eventId && r.start && !eventStartMap.has(r.eventId)) {
+      if (r.eventId && r.start) {
         eventStartMap.set(r.eventId, r.start);
+        const stripped = r.eventId.replace(/^oddsapi-[A-Z]+-/, "");
+        if (stripped !== r.eventId) eventStartMap.set(stripped, r.start);
       }
       if (r.home && r.away && r.start) {
         const mKey = `${r.away.toLowerCase()}|${r.home.toLowerCase()}`;
@@ -312,6 +355,8 @@ function TheLab() {
         const started = r.inPlay || (r.start && new Date(r.start).getTime() < now);
         if (started) {
           liveEventIds.add(r.eventId);
+          const stripped = r.eventId.replace(/^oddsapi-[A-Z]+-/, "");
+          if (stripped !== r.eventId) liveEventIds.add(stripped);
           if (r.home && r.away) liveMatchups.add(`${r.away.toLowerCase()}|${r.home.toLowerCase()}`);
         }
       }
@@ -319,7 +364,14 @@ function TheLab() {
 
     const isLive = (b: any) => {
       if (b.inPlay) return true;
-      const startStr = b.start || (b.eventId ? eventStartMap.get(b.eventId) : undefined);
+      const rawId = (b.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
+      const fullId = b.sport ? `oddsapi-${b.sport}-${rawId}` : "";
+      const mKey = (b.away && b.home) ? `${b.away.toLowerCase()}|${b.home.toLowerCase()}` : "";
+      const startStr = b.start
+        || (b.eventId ? eventStartMap.get(b.eventId) : undefined)
+        || (fullId ? eventStartMap.get(fullId) : undefined)
+        || (rawId ? eventStartMap.get(rawId) : undefined)
+        || (mKey ? matchupStartMap.get(mKey) : undefined);
       if (startStr) {
         const start = new Date(startStr).getTime();
         if (!isNaN(start)) {
@@ -327,6 +379,8 @@ function TheLab() {
         }
       }
       if (b.eventId && liveEventIds.has(b.eventId)) return true;
+      if (rawId && liveEventIds.has(rawId)) return true;
+      if (mKey && liveMatchups.has(mKey)) return true;
       return false;
     };
 
@@ -398,15 +452,25 @@ function TheLab() {
       const price = p.price || -110;
       const lab = labScore({ chance, fairProb: p.fairProb ?? chance, price });
 
+      const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
+      const fullId = p.sport ? `oddsapi-${p.sport}-${rawId}` : "";
+      const mKey = (p.away && p.home) ? `${p.away.toLowerCase()}|${p.home.toLowerCase()}` : "";
+      const resolvedStart = p.start
+        || (p.eventId ? eventStartMap.get(p.eventId) : "")
+        || (fullId ? eventStartMap.get(fullId) : "")
+        || (rawId ? eventStartMap.get(rawId) : "")
+        || (mKey ? matchupStartMap.get(mKey) : "")
+        || "";
+
       result.push({
         id: key,
         selection: p.selection || "",
         marketType: p.marketType || "prop",
         sport: p.sport || "",
-        eventId: p.eventId || "",
+        eventId: fullId || p.eventId || "",
         home: p.home || "",
         away: p.away || "",
-        start: p.start || eventStartMap.get(p.eventId || "") || "",
+        start: resolvedStart,
         price,
         player: p.player,
         headshot: p.headshot || (p.row as any)?.headshot,
@@ -850,6 +914,11 @@ function TheLab() {
                         logoUrl={!playerName ? logoUrl : undefined}
                         initials={initials}
                         playerName={playerName}
+                        isTotal={b.marketType === "total"}
+                        awayLogo={legTeam.awayLogo || b.awayLogo}
+                        homeLogo={legTeam.homeLogo || b.homeLogo}
+                        awayName={legTeam.awayName || b.away}
+                        homeName={legTeam.homeName || b.home}
                       />
                       <div className="flex gap-px">{renderStars(stars)}</div>
                     </div>

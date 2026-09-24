@@ -17,6 +17,8 @@ import {
   ribbonLegs,
   type MixFilter,
 } from "@/lib/market/feed-mix";
+import { enumerateCrossParlays, enumerateSgp } from "@/lib/market/engine";
+import { fromParlay } from "@/lib/market/picks";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
@@ -28,7 +30,10 @@ function isPickToday(pick: any, snapshot: any): boolean {
   }
   return legs.every((leg: any) => {
     if (leg?.inPlay) return true;
-    const start = leg?.start || snapshot?.quotes?.find((q: any) => q.eventId === leg?.eventId)?.start || snapshot?.briefs?.find((b: any) => b.eventId === leg?.eventId)?.start;
+    const rawId = (leg?.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
+    const start = leg?.start
+      || snapshot?.quotes?.find((q: any) => q.eventId === leg?.eventId || (rawId && q.eventId?.replace(/^oddsapi-[A-Z]+-/, "") === rawId))?.start
+      || (snapshot?.briefs?.find((b: any) => b.eventId === leg?.eventId || (rawId && b.eventId?.replace(/^oddsapi-[A-Z]+-/, "") === rawId)) as any)?.start;
     return isTodayEt(start);
   });
 }
@@ -58,9 +63,6 @@ function SportsLockCommandCenter() {
     return filtered.filter((p: any) => isPickToday(p, snapshot));
   }, [filtered, todayOnly, snapshot]);
 
-  const gold = todayFiltered.filter((p: any) => p.feedLane === "gold");
-  const catalog = todayFiltered.filter((p: any) => p.feedLane !== "gold");
-
   const singlesRows = useMemo(() => {
     if (!todayOnly) return scan?.rows || [];
     return (scan?.rows || []).filter(r => isTodayEt(r.start) || r.inPlay);
@@ -68,8 +70,83 @@ function SportsLockCommandCenter() {
 
   const singlesProps = useMemo(() => {
     if (!todayOnly) return cachedProps;
-    return cachedProps.filter(p => isTodayEt(p.start || (p.row as any)?.start) || p.inPlay);
-  }, [cachedProps, todayOnly]);
+    return cachedProps.filter(p => {
+      const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
+      const start = p.start
+        || (p.row as any)?.start
+        || snapshot?.quotes?.find((q: any) => q.eventId === p.eventId || (rawId && q.eventId?.replace(/^oddsapi-[A-Z]+-/, "") === rawId))?.start
+        || (snapshot?.briefs?.find((b: any) => b.eventId === p.eventId || (rawId && b.eventId?.replace(/^oddsapi-[A-Z]+-/, "") === rawId)) as any)?.start;
+      return isTodayEt(start) || p.inPlay;
+    });
+  }, [cachedProps, todayOnly, snapshot]);
+
+  // Combined pool of today's rows + props for synthesizing today's parlays if standard feed has 0 today-only parlays
+  const candidateTodayRows = useMemo(() => {
+    const rows = [...singlesRows];
+    const seen = new Set(rows.map(r => `${r.eventId}|${r.selection}`));
+    for (const p of singlesProps) {
+      const key = `${p.eventId}|${p.selection}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({
+        eventId: p.eventId || "prop",
+        sport: p.sport || "NFL",
+        start: p.start || new Date().toISOString(),
+        home: p.home || "",
+        away: p.away || "",
+        marketType: p.marketType || "prop",
+        side: p.side || "",
+        selection: p.selection || `${p.player} Prop`,
+        price: p.price || -110,
+        fairProb: Number(p.aiProb ?? p.fairProb ?? 0.55),
+        evPct: Number(p.aiEdge ?? p.edge ?? 0.05),
+        isProp: true,
+        player: p.player,
+        headshot: p.headshot,
+        homeLogo: p.homeLogo,
+        awayLogo: p.awayLogo,
+        homeAbbr: p.homeAbbr,
+        awayAbbr: p.awayAbbr,
+        tag: "fair_or_better",
+        action: "enter_ticket",
+        conviction: "high",
+      } as any);
+    }
+    return rows;
+  }, [singlesRows, singlesProps]);
+
+  const fallbackTodayParlays = useMemo(() => {
+    if (!todayOnly || todayFiltered.length > 0 || candidateTodayRows.length < 2) return [];
+    try {
+      const sgps = enumerateSgp(candidateTodayRows, 6);
+      const cross2 = enumerateCrossParlays(candidateTodayRows, 2, 6);
+      const sgpPicks = sgps.map(p => fromParlay(p, "sgp"));
+      const twoPicks = cross2.map(p => fromParlay(p, p.sameGame ? "sgp" : "parlay2"));
+      const combined = [...sgpPicks, ...twoPicks];
+      if (combined.length === 0) return [];
+      return buildFeedParlays({
+        ribbon: combined,
+        two: twoPicks,
+        sgp: sgpPicks,
+      });
+    } catch (e) {
+      console.error("Failed to build fallback today parlays:", e);
+      return [];
+    }
+  }, [todayOnly, todayFiltered.length, candidateTodayRows]);
+
+  const displayParlays = useMemo(() => {
+    if (!todayOnly) return filtered;
+    if (todayFiltered.length > 0) return todayFiltered;
+    return fallbackTodayParlays;
+  }, [todayOnly, filtered, todayFiltered, fallbackTodayParlays]);
+
+  let gold = displayParlays.filter((p: any) => p.feedLane === "gold");
+  let catalog = displayParlays.filter((p: any) => p.feedLane !== "gold");
+  if (gold.length === 0 && catalog.length > 0) {
+    gold = [{ ...catalog[0], feedLane: "gold" }];
+    catalog = catalog.slice(1);
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-4 sm:pt-0">

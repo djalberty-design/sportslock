@@ -512,6 +512,33 @@ export function GamePage({ eventId }: { eventId: string }) {
               <div className="shrink-0 size-10 rounded-full bg-line/50 ring-1 ring-line flex items-center justify-center text-muted text-xs font-bold">
                 {playerName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
               </div>
+            ) : isTotal ? (
+              <div className="flex items-center -space-x-2 shrink-0">
+                <div className="size-8 rounded-full bg-panel ring-1 ring-line flex items-center justify-center p-0.5 overflow-hidden">
+                  {teamInfo.awayLogo || awayLogo ? (
+                    <img
+                      src={teamInfo.awayLogo || awayLogo}
+                      className="size-full object-contain"
+                      alt={teamInfo.awayName || "Away"}
+                      onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <span className="text-[10px] font-bold font-mono text-muted">{(teamInfo.awayAbbr || "AWY").slice(0, 3)}</span>
+                  )}
+                </div>
+                <div className="size-8 rounded-full bg-panel ring-1 ring-line flex items-center justify-center p-0.5 overflow-hidden z-10">
+                  {teamInfo.homeLogo || homeLogo ? (
+                    <img
+                      src={teamInfo.homeLogo || homeLogo}
+                      className="size-full object-contain"
+                      alt={teamInfo.homeName || "Home"}
+                      onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <span className="text-[10px] font-bold font-mono text-muted">{(teamInfo.homeAbbr || "HOM").slice(0, 3)}</span>
+                  )}
+                </div>
+              </div>
             ) : resolvedTeamLogo ? (
               <div className="shrink-0 size-10 rounded-full bg-panel ring-1 ring-line flex items-center justify-center p-1 overflow-hidden">
                 <img

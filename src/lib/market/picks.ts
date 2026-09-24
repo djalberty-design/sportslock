@@ -450,7 +450,7 @@ function fromRow(row: ScanRow, bucket: PickBucket, why: string): DeskPick {
   };
 }
 
-function fromParlay(p: ParlayCandidate, bucket: PickBucket): DeskPick {
+export function fromParlay(p: ParlayCandidate, bucket: PickBucket): DeskPick {
   const dec = p.decimalPayout ?? 1;
   const names = p.legs.map((l) => shortPick(l.selection, l.marketType)).join(" + ");
   const quality = parlayInfoQuality(p.legs.length, Boolean(p.sameGame));
