@@ -36,7 +36,7 @@ export function TicketLegAvatar({
   );
 
   if (!playerName && isPropCandidate && rawSel) {
-    const propMatch = rawSel.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\.'-]+)+)\s+(?:yes|no|over|under|anytime|\d)/i);
+    const propMatch = rawSel.match(/^([A-Z][a-zA-Z\.'-]+(?:\s+[A-Z][a-zA-Z\.'-]+)*?)\s+(?:yes|no|over|under|anytime|\+|-|\d)/i);
     if (propMatch) {
       playerName = propMatch[1];
     }
@@ -97,6 +97,14 @@ export function TicketLegAvatar({
           className="size-full object-cover object-top"
           onError={() => setImgErr(true)}
         />
+      </span>
+    );
+  }
+
+  if (isProp) {
+    return (
+      <span className={cn("relative shrink-0 rounded-full bg-panel ring-1 ring-line flex items-center justify-center text-[10px] font-mono font-bold text-muted", sizeClass)}>
+        {initials}
       </span>
     );
   }

@@ -155,21 +155,29 @@ export function buildFeedParlays(picks: {
   sgp?: any[];
 } | null | undefined): any[] {
   const ribbon = (picks?.ribbon ?? []).filter((p) => p?.parlay).filter(feedValueFilter);
-  const seen = new Set(ribbon.map((p) => String(p.id || "")));
-  // Gold: top 1 by score (value-ranked, not just safest)
-  const gold = ribbon
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-    .slice(0, 1)
-    .map((p) => ({ ...p, feedLane: "gold" as const }));
-  // Catalog: top 10 by score, filtered for value
-  const catalog = [...(picks?.two ?? []), ...(picks?.three ?? []), ...(picks?.sgp ?? [])]
+  const sortedRibbon = ribbon.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+  // Gold: top 1 by score (only if meeting strict criteria, otherwise empty)
+  const gold = sortedRibbon.slice(0, 1).map((p) => ({ ...p, feedLane: "gold" as const }));
+  const seen = new Set(gold.map((p) => String(p.id || "")));
+
+  // Catalog: remaining from ribbon + all two, three, sgp
+  const catalogPool = [
+    ...sortedRibbon.slice(1),
+    ...(picks?.two ?? []),
+    ...(picks?.three ?? []),
+    ...(picks?.sgp ?? []),
+  ];
+
+  const catalog = catalogPool
     .filter((p) => p?.parlay && !seen.has(String(p.id || "")))
     .filter(feedValueFilter)
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-    .slice(0, 10)
+    .slice(0, 36)
     .map((p) => {
       seen.add(String(p.id || ""));
       return { ...p, feedLane: "catalog" as const };
     });
+
   return [...gold, ...catalog];
 }

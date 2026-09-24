@@ -11,14 +11,13 @@ import { cn, isTodayEt } from "@/lib/utils";
 import {
   applyMixFilter,
   applyRibbonSportFilter,
-  applySlateDayFilter,
   buildFeedParlays,
   snapshotSports,
   ribbonLegs,
   type MixFilter,
 } from "@/lib/market/feed-mix";
 import { enumerateCrossParlays, enumerateSgp } from "@/lib/market/engine";
-import { fromParlay } from "@/lib/market/picks";
+import { fromParlay, buildRibbon } from "@/lib/market/picks";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
@@ -51,17 +50,13 @@ function SportsLockCommandCenter() {
       .catch(() => {});
   }, []);
 
-  const feed = buildFeedParlays(picks);
+  const feed = useMemo(() => buildFeedParlays(picks), [picks]);
   const liveSports = snapshotSports(snapshot);
-  const filtered = applyMixFilter(
-    applyRibbonSportFilter(applySlateDayFilter(feed, snapshot), sportFilter),
-    mixFilter,
-  );
 
-  const todayFiltered = useMemo(() => {
-    if (!todayOnly) return filtered;
-    return filtered.filter((p: any) => isPickToday(p, snapshot));
-  }, [filtered, todayOnly, snapshot]);
+  const slateFilteredFeed = useMemo(() => {
+    if (!todayOnly) return feed;
+    return feed.filter((p: any) => isPickToday(p, snapshot));
+  }, [feed, todayOnly, snapshot]);
 
   const singlesRows = useMemo(() => {
     if (!todayOnly) return scan?.rows || [];
@@ -116,37 +111,42 @@ function SportsLockCommandCenter() {
   }, [singlesRows, singlesProps]);
 
   const fallbackTodayParlays = useMemo(() => {
-    if (!todayOnly || todayFiltered.length > 0 || candidateTodayRows.length < 2) return [];
+    if (!todayOnly || slateFilteredFeed.length > 0 || candidateTodayRows.length < 2) return [];
     try {
-      const sgps = enumerateSgp(candidateTodayRows, 6);
-      const cross2 = enumerateCrossParlays(candidateTodayRows, 2, 6);
+      const sgps = enumerateSgp(candidateTodayRows, 8);
+      const cross2 = enumerateCrossParlays(candidateTodayRows, 2, 8);
       const sgpPicks = sgps.map(p => fromParlay(p, "sgp"));
       const twoPicks = cross2.map(p => fromParlay(p, p.sameGame ? "sgp" : "parlay2"));
-      const combined = [...sgpPicks, ...twoPicks];
-      if (combined.length === 0) return [];
-      return buildFeedParlays({
-        ribbon: combined,
-        two: twoPicks,
-        sgp: sgpPicks,
-      });
+      const combined = [...twoPicks, ...sgpPicks];
+      // Only grant gold if a 2-leg cross legitimately satisfies the strict ribbon standard
+      const goldEligible = buildRibbon(twoPicks);
+      const goldId = goldEligible[0]?.id;
+      return combined.map(p => ({
+        ...p,
+        feedLane: (p.id === goldId ? "gold" : "catalog") as "gold" | "catalog",
+      }));
     } catch (e) {
       console.error("Failed to build fallback today parlays:", e);
       return [];
     }
-  }, [todayOnly, todayFiltered.length, candidateTodayRows]);
+  }, [todayOnly, slateFilteredFeed.length, candidateTodayRows]);
 
-  const displayParlays = useMemo(() => {
-    if (!todayOnly) return filtered;
-    if (todayFiltered.length > 0) return todayFiltered;
+  const rawFeed = useMemo(() => {
+    if (!todayOnly) return feed;
+    if (slateFilteredFeed.length > 0) return slateFilteredFeed;
     return fallbackTodayParlays;
-  }, [todayOnly, filtered, todayFiltered, fallbackTodayParlays]);
+  }, [todayOnly, feed, slateFilteredFeed, fallbackTodayParlays]);
 
-  let gold = displayParlays.filter((p: any) => p.feedLane === "gold");
-  let catalog = displayParlays.filter((p: any) => p.feedLane !== "gold");
-  if (gold.length === 0 && catalog.length > 0) {
-    gold = [{ ...catalog[0], feedLane: "gold" }];
-    catalog = catalog.slice(1);
-  }
+  // Top filters: Sport Filter (All, NFL, MLB, etc.) & Mix Filter (All mixes, SGP, 2-leg, 3-leg, etc.)
+  const displayParlays = useMemo(() => {
+    return applyMixFilter(
+      applyRibbonSportFilter(rawFeed, sportFilter),
+      mixFilter,
+    );
+  }, [rawFeed, sportFilter, mixFilter]);
+
+  const gold = displayParlays.filter((p: any) => p.feedLane === "gold");
+  const catalog = displayParlays.filter((p: any) => p.feedLane !== "gold");
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-4 sm:pt-0">

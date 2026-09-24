@@ -6,6 +6,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import { lockPredictionFn } from "@/lib/market/server";
 import { getHardRockUrl } from "@/lib/market/hard-rock-links";
 import { calculateDynamicWager } from "@/lib/kelly";
+import { formatMarketName } from "@/lib/market/logos";
 
 export function ParlayBar() {
   const { legs, removeLeg, clearAll } = useParlaySlip();
@@ -49,11 +50,21 @@ export function ParlayBar() {
         point: q.point,
         price: q.price || -110,
         fairProb: q.fairProb || 0.5,
+        home: q.home,
+        away: q.away,
+        sport: q.sport,
+        player: q.player,
+        headshot: q.headshot,
+        homeLogo: q.homeLogo,
+        awayLogo: q.awayLogo,
+        homeAbbr: q.homeAbbr,
+        awayAbbr: q.awayAbbr,
+        isProp: q.isProp,
       }));
 
-      // Build description
+      // Build clean description
       const desc = legData.length === 1
-        ? `${legData[0].selection} (${legData[0].marketType})`
+        ? `${legData[0].selection} (${formatMarketName(legData[0].marketType, legData[0].selection)})`
         : `${legData.length}-leg parlay: ${legData.map(l => l.selection).join(" + ")}`;
 
       // Calculate combined odds
@@ -86,10 +97,17 @@ export function ParlayBar() {
           price: l.price,
           fairProb: l.fairProb,
           eventId: l.eventId,
-          home: legs[i]?.home || "",
-          away: legs[i]?.away || "",
-          sport: legs[i]?.sport || "",
+          home: l.home || legs[i]?.home || "",
+          away: l.away || legs[i]?.away || "",
+          sport: l.sport || legs[i]?.sport || "",
           point: (l as any).point ?? undefined,
+          player: l.player || legs[i]?.player,
+          headshot: l.headshot || (legs[i] as any)?.headshot,
+          homeLogo: l.homeLogo || (legs[i] as any)?.homeLogo,
+          awayLogo: l.awayLogo || (legs[i] as any)?.awayLogo,
+          homeAbbr: l.homeAbbr || (legs[i] as any)?.homeAbbr,
+          awayAbbr: l.awayAbbr || (legs[i] as any)?.awayAbbr,
+          isProp: Boolean(l.isProp || l.player || (legs[i] as any)?.player || (legs[i] as any)?.headshot),
           status: "open",
         })),
         ...(legData.length === 1 ? {

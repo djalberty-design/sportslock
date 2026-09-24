@@ -402,9 +402,66 @@ const SEED_HEADSHOTS: Record<string, string> = {
   "nick muse": "https://a.espncdn.com/i/headshots/nfl/players/full/4249624.png",
   "reggie gilliam": "https://a.espncdn.com/i/headshots/nfl/players/full/4039505.png",
   "charlie woerner": "https://a.espncdn.com/i/headshots/nfl/players/full/4035020.png",
+  "michael penix jr": "https://a.espncdn.com/i/headshots/nfl/players/full/4360423.png",
+  "michael penix": "https://a.espncdn.com/i/headshots/nfl/players/full/4360423.png",
+  "jordan love": "https://a.espncdn.com/i/headshots/nfl/players/full/4036378.png",
+  "bijan robinson": "https://a.espncdn.com/i/headshots/nfl/players/full/4430807.png",
+  "tucker kraft": "https://a.espncdn.com/i/headshots/nfl/players/full/4572680.png",
+  "kyle pitts": "https://a.espncdn.com/i/headshots/nfl/players/full/4360248.png",
+  "drake london": "https://a.espncdn.com/i/headshots/nfl/players/full/4426502.png",
+  "christian watson": "https://a.espncdn.com/i/headshots/nfl/players/full/4248528.png",
+  "romeo doubs": "https://a.espncdn.com/i/headshots/nfl/players/full/4361432.png",
+  "kirk cousins": "https://a.espncdn.com/i/headshots/nfl/players/full/14880.png",
+  "josh jacobs": "https://a.espncdn.com/i/headshots/nfl/players/full/4047365.png",
+  "jayden reed": "https://a.espncdn.com/i/headshots/nfl/players/full/4362249.png",
+  "darnell mooney": "https://a.espncdn.com/i/headshots/nfl/players/full/4040655.png",
+  "tyler allgeier": "https://a.espncdn.com/i/headshots/nfl/players/full/4361429.png",
+  "josh allen": "https://a.espncdn.com/i/headshots/nfl/players/full/3918298.png",
 };
 for (const [k, v] of Object.entries(SEED_HEADSHOTS)) {
   PLAYER_HEADSHOT_CACHE.set(k.toLowerCase(), v);
+}
+
+export function formatMarketName(marketType?: string, selection?: string): string {
+  const m = String(marketType || "").toLowerCase();
+  const s = String(selection || "").toLowerCase();
+
+  if (m === "player_pass_tds" || s.includes("passing touchdown") || s.includes("pass td")) return "Passing TDs";
+  if (m === "player_pass_yds" || s.includes("passing yard") || s.includes("pass yd")) return "Passing Yards";
+  if (m === "player_rush_yds" || s.includes("rushing yard") || s.includes("rush yd")) return "Rushing Yards";
+  if (m === "player_reception_yds" || s.includes("receiving yard") || s.includes("rec yd")) return "Receiving Yards";
+  if (m === "player_receptions" || s.includes("reception")) return "Receptions";
+  if (m === "player_anytime_td" || s.includes("anytime touchdown") || s.includes("anytime td")) return "Anytime TD";
+  if (m === "player_points" || s.includes("points")) return "Points";
+  if (m === "player_rebounds" || s.includes("rebounds")) return "Rebounds";
+  if (m === "player_assists" || s.includes("assists")) return "Assists";
+  if (m === "player_threes" || s.includes("three")) return "3-Pointers";
+  if (m === "player_strikeouts" || s.includes("strikeout")) return "Strikeouts";
+  if (m === "player_hits" || s.includes("hits")) return "Hits";
+  if (m === "player_total_bases" || s.includes("total base")) return "Total Bases";
+  if (m === "player_home_runs" || s.includes("home run")) return "Home Runs";
+  if (m === "player_goals" || s.includes("goals")) return "Goals";
+  if (m === "player_shots_on_goal" || s.includes("shots on goal")) return "Shots on Goal";
+
+  if (m === "spread" || /^[+-]\d+(\.\d+)?$/.test(s) || /\b[+-]\d+(\.\d+)?\b/.test(s)) return "Spread";
+  if (m === "total" || m === "totals" || /^(over|under)\s+\d+(\.\d+)?/i.test(s)) return "Total";
+  if (m === "moneyline" || m === "ml") return "Moneyline";
+
+  if (m && m !== "unknown" && m !== "prop" && m !== "line") {
+    return m.replace(/^player_/i, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  if (/anytime\s*touchdown/i.test(s)) return "Anytime TD";
+  if (/touchdown/i.test(s)) return "Touchdowns";
+  if (/\b(spread|[+-]\d)/i.test(s)) return "Spread";
+  if (/\b(over|under)\b/i.test(s)) return "Total";
+
+  return "Game Line";
+}
+
+export function cleanDescription(desc?: string): string {
+  if (!desc) return "";
+  return desc.replace(/_([a-z0-9])/gi, " $1").replace(/\s{2,}/g, " ").trim();
 }
 
 export function resolvePlayerHeadshotSync(name?: string | null): string | null {

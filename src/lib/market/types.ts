@@ -433,6 +433,13 @@ export type PaperTicketLeg = {
   status?: "open" | "win" | "loss" | "void";
   finalScore?: string;
   start?: string;
+  player?: string;
+  headshot?: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  homeAbbr?: string;
+  awayAbbr?: string;
+  isProp?: boolean;
 };
 
 export type PaperTicket = {

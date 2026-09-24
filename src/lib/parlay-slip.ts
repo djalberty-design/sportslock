@@ -14,6 +14,12 @@ export type ParlayLeg = {
   home?: string;
   away?: string;
   player?: string;
+  headshot?: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  homeAbbr?: string;
+  awayAbbr?: string;
+  isProp?: boolean;
 };
 
 type ParlaySlipState = {

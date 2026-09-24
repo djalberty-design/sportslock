@@ -6,7 +6,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
 import { ChevronLeft, ChevronRight, BarChart2, ShieldCheck, X, CloudSun, TrendingUp, Zap, Check, Star, Trash2 } from "lucide-react";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { espnLogoUrl, resolveLegTeam } from "@/lib/market/logos";
+import { espnLogoUrl, resolveLegTeam, formatMarketName } from "@/lib/market/logos";
 import { cn, formatEasternTime, formatEasternDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParlaySlip, isLegSelected, combinedOdds, type ParlayLeg } from "@/lib/parlay-slip";
@@ -271,11 +271,21 @@ export function GamePage({ eventId }: { eventId: string }) {
         point: q.point,
         price: parseInt(finalOdds || americanOdds) || q.price || -110,
         fairProb: q.fairProb || 0.5,
+        home: q.home || firstQuote?.home || "",
+        away: q.away || firstQuote?.away || "",
+        sport: q.sport || firstQuote?.sport || "",
+        player: q.player,
+        headshot: q.headshot,
+        homeLogo: q.homeLogo || firstQuote?.homeLogo || homeLogo,
+        awayLogo: q.awayLogo || firstQuote?.awayLogo || awayLogo,
+        homeAbbr: q.homeAbbr || firstQuote?.homeAbbr || firstQuoteRef?.homeAbbr,
+        awayAbbr: q.awayAbbr || firstQuote?.awayAbbr || firstQuoteRef?.awayAbbr,
+        isProp: Boolean(q.player || q.headshot || q.isProp),
       }));
 
-      // Build description from legs
+      // Build clean description from legs
       const desc = legs.length === 1
-        ? `${legs[0].selection} (${legs[0].marketType})`
+        ? `${legs[0].selection} (${formatMarketName(legs[0].marketType, legs[0].selection)})`
         : `${legs.length}-leg parlay: ${legs.map(l => l.selection).join(" + ")}`;
 
       // Add to local paper tickets (shows in My Action)
@@ -308,11 +318,18 @@ export function GamePage({ eventId }: { eventId: string }) {
           price: l.price,
           fairProb: l.fairProb,
           eventId: l.eventId,
-          home: firstQuote?.home || "",
-          away: firstQuote?.away || "",
-          sport: firstQuote?.sport || "",
+          home: l.home || firstQuote?.home || "",
+          away: l.away || firstQuote?.away || "",
+          sport: l.sport || firstQuote?.sport || "",
           start: firstQuote?.start || undefined,
           point: (l as any).point ?? undefined,
+          player: l.player,
+          headshot: l.headshot,
+          homeLogo: l.homeLogo,
+          awayLogo: l.awayLogo,
+          homeAbbr: l.homeAbbr,
+          awayAbbr: l.awayAbbr,
+          isProp: l.isProp,
           status: "open",
         })),
         // Forward line/market for auto-grader (single-leg)
@@ -367,6 +384,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     const hasAi = q.aiProb != null;
     const playerName = q.player || q.row?.player;
     const mTypeLower = String(q.marketType || q.row?.marketType || "").toLowerCase();
+    const isTotal = mTypeLower === "total" || mTypeLower === "totals";
     const rawSel = String(q.selection || "");
 
     // Resolve team info and logos for game lines and props

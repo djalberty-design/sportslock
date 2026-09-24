@@ -16,9 +16,9 @@ import { BankrollTracker } from "./bankroll-tracker";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { ClvBadge } from "./competitive-widgets";
 import { getHardRockUrl } from "@/lib/market/hard-rock-links";
-import type { PaperTicket } from "@/lib/market/types";
 import { TicketLegAvatar } from "./ticket-leg-avatar";
 import { teamsMatch } from "@/lib/market/live-scores";
+import { formatMarketName, cleanDescription } from "@/lib/market/logos";
 import {
   CheckCircle2,
   XCircle,
@@ -399,7 +399,7 @@ function HardRockTicketCard({
         {isParlay && legs.length > 0 ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted">
-              <span className="font-semibold uppercase tracking-wider">{ticket.description}</span>
+              <span className="font-semibold uppercase tracking-wider">{cleanDescription(ticket.description)}</span>
               <button
                 onClick={() => setExpandedLegs(!expandedLegs)}
                 className="flex items-center gap-1 text-[11px] text-muted hover:text-ink cursor-pointer"
@@ -415,15 +415,22 @@ function HardRockTicketCard({
                   const isPropLeg = Boolean(
                     leg.isProp ||
                     leg.player ||
+                    leg.marketType === "prop" ||
+                    String(leg.marketType || "").startsWith("player_") ||
                     /anytime\s*touchdown/i.test(leg.selection || "") ||
-                    /\b(passing|rushing|receiving|receptions|strikeouts|hits)\b/i.test(leg.selection || "")
+                    /\b(passing|rushing|receiving|receptions|strikeouts|hits|points|rebounds|assists)\b/i.test(leg.selection || "")
                   );
-                  const hasRealMatchup = leg.away && leg.home && leg.away !== "Away" && leg.home !== "Home";
+                  const homeName = leg.home || ticket.home;
+                  const awayName = leg.away || ticket.away;
+                  const hasRealMatchup = awayName && homeName && awayName !== "Away" && homeName !== "Home";
+                  const legSport = leg.sport || ticket.sport;
                   const matchupSub = isPropLeg
-                    ? (leg.sport ? `Player Prop · ${leg.sport}` : "Player Prop")
+                    ? (legSport ? `Player Prop · ${legSport}` : "Player Prop")
                     : hasRealMatchup
-                      ? `${leg.away} @ ${leg.home}`
-                      : (leg.sport || "Game Line");
+                      ? `${awayName} @ ${homeName}`
+                      : (legSport || "Game Line");
+
+                  const formattedMarket = formatMarketName(leg.marketType, leg.selection);
 
                   return (
                     <div key={idx} className="p-2.5 flex items-center justify-between gap-3 text-xs">
@@ -431,11 +438,21 @@ function HardRockTicketCard({
                         <span className="text-[10px] bg-primary/20 text-primary font-bold px-1 rounded shrink-0">
                           {idx + 1}
                         </span>
-                        <TicketLegAvatar leg={leg} size="sm" />
+                        <TicketLegAvatar
+                          leg={{
+                            ...leg,
+                            sport: leg.sport || ticket.sport,
+                            home: leg.home || ticket.home,
+                            away: leg.away || ticket.away,
+                            homeLogo: leg.homeLogo || ticket.homeLogo,
+                            awayLogo: leg.awayLogo || ticket.awayLogo,
+                          }}
+                          size="sm"
+                        />
                         <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="font-bold text-ink truncate">{leg.selection}</div>
+                          <div className="font-bold text-ink truncate">{cleanDescription(leg.selection)}</div>
                           <div className="text-[11px] text-muted truncate">
-                            {leg.marketType?.toUpperCase() || "LINE"} · {matchupSub}
+                            {formattedMarket} · {matchupSub}
                             {leg.finalScore ? ` (${leg.finalScore})` : ""}
                           </div>
                         </div>
@@ -475,7 +492,7 @@ function HardRockTicketCard({
                 />
                 <div className="min-w-0">
                   <h3 className="font-display text-lg font-bold text-ink leading-snug">
-                    {ticket.description}
+                    {cleanDescription(ticket.description)}
                   </h3>
                   {ticket.home && ticket.away && !isParlay && (
                     <p className="text-xs text-muted">
