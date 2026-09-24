@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
+import { useDeskStore } from "@/lib/desk-store";
+import { calculateDynamicWager } from "@/lib/kelly";
 import {
   TrendingUp,
   Target,
@@ -145,6 +147,9 @@ function TopSingleAvatar({ row }: { row: ScanRow }) {
 
 export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
   const { legs: slipLegs, addLeg, removeLeg } = useParlaySlip();
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
 
   // 1. Best Moneyline (highest EV, fallback to highest win prob)
   const bestMl = React.useMemo(() => {
@@ -333,6 +338,14 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
           const vegasImplied = r.price < 0 ? Math.round((-r.price / (-r.price + 100)) * 100) : Math.round((100 / (r.price + 100)) * 100);
           const aiHit = Math.round(r.fairProb * 100);
 
+          const dyn = calculateDynamicWager({
+            totalBankroll,
+            baseUnitSize,
+            riskMode: riskProfileMode,
+            fairProb: r.fairProb,
+            bookOdds: r.price,
+          });
+
           const matchupText = r.isProp && r.player
             ? `${r.player} · ${r.sport}`
             : r.home && r.away
@@ -406,7 +419,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                 </div>
 
                 {/* Metrics Box */}
-                <div className="grid grid-cols-3 gap-1.5 bg-obsidian border border-line/60 rounded-lg p-2.5 my-3 text-center">
+                <div className="grid grid-cols-4 gap-1 bg-obsidian border border-line/60 rounded-lg p-2.5 my-3 text-center">
                   <div>
                     <div className="text-[9px] text-muted font-mono uppercase">Our AI</div>
                     <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
@@ -423,6 +436,12 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                     <div className="text-[9px] text-muted font-mono uppercase">Edge</div>
                     <div className="text-xs font-bold text-primary font-mono mt-0.5">
                       {evText}
+                    </div>
+                  </div>
+                  <div className="border-l border-line/50">
+                    <div className="text-[9px] text-muted font-mono uppercase">Rec</div>
+                    <div className="text-xs font-bold text-amber-400 font-mono mt-0.5 truncate" title={`Kelly Suggested Stake: $${dyn.wagerDollars} (${dyn.unitCount}u)`}>
+                      ${dyn.wagerDollars}
                     </div>
                   </div>
                 </div>

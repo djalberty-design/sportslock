@@ -5,13 +5,38 @@ import { useState, useCallback } from "react";
 import { useDeskStore } from "@/lib/desk-store";
 import { lockPredictionFn } from "@/lib/market/server";
 import { getHardRockUrl } from "@/lib/market/hard-rock-links";
+import { calculateDynamicWager } from "@/lib/kelly";
 
 export function ParlayBar() {
   const { legs, removeLeg, clearAll } = useParlaySlip();
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [customStake, setCustomStake] = useState<string>("");
   const placePaper = useDeskStore((s) => s.placePaperTicket);
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
+
+  const { american, decPayout, combinedProb, isCorrelated } = combinedOdds(legs);
+  const probPct = Math.round(combinedProb * 100);
+  const isSingle = legs.length === 1;
+  const label = isSingle ? "BET" : `${legs.length}L`;
+
+  const numericOdds = typeof american === "number" ? american : parseInt(american, 10) || -110;
+  const dynWager = calculateDynamicWager({
+    totalBankroll,
+    baseUnitSize,
+    riskMode: riskProfileMode,
+    fairProb: combinedProb,
+    bookOdds: numericOdds,
+  });
+
+  const stakeAmount = customStake !== "" && Number.isFinite(Number(customStake)) && Number(customStake) > 0
+    ? Number(customStake)
+    : dynWager.wagerDollars;
+
+  const potentialPayout = (stakeAmount * decPayout).toFixed(2);
 
   const handleLockIn = useCallback(async () => {
     if (legs.length === 0 || saving) return;
@@ -46,7 +71,7 @@ export function ParlayBar() {
       placePaper({
         kind: legData.length === 1 ? "main" : "parlay",
         description: desc,
-        stake: 50,
+        stake: stakeAmount,
         price: americanCombined,
         status: "open",
         gameIds: [...new Set(legData.map(l => l.eventId))],
@@ -85,14 +110,9 @@ export function ParlayBar() {
       console.error("Lock-in error:", e);
     }
     setSaving(false);
-  }, [legs, saving, placePaper, clearAll]);
+  }, [legs, saving, placePaper, clearAll, stakeAmount]);
 
   if (legs.length === 0) return null;
-
-  const { american, decPayout, combinedProb, isCorrelated } = combinedOdds(legs);
-  const probPct = Math.round(combinedProb * 100);
-  const isSingle = legs.length === 1;
-  const label = isSingle ? "BET" : `${legs.length}L`;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-2 duration-200">
@@ -100,6 +120,18 @@ export function ParlayBar() {
       {expanded && (
         <div className="bg-obsidian/95 backdrop-blur-xl border-t border-line max-h-[35vh] overflow-y-auto">
           <div className="max-w-2xl mx-auto px-3 py-2 space-y-1">
+            <div className="flex items-center justify-between pb-1 border-b border-line/60 text-[11px]">
+              <span className="text-muted">
+                Kelly Suggestion ({riskProfileMode}): <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setCustomStake(String(dynWager.wagerDollars))}
+                className="text-primary hover:underline text-[10px] font-bold"
+              >
+                Reset to Rec
+              </button>
+            </div>
             {legs.map((leg, i) => (
               <div key={`${leg.selection}-${leg.marketType}`} className="flex items-center justify-between gap-2 bg-panel rounded px-2.5 py-1.5">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -147,9 +179,23 @@ export function ParlayBar() {
             )}>
               {probPct}%
             </span>
-            <span className="text-[10px] font-mono text-ink">
-              ${(10 * decPayout).toFixed(0)}
-            </span>
+            
+            {/* Dynamic Stake Input & Payout */}
+            <div className="flex items-center gap-1 bg-panel border border-line rounded px-1.5 py-0.5" title={`Recommended: $${dynWager.wagerDollars} (${dynWager.unitCount}u)`}>
+              <span className="text-[10px] text-muted font-mono">$</span>
+              <input
+                type="number"
+                min="1"
+                step="5"
+                placeholder={String(dynWager.wagerDollars)}
+                value={customStake}
+                onChange={(e) => setCustomStake(e.target.value)}
+                className="w-12 bg-transparent text-[10px] font-mono font-bold text-ink focus:outline-none text-left"
+              />
+              <span className="text-[10px] font-mono text-emerald-400 font-bold" title="Potential Payout">
+                →${potentialPayout}
+              </span>
+            </div>
 
             {/* Hard Rock Bet Deep Link */}
             <a

@@ -7,6 +7,7 @@ import { useDeskStore } from "@/lib/desk-store";
 import { DEFAULT_WAGER } from "@/lib/market/book-price";
 import { paperFromLock, researchAmerican, researchStake, writePredictionLegs } from "@/lib/market/lock-action";
 import { matchSnapshotEvent, resolveLegTeam } from "@/lib/market/logos";
+import { calculateDynamicWager } from "@/lib/kelly";
 
 function selectionLabel(leg: any, snapshot?: any) {
   const teams = resolveLegTeam(leg, matchSnapshotEvent(snapshot, leg).quote);
@@ -32,19 +33,34 @@ export function FeedLockModal({
   americanOdds: string;
 }) {
   const placePaperTicket = useDeskStore((s) => s.placePaperTicket);
-  const [wager, setWager] = useState(String(DEFAULT_WAGER));
-  const [oddsInput, setOddsInput] = useState(americanOdds);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [lockErr, setLockErr] = useState<string | null>(null);
-
-  if (!open) return null;
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
 
   const pick = parlay;
   const parlayCand = pick?.parlay || pick;
   const legs = parlayCand?.legs || [];
   const first = legs[0];
   const firstTeams = resolveLegTeam(first, matchSnapshotEvent(snapshot, first).quote);
+
+  const parsedOdds = researchAmerican(americanOdds, -110);
+  const fairChance = Number(pick?.chance ?? parlayCand?.combinedFair ?? 0.5);
+
+  const dynWager = calculateDynamicWager({
+    totalBankroll,
+    baseUnitSize,
+    riskMode: riskProfileMode,
+    fairProb: fairChance,
+    bookOdds: parsedOdds,
+  });
+
+  const [wager, setWager] = useState(String(dynWager.wagerDollars || DEFAULT_WAGER));
+  const [oddsInput, setOddsInput] = useState(americanOdds);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [lockErr, setLockErr] = useState<string | null>(null);
+
+  if (!open) return null;
 
   async function saveToAction() {
     setSaving(true);
@@ -124,6 +140,18 @@ export function FeedLockModal({
                 onChange={(e) => setWager(e.target.value)}
                 className="w-full bg-obsidian border border-line rounded-lg px-4 py-3 text-ink font-mono focus:outline-none focus:border-primary text-lg"
               />
+              <div className="flex items-center justify-between text-[11px] pt-1 px-0.5">
+                <span className="text-muted">
+                  Kelly Rec ({riskProfileMode}): <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setWager(String(dynWager.wagerDollars))}
+                  className="text-primary hover:underline font-bold text-[10px]"
+                >
+                  Use Rec
+                </button>
+              </div>
             </div>
           </div>
           {lockErr ? <p className="mt-3 text-sm text-red-400">{lockErr}</p> : null}

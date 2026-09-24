@@ -11,6 +11,7 @@ import { labScore, type LabScore } from "@/lib/market/ev-score";
 import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
 import { resolveTeamLogo, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { AiCustomArchitect } from "@/components/app/ai-custom-architect";
+import { calculateDynamicWager } from "@/lib/kelly";
 
 export const Route = createFileRoute("/picks")({
   component: TheLab,
@@ -239,6 +240,9 @@ function BetAvatar({
 function TheLab() {
   const { picks, scan } = useDeskDecision();
   const sportFilter = useDeskStore((s) => s.sportFilter);
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
   const { legs: sgpSlip, addLeg, removeLeg } = useParlaySlip();
 
   // Load enriched props from DB
@@ -655,6 +659,14 @@ function TheLab() {
               });
               const logoUrl = legTeam.selectionLogo || legTeam.homeLogo || legTeam.awayLogo;
 
+              const dyn = calculateDynamicWager({
+                totalBankroll,
+                baseUnitSize,
+                riskMode: riskProfileMode,
+                fairProb: b.fairProb,
+                bookOdds: b.price,
+              });
+
               return (
                 <div key={b.id} className={cn(
                   "rounded-xl border bg-panel p-3 transition-all",
@@ -747,6 +759,12 @@ function TheLab() {
                           {b.lab.edgePct} edge
                         </span>
                       )}
+                      <span
+                        className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20"
+                        title={`Recommended Kelly Stake (${riskProfileMode}): $${dyn.wagerDollars} (${dyn.unitCount}u)`}
+                      >
+                        Rec: ${dyn.wagerDollars}
+                      </span>
                     </div>
                     <p className="text-[9px] text-muted italic ml-0.5">
                       {b.lab.label} — {b.lab.hitPct >= 70 ? "wins most of the time" : b.lab.hitPct >= 55 ? "better than a coin flip" : b.lab.hitPct >= 45 ? "could go either way" : b.lab.hitPct >= 30 ? "lower chance, bigger payout" : "risky but high reward"}

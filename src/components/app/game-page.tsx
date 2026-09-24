@@ -15,13 +15,17 @@ import { ProjectedScore, PublicSharpMeter, StreakBadge } from "./competitive-wid
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
+import { calculateDynamicWager } from "@/lib/kelly";
 
 export function GamePage({ eventId }: { eventId: string }) {
   const { snapshot, picks } = useDeskDecision();
   const [activeTab, setActiveTab] = useState("popular");
   const { legs: sgpSlip, addLeg, removeLeg, removeLegByIndex, clearAll } = useParlaySlip();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [wager, setWager] = useState("50");
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
+  const [wager, setWager] = useState(String(baseUnitSize || 50));
   const [finalOdds, setFinalOdds] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -231,15 +235,19 @@ export function GamePage({ eventId }: { eventId: string }) {
   const vegasPct = Math.round(vegasImplied * 100);
   const edgeVal = (hitProbPct - vegasPct).toFixed(1);
 
-  // Smart wager: quarter Kelly
-  const kellyFraction = combinedProb > 0 && vegasImplied > 0
-    ? Math.max(0, ((combinedProb * decPayout - 1) / (decPayout - 1)) * 0.25)
-    : 0;
-  const smartWager = Math.max(5, Math.round(kellyFraction * 1000)); // Assume $1000 bankroll
+  // Smart wager: Kelly Criterion scaled by user risk profile and bankroll
+  const finalOddsNum = parseInt(finalOdds || americanOdds) || -110;
+  const dynWager = calculateDynamicWager({
+    totalBankroll,
+    baseUnitSize,
+    riskMode: riskProfileMode,
+    fairProb: combinedProb,
+    bookOdds: finalOddsNum,
+  });
+  const smartWager = dynWager.wagerDollars;
 
   // Payout calc
   const wagerNum = parseFloat(wager) || 0;
-  const finalOddsNum = parseInt(finalOdds || americanOdds) || 0;
   const payout = finalOddsNum > 0
     ? wagerNum * (finalOddsNum / 100)
     : finalOddsNum < 0
@@ -1013,10 +1021,11 @@ export function GamePage({ eventId }: { eventId: string }) {
                     />
                     <button
                       onClick={() => setWager(String(smartWager))}
-                      className="shrink-0 bg-primary/10 text-primary border border-primary/20 px-4 rounded-lg font-bold text-xs flex flex-col items-center justify-center hover:bg-primary/20 transition-colors group"
+                      className="shrink-0 bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg font-bold text-xs flex flex-col items-center justify-center hover:bg-primary/20 transition-colors group"
+                      title={`Kelly Recommended (${riskProfileMode}): $${smartWager} (${dynWager.unitCount}u)`}
                     >
                       <span className="group-hover:scale-105 transition-transform"><Zap className="size-3 inline mr-0.5" />SMART</span>
-                      <span className="group-hover:scale-105 transition-transform">${smartWager}</span>
+                      <span className="group-hover:scale-105 transition-transform font-mono">${smartWager} <span className="text-[10px] opacity-75 font-normal">({dynWager.unitCount}u)</span></span>
                     </button>
                   </div>
                 </div>
