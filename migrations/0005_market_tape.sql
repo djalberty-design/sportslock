@@ -21,7 +21,13 @@ create table if not exists market_tape (
   clock text,
   status_text text,
   snapped_at timestamptz not null default now(),
-  snapshot jsonb
+  snapshot jsonb,
+  status text,
+  recommended boolean not null default false,
+  result_home integer,
+  result_away integer,
+  graded_at timestamptz,
+  bucket integer
 );
 
 create index if not exists market_tape_event_idx on market_tape (event_id, market_type, side, snapped_at desc);
