@@ -93,18 +93,27 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://[::1]:8080",
 ];
 const baseURL = explicitBaseURL ?? {
-  allowedHosts: [...previewAllowedHosts, "localhost", "127.0.0.1", "[::1]"],
+  allowedHosts: [
+    ...previewAllowedHosts,
+    "localhost",
+    "127.0.0.1",
+    "[::1]",
+    "sportslock.app",
+    "www.sportslock.app",
+    "*.vercel.app",
+  ],
   protocol: "auto" as const,
-  fallback: "http://localhost:8080",
+  fallback: "https://www.sportslock.app",
 };
 
-const trustedOrigins: string[] = explicitBaseURL
-  ? [explicitBaseURL, ...LOCAL_DEV_ORIGINS]
-  : [
-      ...previewAllowedHosts,
-      ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
-      ...LOCAL_DEV_ORIGINS,
-    ];
+const trustedOrigins: string[] = [
+  "https://sportslock.app",
+  "https://www.sportslock.app",
+  ...LOCAL_DEV_ORIGINS,
+  ...(explicitBaseURL ? [explicitBaseURL] : []),
+  ...previewAllowedHosts,
+  ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
+];
 
 const databaseUrl = env("DATABASE_URL");
 
@@ -114,7 +123,11 @@ const grokTokenUrl = `${issuerBase}/api/auth/oauth2/token`;
 const grokUserInfoUrl = `${issuerBase}/api/auth/oauth2/userinfo`;
 
 const database = databaseUrl
-  ? new Pool({ connectionString: databaseUrl, max: 2 })
+  ? new Pool({
+      connectionString: databaseUrl,
+      max: 2,
+      ssl: databaseUrl.includes("sslmode=require") || databaseUrl.includes("neon.tech") ? { rejectUnauthorized: false } : undefined,
+    })
   : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
 
 /** Session token cookie name — also read by the live-preview popup completion page. */
@@ -137,16 +150,20 @@ const grokOAuthPlugin = authConfigured
 
 export const auth = betterAuth({
   socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    },
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
   },
   baseURL,
   secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
   database,
 
-  trustedOrigins: ["https://sportslock.app", "https://www.sportslock.app", ...LOCAL_DEV_ORIGINS],
+  trustedOrigins,
 
   account: {
     encryptOAuthTokens: true,

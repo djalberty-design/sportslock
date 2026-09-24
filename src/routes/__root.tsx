@@ -12,13 +12,25 @@ import appCss from "../styles.css?url";
 import { createServerFn } from "@tanstack/react-start";
 
 const fetchSessionUser = createServerFn({ method: "GET" }).handler(async () => {
-  const { getSessionUser } = await import("@/lib/auth/verify.server");
-  const u = await getSessionUser();
-  return u ? { id: u.id, email: u.email } : null;
+  try {
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const u = await getSessionUser();
+    return u ? { id: u.id, email: u.email } : null;
+  } catch (err) {
+    console.error("[fetchSessionUser] error:", err);
+    return null;
+  }
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async () => ({ sessionUser: await fetchSessionUser() }),
+  beforeLoad: async () => {
+    try {
+      return { sessionUser: await fetchSessionUser() };
+    } catch (err) {
+      console.error("[Root beforeLoad] error:", err);
+      return { sessionUser: null };
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
