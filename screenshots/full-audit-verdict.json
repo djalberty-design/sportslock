@@ -1,0 +1,102 @@
+{
+  "home": {
+    "desktop": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 1051,
+      "bodySnippet": "DESK WED SEP 23 · 11:44 P.M. ET SportsLock AI AI Picks The Lab Arbitrage Matchups My Action Track Re",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\home-desktop.png"
+    },
+    "mobile": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 1040,
+      "bodySnippet": "DESK WED SEP 23 · 11:44 P.M. ET AI Picks The Lab Arbitrage Matchups My Action Track Record SportsLoc",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\home-mobile.png"
+    }
+  },
+  "arbitrage": {
+    "desktop": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 971,
+      "bodySnippet": "DESK WED SEP 23 · 11:44 P.M. ET SportsLock AI AI Picks The Lab Arbitrage Matchups My Action Track Re",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\arbitrage-desktop.png"
+    },
+    "mobile": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 960,
+      "bodySnippet": "DESK WED SEP 23 · 11:44 P.M. ET AI Picks The Lab Arbitrage Matchups My Action Track Record SportsLoc",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\arbitrage-mobile.png"
+    }
+  },
+  "results": {
+    "desktop": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 839,
+      "bodySnippet": "DESK WED SEP 23 · 11:44 P.M. ET SportsLock AI AI Picks The Lab Arbitrage Matchups My Action Track Re",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\results-desktop.png"
+    },
+    "mobile": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 827,
+      "bodySnippet": "DESK WED SEP 23 · 11:45 P.M. ET AI Picks The Lab Arbitrage Matchups My Action Track Record SportsLoc",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\results-mobile.png"
+    }
+  },
+  "picks": {
+    "desktop": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 1354,
+      "bodySnippet": "DESK WED SEP 23 · 11:45 P.M. ET SportsLock AI AI Picks The Lab Arbitrage Matchups My Action Track Re",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\picks-desktop.png"
+    },
+    "mobile": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 1343,
+      "bodySnippet": "DESK WED SEP 23 · 11:45 P.M. ET AI Picks The Lab Arbitrage Matchups My Action Track Record SportsLoc",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\picks-mobile.png"
+    }
+  },
+  "profile": {
+    "desktop": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 2445,
+      "bodySnippet": "DESK WED SEP 23 · 11:45 P.M. ET SportsLock AI AI Picks The Lab Arbitrage Matchups My Action Track Re",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\profile-desktop.png"
+    },
+    "mobile": {
+      "status": 200,
+      "title": "Sports Lock",
+      "bodyTextLength": 2433,
+      "bodySnippet": "DESK WED SEP 23 · 11:45 P.M. ET AI Picks The Lab Arbitrage Matchups My Action Track Record SportsLoc",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "screenshot": "C:\\Users\\alber\\Documents\\sports-lock_G\\screenshots\\profile-mobile.png"
+    }
+  }
+}

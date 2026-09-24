@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { chromium } from "playwright";
 import { checkedOutputPath, checkedUrl } from "./browser-guard.mjs";
@@ -26,11 +26,12 @@ if (args.error) {
   process.exit(1);
 }
 
+const allowedDirs = [process.cwd(), "/workspace"];
 const url = checkedUrl(args.url);
-const outPng = checkedOutputPath(args.outPng, ["/workspace"]);
+const outPng = checkedOutputPath(args.outPng, allowedDirs);
 const derived = derivedPaths(outPng);
-const mobilePng = checkedOutputPath(derived.mobilePng, ["/workspace"]);
-const outJson = checkedOutputPath(derived.verdictJson, ["/workspace"], "verdict JSON");
+const mobilePng = checkedOutputPath(derived.mobilePng, allowedDirs);
+const outJson = checkedOutputPath(derived.verdictJson, allowedDirs, "verdict JSON");
 
 const MAX_BASELINE_BYTES = 1024 * 1024;
 const baselineRequested = Boolean(args.baseline);
@@ -38,7 +39,7 @@ let baselinePath = null;
 let baselineResolveError = null;
 if (baselineRequested) {
   try {
-    baselinePath = checkedOutputPath(realpathSync(args.baseline), ["/workspace"], "baseline");
+    baselinePath = checkedOutputPath(realpathSync(args.baseline), allowedDirs, "baseline");
   } catch (err) {
     baselineResolveError = err?.code ?? "unresolvable path";
   }
@@ -90,8 +91,13 @@ function compareAgainstBaseline(verdict) {
 
 let browser = null;
 try {
+  const chromePath = existsSync("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
+    ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    : undefined;
+
   browser = await chromium.launch({
     headless: true,
+    ...(chromePath ? { executablePath: chromePath } : {}),
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
 
@@ -109,7 +115,9 @@ try {
     // networkidle never settles and would burn the whole timeout.
     const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
     const status = resp?.status() ?? 0;
-    await page.waitForTimeout(1000);
+    await page.waitForSelector("body:not(:has-text('Loading SportsLock...'))", { timeout: 10000 }).catch(() => {});
+    await page.waitForSelector(".animate-pulse", { state: "detached", timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(1500);
 
     const title = await page.title();
     const hasCanvas = (await page.locator("canvas").count()) > 0;
