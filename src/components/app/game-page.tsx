@@ -287,6 +287,7 @@ export function GamePage({ eventId }: { eventId: string }) {
         home: firstQuote?.home || "",
         away: firstQuote?.away || "",
         sport: firstQuote?.sport || undefined,
+        start: firstQuote?.start || undefined,
         fastLog: true,
         legs: legs.map((l) => ({
           selection: l.selection,
@@ -297,6 +298,7 @@ export function GamePage({ eventId }: { eventId: string }) {
           home: firstQuote?.home || "",
           away: firstQuote?.away || "",
           sport: firstQuote?.sport || "",
+          start: firstQuote?.start || undefined,
           point: (l as any).point ?? undefined,
           status: "open",
         })),

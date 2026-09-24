@@ -431,11 +431,13 @@ export type PaperTicketLeg = {
   point?: number;
   status?: "open" | "win" | "loss" | "void";
   finalScore?: string;
+  start?: string;
 };
 
 export type PaperTicket = {
   id: string;
   createdAt: string;
+  start?: string;
   kind: "main" | "parlay" | "prop" | "dfs";
   description: string;
   stake: number;

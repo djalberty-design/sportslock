@@ -384,9 +384,20 @@ export function resolveLegTeam(leg: any, quote?: any) {
 
 // ── Player Headshot Resolution ──────────────────────────────────────────
 
+export function normalizePlayerName(name: string): string {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[.'’\-]/g, "")
+    .replace(/\b(jr|sr|ii|iii|iv|v)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const PLAYER_HEADSHOT_CACHE = new Map<string, string>();
 
 const SEED_HEADSHOTS: Record<string, string> = {
+  "aaron jones": "https://a.espncdn.com/i/headshots/nfl/players/full/3042519.png",
+  "aaron jones sr": "https://a.espncdn.com/i/headshots/nfl/players/full/3042519.png",
   "chris blair": "https://a.espncdn.com/i/headshots/nfl/players/full/4369886.png",
   "nick muse": "https://a.espncdn.com/i/headshots/nfl/players/full/4249624.png",
   "reggie gilliam": "https://a.espncdn.com/i/headshots/nfl/players/full/4039505.png",
@@ -399,7 +410,10 @@ for (const [k, v] of Object.entries(SEED_HEADSHOTS)) {
 export function resolvePlayerHeadshotSync(name?: string | null): string | null {
   if (!name) return null;
   const key = name.trim().toLowerCase();
-  return PLAYER_HEADSHOT_CACHE.get(key) || null;
+  const direct = PLAYER_HEADSHOT_CACHE.get(key);
+  if (direct) return direct;
+  const norm = normalizePlayerName(name);
+  return PLAYER_HEADSHOT_CACHE.get(norm) || null;
 }
 
 export async function fetchPlayerHeadshot(name: string, sport?: string): Promise<string | null> {

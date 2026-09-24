@@ -18,6 +18,8 @@ export type GradeNotification = {
  * Checks if a game is finished based on quote data.
  */
 function isGameFinal(q: QuoteLine): boolean {
+  if (q.start && new Date(q.start).getTime() > Date.now()) return false;
+  if ((q as any).inPlay) return false;
   if ((q as any).complete) return true;
   const st = String(q.statusText || "").toLowerCase();
   return /(final|official|game over|completed)/.test(st);
@@ -196,6 +198,7 @@ export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
 
     for (const ticket of open) {
       if (gradedRef.current.has(ticket.id)) continue;
+      if (ticket.start && new Date(ticket.start).getTime() > Date.now()) continue;
 
       const quote = findMatchingQuote(ticket, snapshot.quotes);
       if (!quote) continue;

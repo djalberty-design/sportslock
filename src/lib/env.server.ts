@@ -9,5 +9,5 @@ export function env(key: string): string | undefined {
  * In local dev this is unset, so isWorkspacePreview() returns true.
  */
 export function isWorkspacePreview(): boolean {
-  return !env("SPORTSLOCK_DEPLOYED");
+  return !env("GROK_PROJECT_ID") && !env("SPORTSLOCK_DEPLOYED");
 }

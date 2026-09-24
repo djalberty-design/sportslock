@@ -293,7 +293,7 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
 
       // ── Phase 1: Fetch ESPN rosters for headshots + team + position (free) ──
-      const { teamAbbrFromName, resolvePlayerHeadshotSync } = await import("@/lib/market/logos");
+      const { teamAbbrFromName, resolvePlayerHeadshotSync, normalizePlayerName } = await import("@/lib/market/logos");
       const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
       const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
 
@@ -305,11 +305,16 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
       // Build player lookup: name → { headshot, team, position, homeAway, stats }
       const playerMap = new Map<string, { headshot?: string; team: string; position: string; homeAway: string; stats?: Record<string, number>; recentStats?: Record<string, number>; recentN?: number; usageMin?: number }>();
       for (const p of [...homeRoster, ...awayRoster] as any[]) {
-        const key = (p.name || "").toLowerCase();
-        if (key) playerMap.set(key, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats, recentStats: p.recentStats, recentN: p.recentN, usageMin: p.usageMin });
-        // Also index by last name for fuzzy matching
-        const last = key.split(" ").pop();
-        if (last && last.length > 2 && !playerMap.has(last)) playerMap.set(last, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats });
+        const rawKey = (p.name || "").toLowerCase().trim();
+        const normKey = normalizePlayerName(p.name || "");
+        const entry = { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "", stats: p.stats, recentStats: p.recentStats, recentN: p.recentN, usageMin: p.usageMin };
+        if (rawKey) playerMap.set(rawKey, entry);
+        if (normKey && !playerMap.has(normKey)) playerMap.set(normKey, entry);
+        const parts = normKey.split(" ");
+        if (parts.length >= 2) {
+          const initKey = `${parts[0][0]} ${parts[parts.length - 1]}`;
+          if (!playerMap.has(initKey)) playerMap.set(initKey, entry);
+        }
       }
 
       // ── Phase 2: Build enriched props with AI model ──
@@ -364,8 +369,15 @@ export const fetchRealPropsFn = createServerFn({ method: "POST" })
             // For scorer markets, outcome.description may be empty and player name is in outcome.name
             const GENERIC_NAMES = new Set(["over", "under", "yes", "no"]);
             const playerName = outcome.description || (outcome.name && !GENERIC_NAMES.has(outcome.name.toLowerCase()) ? outcome.name : undefined);
-            const pKey = (playerName || "").toLowerCase();
-            const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
+            const pKey = (playerName || "").toLowerCase().trim();
+            const normKey = playerName ? normalizePlayerName(playerName) : "";
+            let rosterHit = (pKey ? playerMap.get(pKey) : undefined) || (normKey ? playerMap.get(normKey) : undefined);
+            if (!rosterHit && normKey) {
+              const parts = normKey.split(" ");
+              if (parts.length >= 2) {
+                rosterHit = playerMap.get(`${parts[0][0]} ${parts[parts.length - 1]}`);
+              }
+            }
 
             // Include stat label in selection so parsePropSelection/detectStat can match
             const selectionWithStat = outcome.description
@@ -485,11 +497,15 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
         // Check if enriched cache has AI scores AND is not expired (24h TTL)
         const hasAi = enriched.data.some((p: any) => p.aiProb != null);
         const cacheAge = Date.now() - new Date(enriched.fetchedAt).getTime();
-        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-        if (hasAi && cacheAge < CACHE_TTL) {
+        const CACHE_TTL = 24 * 60 * 60 * 1000;
+        // Invalidate if enriched cache contains corrupted Aaron Jones DL data
+        const hasBadJones = enriched.data.some((p: any) => 
+          p.player?.toLowerCase().includes("aaron jones") && (p.position === "DT" || p.position === "DL")
+        );
+        if (!hasBadJones && hasAi && cacheAge < CACHE_TTL) {
           return { ok: true, props: enriched.data, fetchedAt: enriched.fetchedAt.toISOString() };
         }
-        // Stale enriched cache (no AI or expired) — fall through to re-enrich
+        // Stale or corrupted enriched cache — fall through to re-enrich
       }
 
       // Fallback to raw cache — enrich it (one-time, no Odds API call)
@@ -511,7 +527,7 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       const espnPath = ESPN_PATH[sport as keyof typeof ESPN_PATH];
 
       // Fetch ESPN rosters for headshots + team + position (free)
-      const { teamAbbrFromName, resolvePlayerHeadshotSync } = await import("@/lib/market/logos");
+      const { teamAbbrFromName, resolvePlayerHeadshotSync, normalizePlayerName } = await import("@/lib/market/logos");
       const homeAbbr = teamAbbrFromName(home) || home.split(" ").pop()?.toLowerCase() || "";
       const awayAbbr = teamAbbrFromName(away) || away.split(" ").pop()?.toLowerCase() || "";
 
@@ -521,11 +537,17 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
       ]) : [[], []];
 
       const playerMap = new Map<string, { headshot?: string; team: string; position: string; homeAway: string }>();
-      for (const p of [...homeRoster, ...awayRoster]) {
-        const key = (p.name || "").toLowerCase();
-        if (key) playerMap.set(key, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "" });
-        const last = key.split(" ").pop();
-        if (last && last.length > 2 && !playerMap.has(last)) playerMap.set(last, { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "" });
+      for (const p of [...homeRoster, ...awayRoster] as any[]) {
+        const rawKey = (p.name || "").toLowerCase().trim();
+        const normKey = normalizePlayerName(p.name || "");
+        const entry = { headshot: p.headshot, team: p.team, position: p.position || "", homeAway: p.homeAway || "" };
+        if (rawKey) playerMap.set(rawKey, entry);
+        if (normKey && !playerMap.has(normKey)) playerMap.set(normKey, entry);
+        const parts = normKey.split(" ");
+        if (parts.length >= 2) {
+          const initKey = `${parts[0][0]} ${parts[parts.length - 1]}`;
+          if (!playerMap.has(initKey)) playerMap.set(initKey, entry);
+        }
       }
 
       // Build AI context
@@ -576,8 +598,15 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
               : 100 / (price + 100);
             const GENERIC_NAMES = new Set(["over", "under", "yes", "no"]);
             const playerName = outcome.description || (outcome.name && !GENERIC_NAMES.has(outcome.name.toLowerCase()) ? outcome.name : undefined);
-            const pKey = (playerName || "").toLowerCase();
-            const rosterHit = playerMap.get(pKey) || playerMap.get(pKey.split(" ").pop() || "");
+            const pKey = (playerName || "").toLowerCase().trim();
+            const normKey = playerName ? normalizePlayerName(playerName) : "";
+            let rosterHit = (pKey ? playerMap.get(pKey) : undefined) || (normKey ? playerMap.get(normKey) : undefined);
+            if (!rosterHit && normKey) {
+              const parts = normKey.split(" ");
+              if (parts.length >= 2) {
+                rosterHit = playerMap.get(`${parts[0][0]} ${parts[parts.length - 1]}`);
+              }
+            }
 
             const selectionWithStat = outcome.description
               ? `${outcome.description} ${outcome.name} ${outcome.point ?? ""} ${statLabel}`
@@ -1704,6 +1733,31 @@ export const settlePaperTicketsFn = createServerFn({ method: "POST" })
       for (const t of tickets) {
         if (t.status !== "open") continue;
 
+        // 1. Guard against future games
+        const ticketStartMs = t.start ? new Date(t.start).getTime() : NaN;
+        if (Number.isFinite(ticketStartMs) && ticketStartMs > Date.now()) {
+          continue;
+        }
+
+        // 2. Guard against cross-day historical scores
+        // If ticket was created recently (within last 18 hours), yesterday's or older historical scores can never settle it
+        const ticketCreatedMs = t.createdAt ? new Date(t.createdAt).getTime() : Date.now();
+        const eligibleScores = [...liveScores, ...histToday];
+        if (ticketCreatedMs < Date.now() - 20 * 3600 * 1000) {
+          eligibleScores.push(...histYest);
+        }
+        if (ticketCreatedMs < Date.now() - 44 * 3600 * 1000) {
+          eligibleScores.push(...histTwo);
+        }
+
+        const isMatch = (s: any, homeName?: string, awayName?: string) => {
+          if (!homeName || !awayName) return false;
+          return (
+            (teamsMatch(s.home, homeName) && teamsMatch(s.away, awayName)) ||
+            (teamsMatch(s.home, awayName) && teamsMatch(s.away, homeName))
+          );
+        };
+
         // Check if this is a multi-leg parlay
         if (t.legs && Array.isArray(t.legs) && t.legs.length > 1) {
           let allLegsFinished = true;
@@ -1712,12 +1766,40 @@ export const settlePaperTicketsFn = createServerFn({ method: "POST" })
           const updatedLegs: any[] = [];
 
           for (const leg of t.legs) {
-            const legHit = allScores.find(
+            const legStartMs = leg.start ? new Date(leg.start).getTime() : ticketStartMs;
+            if (Number.isFinite(legStartMs) && legStartMs > Date.now()) {
+              allLegsFinished = false;
+              updatedLegs.push(leg);
+              continue;
+            }
+
+            const inPlayHit = liveScores.find(
+              (s) =>
+                !s.complete &&
+                (s.inPlay || s.scheduled) &&
+                isMatch(s, leg.home, leg.away)
+            );
+            if (inPlayHit) {
+              liveUpdates.push({
+                id: t.id,
+                homeScore: inPlayHit.homeScore,
+                awayScore: inPlayHit.awayScore,
+                statusText: inPlayHit.statusText,
+              });
+              allLegsFinished = false;
+              updatedLegs.push({
+                ...leg,
+                status: "open",
+                finalScore: `${inPlayHit.awayScore}-${inPlayHit.homeScore}`,
+              });
+              continue;
+            }
+
+            const legHit = eligibleScores.find(
               (s) =>
                 s.complete &&
                 (!leg.sport || !s.sport || s.sport.toUpperCase() === leg.sport.toUpperCase()) &&
-                ((leg.home && leg.away && teamsMatch(s.home, leg.home) && teamsMatch(s.away, leg.away)) ||
-                 teamsMatch(s.home, leg.selection) || teamsMatch(s.away, leg.selection))
+                isMatch(s, leg.home, leg.away)
             );
 
             if (legHit) {
@@ -1741,20 +1823,6 @@ export const settlePaperTicketsFn = createServerFn({ method: "POST" })
                 finalScore: `${legHit.awayScore}-${legHit.homeScore}`,
               });
             } else {
-              const inPlayHit = liveScores.find(
-                (s) =>
-                  s.inPlay &&
-                  ((leg.home && leg.away && teamsMatch(s.home, leg.home) && teamsMatch(s.away, leg.away)) ||
-                   teamsMatch(s.home, leg.selection) || teamsMatch(s.away, leg.selection))
-              );
-              if (inPlayHit) {
-                liveUpdates.push({
-                  id: t.id,
-                  homeScore: inPlayHit.homeScore,
-                  awayScore: inPlayHit.awayScore,
-                  statusText: inPlayHit.statusText,
-                });
-              }
               allLegsFinished = false;
               updatedLegs.push(leg);
             }
@@ -1777,28 +1845,35 @@ export const settlePaperTicketsFn = createServerFn({ method: "POST" })
         }
 
         // Single-leg ticket
-        const tapeMatch = gradedTape.find((gt) => {
-          if (t.gameIds?.includes(gt.event_id)) return true;
-          if (t.home && t.away && teamsMatch(gt.home, t.home) && teamsMatch(gt.away, t.away)) return true;
-          return false;
-        });
-
-        const scoreHit = allScores.find((s) => {
-          if (t.home && t.away && teamsMatch(s.home, t.home) && teamsMatch(s.away, t.away)) return true;
-          if (teamsMatch(s.home, t.description) || teamsMatch(s.away, t.description)) return true;
-          return false;
-        });
-
-        if (scoreHit?.inPlay && !scoreHit.complete) {
+        // Check if game is in play or scheduled on today's board
+        const inPlayHit = liveScores.find(
+          (s) =>
+            !s.complete &&
+            (s.inPlay || s.scheduled) &&
+            isMatch(s, t.home, t.away)
+        );
+        if (inPlayHit) {
           liveUpdates.push({
             id: t.id,
-            homeScore: scoreHit.homeScore,
-            awayScore: scoreHit.awayScore,
-            statusText: scoreHit.statusText,
+            homeScore: inPlayHit.homeScore,
+            awayScore: inPlayHit.awayScore,
+            statusText: inPlayHit.statusText,
           });
+          continue;
         }
 
-        const isFinal = scoreHit?.complete || tapeMatch != null;
+        // Only match gradedTape if event_id explicitly matches (never loose team names!)
+        const tapeMatch = gradedTape.find((gt) => {
+          if (t.gameIds?.includes(gt.event_id)) return true;
+          return false;
+        });
+
+        const scoreHit = eligibleScores.find((s) => {
+          if (!s.complete) return false;
+          return isMatch(s, t.home, t.away);
+        });
+
+        const isFinal = Boolean(scoreHit?.complete || tapeMatch != null);
         if (!isFinal) continue;
 
         const homeScore = scoreHit?.homeScore ?? tapeMatch?.result_home ?? 0;

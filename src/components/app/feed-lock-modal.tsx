@@ -63,6 +63,7 @@ export function FeedLockModal({
         gameIds: legs.map((l: any) => String(l.eventId || "")),
         home: firstTeams.homeName || first?.home,
         away: firstTeams.awayName || first?.away,
+        start: first?.start || matchSnapshotEvent(snapshot, first).quote?.start || undefined,
         kind: legs.length > 1 ? "parlay" : "main",
       }));
       if (!res.ok) {
