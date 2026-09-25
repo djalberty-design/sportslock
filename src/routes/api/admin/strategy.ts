@@ -32,7 +32,13 @@ async function handleStrategyReport(request: Request) {
     }
 
     const sql = await getSql();
-    const logs = await sql`SELECT * FROM prediction_logs WHERE status != 'PENDING' ORDER BY created_at DESC`;
+    const logs = await sql<any>`
+      SELECT price, status, ai_autopsy, market_type
+      FROM prediction_logs
+      WHERE status != 'PENDING'
+      ORDER BY created_at DESC
+      LIMIT 500
+    `;
 
     if (!logs || logs.length === 0) {
       return new Response(JSON.stringify({ report: "Not enough graded predictions to generate a strategy report." }));

@@ -16,12 +16,17 @@ export type GradeStats = {
   error?: string;
 };
 
+let gradeColumnsEnsured = false;
 async function ensureGradeColumns() {
-  const sql = await getSql();
-  await sql.query(`alter table market_tape add column if not exists status text`);
-  await sql.query(`alter table market_tape add column if not exists result_home integer`);
-  await sql.query(`alter table market_tape add column if not exists result_away integer`);
-  await sql.query(`alter table market_tape add column if not exists graded_at timestamptz`);
+  if (gradeColumnsEnsured) return;
+  try {
+    const sql = await getSql();
+    await sql.query(`alter table market_tape add column if not exists status text`);
+    await sql.query(`alter table market_tape add column if not exists result_home integer`);
+    await sql.query(`alter table market_tape add column if not exists result_away integer`);
+    await sql.query(`alter table market_tape add column if not exists graded_at timestamptz`);
+    gradeColumnsEnsured = true;
+  } catch {}
 }
 
 function findScore(row: { sport?: string | null; home?: string | null; away?: string | null }, scores: LiveScore[]): LiveScore | null {
@@ -270,9 +275,14 @@ export async function gradePredictionLogs(scores?: LiveScore[]): Promise<{ grade
       selection: string;
       market_type: string;
       line: string | number | null;
-      snapshot: any;
+      home: string | null;
+      away: string | null;
+      sport: string | null;
     }>`
-      SELECT id, event_id, selection, market_type, line, snapshot
+      SELECT id, event_id, selection, market_type, line,
+             snapshot->>'home' as home,
+             snapshot->>'away' as away,
+             snapshot->>'sport' as sport
       FROM prediction_logs
       WHERE status = 'PENDING'
       ORDER BY created_at DESC
@@ -312,9 +322,9 @@ export async function gradePredictionLogs(scores?: LiveScore[]): Promise<{ grade
         const inferredSport = sportMatch?.[1] || null;
 
         const tapeInfo = tapeInfoMap.get(eventId);
-        const home = log.snapshot?.home || tapeInfo?.home || null;
-        const away = log.snapshot?.away || tapeInfo?.away || null;
-        const sport = log.snapshot?.sport || tapeInfo?.sport || inferredSport;
+        const home = log.home || tapeInfo?.home || null;
+        const away = log.away || tapeInfo?.away || null;
+        const sport = log.sport || tapeInfo?.sport || inferredSport;
 
         let hit: LiveScore | null = null;
 

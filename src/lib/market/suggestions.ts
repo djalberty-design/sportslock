@@ -15,7 +15,10 @@ export type BrainSuggestion = {
   decidedAt: string | null;
 };
 
+let suggestionsTableEnsured = false;
+
 async function ensureSuggestionsTable() {
+  if (suggestionsTableEnsured) return;
   const sql = await getSql();
   await sql.query(`
     create table if not exists brain_suggestions (
@@ -32,6 +35,7 @@ async function ensureSuggestionsTable() {
     )
   `);
   await sql.query(`create index if not exists brain_suggestions_fp_idx on brain_suggestions (fingerprint, status, created_at desc)`);
+  suggestionsTableEnsured = true;
 }
 
 function mapRow(r: Record<string, unknown>): BrainSuggestion {

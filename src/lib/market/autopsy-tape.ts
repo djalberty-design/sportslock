@@ -89,10 +89,14 @@ export function autopsyNote(opts: {
   return `${opts.sport || "Game"} ${opts.marketType || "market"}${line} ${opts.status}. ${opts.selection || ""} at ${pct} vs ${score}. ${label}`;
 }
 
+let autopsyColumnsEnsured = false;
+
 async function ensureAutopsyColumns() {
+  if (autopsyColumnsEnsured) return;
   const sql = await getSql();
   await sql.query(`alter table market_tape add column if not exists bucket text`);
   await sql.query(`alter table market_tape add column if not exists autopsy_note text`);
+  autopsyColumnsEnsured = true;
 }
 
 export async function runTapeAutopsy(): Promise<{ ok: boolean; tagged: number; error?: string }> {
@@ -117,8 +121,12 @@ export async function runTapeAutopsy(): Promise<{ ok: boolean; tagged: number; e
        where status in ('WIN', 'LOSS', 'PUSH') and bucket is null
        limit 4000`,
     );
-    let tagged = 0;
-    for (const row of rows) {
+
+    if (!rows || rows.length === 0) {
+      return { ok: true, tagged: 0 };
+    }
+
+    const updates = rows.map((row) => {
       const bucket = bucketOf({
         status: row.status,
         modelProb: row.model_probability == null ? null : Number(row.model_probability),
@@ -136,10 +144,31 @@ export async function runTapeAutopsy(): Promise<{ ok: boolean; tagged: number; e
         resultHome: row.result_home,
         resultAway: row.result_away,
       });
-      await sql.query(`update market_tape set bucket = $1, autopsy_note = $2 where id = $3`, [bucket, note, row.id]);
-      tagged++;
+      return { id: row.id, bucket, note };
+    });
+
+    // Batch update in chunks of 50 to eliminate up to 4,000 round-trips over Neon egress
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+      const chunk = updates.slice(i, i + CHUNK_SIZE);
+      const valuePlaceholders: string[] = [];
+      const params: any[] = [];
+      chunk.forEach((item, idx) => {
+        const p = idx * 3;
+        valuePlaceholders.push(`($${p + 1}, $${p + 2}, $${p + 3})`);
+        params.push(item.id, item.bucket, item.note);
+      });
+      await sql.query(
+        `UPDATE market_tape AS m
+         SET bucket = v.bucket,
+             autopsy_note = v.autopsy_note
+         FROM (VALUES ${valuePlaceholders.join(", ")}) AS v(id, bucket, autopsy_note)
+         WHERE m.id = v.id::uuid`,
+        params,
+      );
     }
-    return { ok: true, tagged };
+
+    return { ok: true, tagged: updates.length };
   } catch (err) {
     console.error("tape autopsy failed:", err);
     return { ok: false, tagged: 0, error: String(err) };

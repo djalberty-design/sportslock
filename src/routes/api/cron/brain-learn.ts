@@ -22,26 +22,31 @@ export const Route = createFileRoute("/api/cron/brain-learn")({
  * 4. Auto-tune small adjustments when confidence is high
  * 5. Write insights to desk_brain_insights for dashboard display
  */
+let insightsTableEnsured = false;
+
 async function handleBrainLearn() {
   const sql = await getSql();
 
   try {
-    // Ensure insights table exists
-    await sql.query(`
-      create table if not exists desk_brain_insights (
-        id uuid primary key default gen_random_uuid(),
-        insight_type text not null,
-        scope text not null default 'global',
-        sport text,
-        market_type text,
-        metric_name text not null,
-        metric_value numeric not null,
-        details jsonb,
-        period text not null default 'all_time',
-        computed_at timestamptz not null default now()
-      )
-    `);
-    await sql.query(`create index if not exists brain_insights_type_idx on desk_brain_insights (insight_type, scope, computed_at desc)`);
+    if (!insightsTableEnsured) {
+      // Ensure insights table exists
+      await sql.query(`
+        create table if not exists desk_brain_insights (
+          id uuid primary key default gen_random_uuid(),
+          insight_type text not null,
+          scope text not null default 'global',
+          sport text,
+          market_type text,
+          metric_name text not null,
+          metric_value numeric not null,
+          details jsonb,
+          period text not null default 'all_time',
+          computed_at timestamptz not null default now()
+        )
+      `);
+      await sql.query(`create index if not exists brain_insights_type_idx on desk_brain_insights (insight_type, scope, computed_at desc)`);
+      insightsTableEnsured = true;
+    }
 
     // Clear stale insights (keep last 30 days)
     await sql.query(`delete from desk_brain_insights where computed_at < now() - interval '30 days'`);

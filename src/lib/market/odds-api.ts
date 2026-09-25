@@ -11,6 +11,8 @@ const globalCache = (globalThis as any).__oddsApiCache || {
   mainsLastFetch: 0,
   props: {} as Record<string, any>,
   quotaRemaining: null as number | null,
+  activeProps: null as any[] | null,
+  activePropsLastFetch: 0,
 };
 (globalThis as any).__oddsApiCache = globalCache;
 
@@ -34,6 +36,10 @@ export async function readOddsApiCache(key: string) {
 
 export async function writeOddsApiCache(key: string, data: any): Promise<void> {
   try {
+    if (key.startsWith("enriched-props:") || key === "mains") {
+      globalCache.activeProps = null;
+      globalCache.activePropsLastFetch = 0;
+    }
     const sql = await getSql();
     await sql`
       INSERT INTO odds_api_cache (key, data, fetched_at)
@@ -46,52 +52,27 @@ export async function writeOddsApiCache(key: string, data: any): Promise<void> {
 }
 
 export async function getActiveCachedProps(): Promise<any[]> {
+  const now = Date.now();
+  // 90-second in-memory cache to prevent polling queries from hitting Neon repeatedly
+  if (globalCache.activeProps && Array.isArray(globalCache.activeProps) && now - globalCache.activePropsLastFetch < 90_000) {
+    return globalCache.activeProps;
+  }
+
   try {
     const sql = await getSql();
-    const [rows, mainsRows] = await Promise.all([
-      sql<{ data: any; fetched_at: string }>`
-        SELECT data, fetched_at FROM odds_api_cache
-        WHERE key LIKE 'enriched-props:%'
-        AND fetched_at > NOW() - INTERVAL '36 hours'
-        ORDER BY fetched_at DESC
-      `,
-      sql<{ data: any }>`
-        SELECT data FROM odds_api_cache WHERE key = 'mains'
-      `,
-    ]);
+    const rows = await sql<{ data: any; fetched_at: string }>`
+      SELECT data, fetched_at FROM odds_api_cache
+      WHERE key LIKE 'enriched-props:%'
+      AND fetched_at > NOW() - INTERVAL '36 hours'
+      ORDER BY fetched_at DESC
+    `;
 
-    const startByEventId = new Map<string, string>();
-    const startByMatchup = new Map<string, string>();
-    if (mainsRows?.[0]?.data && Array.isArray(mainsRows[0].data)) {
-      for (const grp of mainsRows[0].data) {
-        if (Array.isArray(grp?.data)) {
-          for (const ev of grp.data) {
-            if (ev?.commence_time) {
-              if (ev.id) startByEventId.set(ev.id, ev.commence_time);
-              if (ev.home_team && ev.away_team) {
-                startByMatchup.set(`${ev.away_team.toLowerCase()}|${ev.home_team.toLowerCase()}`, ev.commence_time);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    const now = Date.now();
     const out: any[] = [];
     const seen = new Set<string>();
     for (const r of rows) {
       if (!Array.isArray(r.data)) continue;
       for (const p of r.data) {
         if (!p || typeof p !== "object") continue;
-        if (!p.start) {
-          const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
-          const mKey = (p.away && p.home) ? `${p.away.toLowerCase()}|${p.home.toLowerCase()}` : "";
-          p.start = (rawId && startByEventId.get(rawId))
-            || (p.eventId && startByEventId.get(p.eventId))
-            || (mKey && startByMatchup.get(mKey))
-            || "";
-        }
         if (p.eventId && !p.eventId.startsWith("oddsapi-") && p.sport) {
           p.eventId = `oddsapi-${p.sport}-${p.eventId}`;
         }
@@ -105,9 +86,11 @@ export async function getActiveCachedProps(): Promise<any[]> {
         out.push(p);
       }
     }
+    globalCache.activeProps = out;
+    globalCache.activePropsLastFetch = now;
     return out;
   } catch {
-    return [];
+    return globalCache.activeProps || [];
   }
 }
 
@@ -166,13 +149,45 @@ function normalizeEventBooks(event: any) {
   for (const b of books) {
     if (b && (b.key === "hardrockbet_fl" || b.key === "hardrockbet")) b.key = "hardrock";
   }
-  books.sort((a: any, b: any) => {
+
+  // Prune down to ONLY the monitored sportsbooks to prevent storing and transferring dozens of unused offshore books
+  const allowedBooks = new Set(["hardrock", "draftkings", "fanduel"]);
+  const filteredBooks = books
+    .filter((b: any) => b && allowedBooks.has(b.key))
+    .map((b: any) => ({
+      key: b.key,
+      title: b.title || b.key,
+      markets: Array.isArray(b.markets)
+        ? b.markets
+            .filter((m: any) => m && (m.key === "h2h" || m.key === "spreads" || m.key === "totals"))
+            .map((m: any) => ({
+              key: m.key,
+              outcomes: Array.isArray(m.outcomes)
+                ? m.outcomes.map((o: any) => ({
+                    name: o.name,
+                    price: o.price,
+                    point: o.point,
+                  }))
+                : [],
+            }))
+        : [],
+    }));
+
+  filteredBooks.sort((a: any, b: any) => {
     const ra = a?.key === "hardrock" ? 0 : a?.key === "draftkings" ? 1 : 2;
     const rb = b?.key === "hardrock" ? 0 : b?.key === "draftkings" ? 1 : 2;
     return ra - rb;
   });
-  event.bookmakers = books;
-  return event;
+
+  return {
+    id: event.id,
+    sport_key: event.sport_key,
+    sport_title: event.sport_title,
+    commence_time: event.commence_time,
+    home_team: event.home_team,
+    away_team: event.away_team,
+    bookmakers: filteredBooks,
+  };
 }
 
 function normalizeSportGroup(data: any) {

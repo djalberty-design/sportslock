@@ -98,88 +98,122 @@ export async function runPostGradeAnalysis(): Promise<AnalysisResult> {
 }
 
 /**
- * 1. Compute Brier score for each (sport × market_type) segment.
- * Compare to baseline (just using the book's implied probability).
+ * 1. Compute Brier score for each (sport × market_type) segment directly in SQL.
+ * Compare to baseline (using the book's implied probability).
+ * Pushes computation into PostgreSQL to eliminate overfetching 2000 raw rows over Neon egress.
  */
 async function computeSegmentBrier(sql: any): Promise<SegmentBrier[]> {
   const rows = await sql.query<{
     sport: string;
     market_type: string;
-    model_probability: string;
-    status: string;
-    price: string | null;
+    n: number;
+    wins: number;
+    losses: number;
+    valid_model_n: number;
+    raw_brier: number | string | null;
+    valid_baseline_n: number;
+    raw_baseline_brier: number | string | null;
   }>(
-    `SELECT sport, market_type, model_probability, status, price
-     FROM market_tape
-     WHERE recommended = true AND status IN ('WIN', 'LOSS')
-       AND model_probability IS NOT NULL
-     ORDER BY snapped_at DESC
-     LIMIT 2000`,
+    `WITH recent AS (
+       SELECT
+         sport,
+         market_type,
+         model_probability::numeric AS p,
+         status,
+         price::numeric AS odds
+       FROM market_tape
+       WHERE recommended = true AND status IN ('WIN', 'LOSS')
+         AND model_probability IS NOT NULL
+       ORDER BY snapped_at DESC
+       LIMIT 2000
+     ),
+     calc AS (
+       SELECT
+         sport,
+         market_type,
+         p,
+         status,
+         CASE WHEN status = 'WIN' THEN 1.0 ELSE 0.0 END AS hit,
+         CASE
+           WHEN odds IS NOT NULL AND odds >= 0 THEN 100.0 / (odds + 100.0)
+           WHEN odds IS NOT NULL AND odds < 0 THEN ABS(odds) / (ABS(odds) + 100.0)
+           ELSE NULL
+         END AS baseline_p
+       FROM recent
+     )
+     SELECT
+       sport,
+       market_type,
+       COUNT(*)::int AS n,
+       COUNT(*) FILTER (WHERE status = 'WIN')::int AS wins,
+       COUNT(*) FILTER (WHERE status = 'LOSS')::int AS losses,
+       COUNT(*) FILTER (WHERE p > 0 AND p < 1)::int AS valid_model_n,
+       AVG(POWER(p - hit, 2)) FILTER (WHERE p > 0 AND p < 1) AS raw_brier,
+       COUNT(*) FILTER (WHERE baseline_p > 0 AND baseline_p < 1)::int AS valid_baseline_n,
+       AVG(POWER(baseline_p - hit, 2)) FILTER (WHERE baseline_p > 0 AND baseline_p < 1) AS raw_baseline_brier
+     FROM calc
+     GROUP BY sport, market_type
+     ORDER BY n DESC`,
   );
 
-  // Group by sport × market
-  const groups = new Map<string, typeof rows>();
-  for (const r of rows) {
-    const key = `${r.sport}:${r.market_type}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(r);
-  }
+  return rows.map((r: any) => {
+    const validModelN = Number(r.valid_model_n || 0);
+    const validBaselineN = Number(r.valid_baseline_n || 0);
+    const brier = validModelN >= 8 && r.raw_brier != null ? Number(r.raw_brier) : null;
+    const baselineBrier = validBaselineN >= 8 && r.raw_baseline_brier != null ? Number(r.raw_baseline_brier) : null;
 
-  const results: SegmentBrier[] = [];
-  for (const [key, group] of groups) {
-    const [sport, marketType] = key.split(":");
-    const forecasts = group.map((r) => ({
-      p: Number(r.model_probability),
-      hit: r.status === "WIN",
-    }));
-
-    // Baseline: use the book's implied probability (from price/odds)
-    const baselineForecasts = group
-      .filter((r) => r.price != null)
-      .map((r) => {
-        const odds = Number(r.price);
-        const implied = odds >= 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
-        return { p: implied, hit: r.status === "WIN" };
-      });
-
-    const brier = brierScore(forecasts);
-    const baselineBrier = brierScore(baselineForecasts);
-    const wins = group.filter((r) => r.status === "WIN").length;
-    const losses = group.filter((r) => r.status === "LOSS").length;
-
-    results.push({
-      sport,
-      marketType,
+    return {
+      sport: String(r.sport || ""),
+      marketType: String(r.market_type || ""),
       brier,
       baselineBrier,
-      n: group.length,
-      wins,
-      losses,
+      n: Number(r.n || 0),
+      wins: Number(r.wins || 0),
+      losses: Number(r.losses || 0),
       beatBaseline: brier != null && baselineBrier != null ? brier < baselineBrier : false,
-    });
-  }
-
-  return results.sort((a, b) => b.n - a.n);
+    };
+  });
 }
 
 /**
- * 2. Detect calibration drift: compare recent Brier to overall Brier.
- * If recent is significantly worse → model is drifting.
+ * 2. Detect calibration drift: compare recent Brier to overall Brier in SQL.
+ * Returns 1 single aggregated row instead of transferring 500 rows over Neon egress.
  */
 async function detectCalibrationDrift(sql: any): Promise<CalibrationDrift | null> {
-  const all = await sql.query<{ model_probability: string; status: string }>(
-    `SELECT model_probability, status FROM market_tape
-     WHERE recommended = true AND status IN ('WIN','LOSS') AND model_probability IS NOT NULL
-     ORDER BY snapped_at DESC LIMIT 500`,
+  const rows = await sql.query<{
+    total_count: number;
+    valid_all_n: number;
+    overall_brier: number | string | null;
+    valid_recent_n: number;
+    recent_brier: number | string | null;
+  }>(
+    `WITH recent_tape AS (
+       SELECT
+         model_probability::numeric AS p,
+         CASE WHEN status = 'WIN' THEN 1.0 ELSE 0.0 END AS hit,
+         ROW_NUMBER() OVER (ORDER BY snapped_at DESC) AS rn
+       FROM market_tape
+       WHERE recommended = true AND status IN ('WIN','LOSS') AND model_probability IS NOT NULL
+       ORDER BY snapped_at DESC
+       LIMIT 500
+     )
+     SELECT
+       COUNT(*)::int AS total_count,
+       COUNT(*) FILTER (WHERE p > 0 AND p < 1)::int AS valid_all_n,
+       AVG(POWER(p - hit, 2)) FILTER (WHERE p > 0 AND p < 1) AS overall_brier,
+       COUNT(*) FILTER (WHERE rn <= 50 AND p > 0 AND p < 1)::int AS valid_recent_n,
+       AVG(POWER(p - hit, 2)) FILTER (WHERE rn <= 50 AND p > 0 AND p < 1) AS recent_brier
+     FROM recent_tape`,
   );
 
-  if (all.length < 30) return null;
+  if (!rows || !rows.length || Number(rows[0].total_count || 0) < 30) return null;
 
-  const allForecasts = all.map((r: any) => ({ p: Number(r.model_probability), hit: r.status === "WIN" }));
-  const recentForecasts = allForecasts.slice(0, Math.min(50, allForecasts.length));
+  const r = rows[0];
+  const validAllN = Number(r.valid_all_n || 0);
+  const validRecentN = Number(r.valid_recent_n || 0);
 
-  const overallBrier = brierScore(allForecasts);
-  const recentBrier = brierScore(recentForecasts);
+  const overallBrier = validAllN >= 8 && r.overall_brier != null ? Number(r.overall_brier) : null;
+  const recentBrier = validRecentN >= 8 && r.recent_brier != null ? Number(r.recent_brier) : null;
 
   if (overallBrier == null || recentBrier == null) return null;
 
@@ -222,6 +256,8 @@ async function computeEdgeProfitability(sql: any): Promise<EdgeProfit[]> {
   }));
 }
 
+let brainAnalysisLogTableEnsured = false;
+
 /**
  * Store analysis results in the database for the Dashboard to read.
  */
@@ -230,14 +266,17 @@ async function storeAnalysisSnapshot(sql: any, data: {
   calibrationDrift: CalibrationDrift | null;
   edgeProfitability: EdgeProfit[];
 }) {
-  await sql.query(`
-    CREATE TABLE IF NOT EXISTS brain_analysis_log (
-      id serial PRIMARY KEY,
-      analysis_type text NOT NULL,
-      data jsonb NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now()
-    )
-  `);
+  if (!brainAnalysisLogTableEnsured) {
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS brain_analysis_log (
+        id serial PRIMARY KEY,
+        analysis_type text NOT NULL,
+        data jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    brainAnalysisLogTableEnsured = true;
+  }
 
   await sql.query(
     `INSERT INTO brain_analysis_log (analysis_type, data) VALUES ('post_grade', $1::jsonb)`,

@@ -48,10 +48,13 @@ export function setSimTemperatureInCache(sport: string, temp: number): void {
   temperatureCache.set(norm, clampTemperature(temp));
 }
 
+let tableEnsured = false;
+
 /**
  * Ensure database table exists for persistent temperature overrides.
  */
 async function ensureTable(): Promise<void> {
+  if (tableEnsured) return;
   try {
     const sql = await getSql();
     await sql.query(`
@@ -61,6 +64,7 @@ async function ensureTable(): Promise<void> {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    tableEnsured = true;
   } catch {
     // Graceful fallback for non-db or worker environments
   }

@@ -11,7 +11,10 @@ export type BrainOverride = {
   note: string;
 };
 
+let overridesTableEnsured = false;
+
 async function ensureOverridesTable() {
+  if (overridesTableEnsured) return;
   const sql = await getSql();
   await sql.query(`
     create table if not exists brain_overrides (
@@ -24,6 +27,7 @@ async function ensureOverridesTable() {
       updated_at timestamptz not null default now()
     )
   `);
+  overridesTableEnsured = true;
 }
 
 export async function upsertOverride(row: BrainOverride): Promise<void> {

@@ -14,44 +14,49 @@ type ActivityEntry = {
   source: string;
 };
 
+let activityLogEnsured = false;
+
 const getActivityLogFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async (): Promise<ActivityEntry[]> => {
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     try {
-      // Ensure activity log table
-      await sql.query(`
-        create table if not exists desk_activity_log (
-          id uuid primary key default gen_random_uuid(),
-          type text not null,
-          action text not null,
-          detail text,
-          source text not null default 'system',
-          created_at timestamptz not null default now()
-        )
-      `);
-      await sql.query(`create index if not exists activity_log_time_idx on desk_activity_log (created_at desc)`);
+      if (!activityLogEnsured) {
+        // Ensure activity log table
+        await sql.query(`
+          create table if not exists desk_activity_log (
+            id uuid primary key default gen_random_uuid(),
+            type text not null,
+            action text not null,
+            detail text,
+            source text not null default 'system',
+            created_at timestamptz not null default now()
+          )
+        `);
+        await sql.query(`create index if not exists activity_log_time_idx on desk_activity_log (created_at desc)`);
 
-      // Seed from existing suggestion decisions if log is empty
-      const countRes = await sql.query<{ n: number }>(`select count(*)::int as n from desk_activity_log`);
-      if (Number(countRes[0]?.n || 0) === 0) {
-        try {
-          await sql.query(`
-            insert into desk_activity_log (type, action, detail, source, created_at)
-            select 'suggestion', 'Suggestion ' || status, title, 'admin', decided_at
-            from brain_suggestions
-            where status in ('accepted', 'rejected', 'revoked', 'auto_applied')
-              and decided_at is not null
-            order by decided_at desc
-            limit 50
-          `);
-          // Also add a system startup entry
-          await sql.query(`
-            insert into desk_activity_log (type, action, detail, source)
-            values ('engine', 'Activity Log initialized', 'Seeded from existing suggestion decisions', 'system')
-          `);
-        } catch {}
+        // Seed from existing suggestion decisions if log is empty
+        const countRes = await sql.query<{ n: number }>(`select count(*)::int as n from desk_activity_log`);
+        if (Number(countRes[0]?.n || 0) === 0) {
+          try {
+            await sql.query(`
+              insert into desk_activity_log (type, action, detail, source, created_at)
+              select 'suggestion', 'Suggestion ' || status, title, 'admin', decided_at
+              from brain_suggestions
+              where status in ('accepted', 'rejected', 'revoked', 'auto_applied')
+                and decided_at is not null
+              order by decided_at desc
+              limit 50
+            `);
+            // Also add a system startup entry
+            await sql.query(`
+              insert into desk_activity_log (type, action, detail, source)
+              values ('engine', 'Activity Log initialized', 'Seeded from existing suggestion decisions', 'system')
+            `);
+          } catch {}
+        }
+        activityLogEnsured = true;
       }
 
       const rows = await sql.query<Record<string, unknown>>(

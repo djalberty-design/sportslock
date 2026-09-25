@@ -7,7 +7,10 @@ export type LedgerTicket = {
   stake: number;
 };
 
+let ledgerTableEnsured = false;
+
 async function ensureLedgerTable(sql: any) {
+  if (ledgerTableEnsured) return;
   await sql`
     CREATE TABLE IF NOT EXISTS desk_ledger (
       id SERIAL PRIMARY KEY,
@@ -20,6 +23,7 @@ async function ensureLedgerTable(sql: any) {
       result VARCHAR DEFAULT NULL
     )
   `;
+  ledgerTableEnsured = true;
 }
 
 export async function insertLedgerTicket(ticket: LedgerTicket): Promise<void> {
@@ -41,6 +45,6 @@ export async function getLedgerTickets() {
   const sql = await getSql();
   await ensureLedgerTable(sql);
 
-  const result = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC`;
+  const result = await sql`SELECT * FROM desk_ledger ORDER BY created_at DESC LIMIT 200`;
   return (result as any).rows || result;
 }

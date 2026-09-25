@@ -20,36 +20,10 @@ async function assertAdmin(userId: string) {
   }
 }
 
-let lastAutoGradeMs = 0;
-let isGradingRunning = false;
-
 export async function autoGradeIfStale(): Promise<void> {
-  const now = Date.now();
-  // 10-minute cadence (600,000 ms)
-  if (now - lastAutoGradeMs < 10 * 60 * 1000 || isGradingRunning) {
-    return;
-  }
-  lastAutoGradeMs = now;
-  isGradingRunning = true;
-
-  (async () => {
-    try {
-      const { gradeMarketTape, gradePredictionLogs } = await import("@/lib/market/grade-tape");
-      const { gradePlayerProps } = await import("@/lib/market/prop-grader");
-      const { runTapeAutopsy } = await import("@/lib/market/autopsy-tape");
-      const { runPostGradeAnalysis } = await import("@/lib/market/post-grade-analysis");
-
-      await gradeMarketTape().catch(() => {});
-      await gradePredictionLogs().catch(() => {});
-      await gradePlayerProps().catch(() => {});
-      await runTapeAutopsy().catch(() => {});
-      await runPostGradeAnalysis().catch(() => {});
-    } catch (e) {
-      console.error("[auto-grade-heartbeat] background error:", e);
-    } finally {
-      isGradingRunning = false;
-    }
-  })();
+  // Grading sweeps are handled autonomously by Vercel Crons (/api/cron/grade every 15m).
+  // Gating this on user page visits prevents redundant serverless query storms.
+  return;
 }
 
 export const getBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
@@ -252,7 +226,12 @@ export const getPredictionLogs = createServerFn({ method: "GET" })
   try {
     await assertAdmin(context.userId);
     const sql = await getSql();
-    const logs = await sql<any>`SELECT * FROM prediction_logs ORDER BY created_at DESC LIMIT 200`;
+    const logs = await sql<any>`
+      SELECT id, event_id, selection, market_type, line, price, model_probability, edge, status, actual_result, ai_autopsy, created_at, updated_at
+      FROM prediction_logs
+      ORDER BY created_at DESC
+      LIMIT 200
+    `;
     return logs.map((r: any) => ({ ...r, id: String(r.id), created_at: String(r.created_at) }));
   } catch (err) {
     console.error("Failed to fetch prediction logs:", err);
@@ -687,55 +666,34 @@ export const getCachedPropsFn = createServerFn({ method: "POST" })
     }
   });
 
-/** Load ALL enriched props across all games (for The Lab page) */
+let cachedEnrichedProps: any[] | null = null;
+let lastEnrichedPropsFetch = 0;
+
+/** Load ALL enriched props across all games (for The Lab page) with in-memory TTL */
 export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(async (): Promise<{ ok: boolean; props: any[] }> => {
+    const now = Date.now();
+    if (cachedEnrichedProps && Array.isArray(cachedEnrichedProps) && now - lastEnrichedPropsFetch < 90_000) {
+      return { ok: true, props: cachedEnrichedProps };
+    }
+
     try {
       const sql = await getSql();
-      const [rows, mainsRows] = await Promise.all([
-        sql<{ data: any; fetched_at: string }>`
-          SELECT data, fetched_at FROM odds_api_cache
-          WHERE key LIKE 'enriched-props:%'
-          AND fetched_at > NOW() - INTERVAL '48 hours'
-          ORDER BY fetched_at DESC
-        `,
-        sql<{ data: any }>`
-          SELECT data FROM odds_api_cache WHERE key = 'mains'
-        `,
-      ]);
+      const rows = await sql<{ data: any; fetched_at: string }>`
+        SELECT data, fetched_at FROM odds_api_cache
+        WHERE key LIKE 'enriched-props:%'
+        AND fetched_at > NOW() - INTERVAL '48 hours'
+        ORDER BY fetched_at DESC
+      `;
 
-      const startByEventId = new Map<string, string>();
-      const startByMatchup = new Map<string, string>();
-      if (mainsRows?.[0]?.data && Array.isArray(mainsRows[0].data)) {
-        for (const grp of mainsRows[0].data) {
-          if (Array.isArray(grp?.data)) {
-            for (const ev of grp.data) {
-              if (ev?.commence_time) {
-                if (ev.id) startByEventId.set(ev.id, ev.commence_time);
-                if (ev.home_team && ev.away_team) {
-                  startByMatchup.set(`${ev.away_team.toLowerCase()}|${ev.home_team.toLowerCase()}`, ev.commence_time);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const now = Date.now();
       const allProps: any[] = [];
+      const seen = new Set<string>();
       for (const row of rows) {
         if (Array.isArray(row.data)) {
           const fetchedAge = now - new Date(row.fetched_at).getTime();
           for (const p of row.data) {
-            if (!p.start) {
-              const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
-              const mKey = (p.away && p.home) ? `${p.away.toLowerCase()}|${p.home.toLowerCase()}` : "";
-              p.start = (rawId && startByEventId.get(rawId))
-                || (p.eventId && startByEventId.get(p.eventId))
-                || (mKey && startByMatchup.get(mKey))
-                || "";
-            }
+            if (!p || typeof p !== "object") continue;
             if (p.eventId && !p.eventId.startsWith("oddsapi-") && p.sport) {
               p.eventId = `oddsapi-${p.sport}-${p.eventId}`;
             }
@@ -745,16 +703,20 @@ export const getAllEnrichedPropsFn = createServerFn({ method: "POST" })
               const startMs = new Date(p.start).getTime();
               if (!isNaN(startMs) && startMs < now) continue;
             } else if (fetchedAge > 6 * 60 * 60 * 1000) {
-              // Legacy props without start field: if fetched > 6h ago, the game has surely started/finished
               continue;
             }
+            const key = `${p.eventId || ""}|${p.selection || ""}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
             allProps.push(p);
           }
         }
       }
+      cachedEnrichedProps = allProps;
+      lastEnrichedPropsFetch = now;
       return { ok: true, props: allProps };
     } catch {
-      return { ok: true, props: [] };
+      return { ok: true, props: cachedEnrichedProps || [] };
     }
   });
 
@@ -1412,7 +1374,7 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
           SELECT id, selection, split_part(event_id, '-', 2) as sport, market_type, line,
                  price, model_probability, edge, status,
                  created_at as snapped_at, created_at as graded_at, event_id,
-                 ai_autopsy as autopsy_note, snapshot
+                 ai_autopsy as autopsy_note
           FROM prediction_logs
           ${where}
           ORDER BY created_at DESC
@@ -1586,7 +1548,7 @@ export const getAnalysisDataFn = createServerFn({ method: "POST" })
         SELECT id, selection, sport, home, away, market_type, side, line,
                price, model_probability, edge, status, result_home, result_away,
                graded_at, snapped_at, start, event_id, phase, in_play,
-               bucket, autopsy_note, snapshot
+               bucket, autopsy_note
         FROM market_tape
         ${where}
         ORDER BY snapped_at DESC

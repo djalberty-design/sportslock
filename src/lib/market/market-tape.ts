@@ -20,7 +20,10 @@ export type TapeStats = {
 const PREGAME_MIN_MS = 6 * 60 * 60 * 1000;
 const LIVE_MIN_MS = 5 * 60 * 1000;
 
+let tapeTableEnsured = false;
+
 async function ensureTapeTable() {
+  if (tapeTableEnsured) return;
   const sql = await getSql();
   await sql.query(`
     create table if not exists market_tape (
@@ -59,6 +62,7 @@ async function ensureTapeTable() {
   await sql.query(
     `create index if not exists market_tape_rec_idx on market_tape (recommended, status)`,
   );
+  tapeTableEnsured = true;
 }
 
 function clipProb(n: number): number | null {
