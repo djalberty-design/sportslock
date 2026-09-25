@@ -20,13 +20,18 @@ function occupyingScores(scores: LiveScore[], sport: string, team?: string) {
   if (!team) return [];
   return scores.filter(
     (s) =>
-      (s.inPlay || s.complete || s.scheduled) &&
+      s.inPlay &&
       (!s.sport || !sport || s.sport === sport) &&
       (teamsMatch(s.home, team, s.homeAbbr) || teamsMatch(s.away, team, s.awayAbbr)),
   );
 }
 
-function stalePairing(home: string, away: string, sport: string, scores: LiveScore[]): boolean {
+function stalePairing(home: string, away: string, sport: string, scores: LiveScore[], start?: string): boolean {
+  // If a game is scheduled for today or in the future, it is a canonical upcoming game and NEVER stale.
+  const today = nowEtDayKey();
+  const day = etDayKey(start);
+  if (day && day >= today) return false;
+
   const hits = [...occupyingScores(scores, sport, home), ...occupyingScores(scores, sport, away)];
   if (!hits.length) return false;
   return hits.some((s) => {
@@ -42,20 +47,24 @@ export function dropFinishedGames(snap: DeskSnapshot, scores: LiveScore[] = []):
 
   for (const q of snap.quotes) {
     if (isFinishedQuote(q)) done.add(q.eventId);
-    if (stalePairing(q.home, q.away, q.sport, scores)) done.add(q.eventId);
     const day = etDayKey(q.start);
     if (!q.inPlay && day && day < today) done.add(q.eventId);
+    if (!q.inPlay && (!day || day < today)) {
+      if (stalePairing(q.home, q.away, q.sport, scores, q.start)) done.add(q.eventId);
+    }
   }
 
-  const quoted = new Set(snap.quotes.map((q) => q.eventId));
+  const quoted = new Set(snap.quotes.filter((q) => !done.has(q.eventId)).map((q) => q.eventId));
   for (const b of snap.briefs ?? []) {
     const sport = String((b as { sport?: string }).sport || "");
     const home = String((b as { home?: string }).home || "");
     const away = String((b as { away?: string }).away || "");
-    if (stalePairing(home, away, sport, scores)) done.add(b.eventId);
     const day = etDayKey((b as { start?: string }).start);
     if (day && day < today) done.add(b.eventId);
     if (!quoted.has(b.eventId) && (!day || day !== today)) done.add(b.eventId);
+    if (!day || day < today) {
+      if (stalePairing(home, away, sport, scores, (b as { start?: string }).start)) done.add(b.eventId);
+    }
   }
 
   if (!done.size) return snap;

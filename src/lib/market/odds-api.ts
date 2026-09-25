@@ -318,10 +318,18 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
   }
 
   if (results.length > 0) {
-    globalCache.mains = results;
+    const merged = [...results];
+    if (cached?.data && Array.isArray(cached.data)) {
+      for (const oldGroup of cached.data) {
+        if (!merged.some((g: any) => g?.sport === oldGroup?.sport) && Array.isArray(oldGroup?.data) && oldGroup.data.length > 0) {
+          merged.push(oldGroup);
+        }
+      }
+    }
+    globalCache.mains = merged;
     globalCache.mainsLastFetch = Date.now();
-    await writeOddsApiCache("mains", results);
-    console.log("[odds-api] Wrote", results.length, "sport groups to DB cache. Quota remaining:", globalCache.quotaRemaining);
+    await writeOddsApiCache("mains", merged);
+    console.log("[odds-api] Wrote", merged.length, "sport groups to DB cache. Quota remaining:", globalCache.quotaRemaining);
   } else {
     console.warn("[odds-api] API returned 0 results across all sports. Quota remaining:", globalCache.quotaRemaining);
   }
