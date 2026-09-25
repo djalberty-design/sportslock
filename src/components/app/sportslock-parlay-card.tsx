@@ -7,6 +7,8 @@ import { FeedLockModal } from "./feed-lock-modal";
 import { cn, formatEasternTime } from "@/lib/utils";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
+import { useDeskStore } from "@/lib/desk-store";
+import { calculateDynamicWager } from "@/lib/kelly";
 
 function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
   const startStr = leg?.start || quote?.start;
@@ -153,10 +155,13 @@ function displaySelection(leg: any, teams: { homeName?: string; awayName?: strin
 }
 
 export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapshot?: any }) {
-  const [wager, setWager] = useState("10");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [expandedLeg, setExpandedLeg] = useState<number | null>(null);
+
+  const totalBankroll = useDeskStore((s) => s.totalBankroll);
+  const baseUnitSize = useDeskStore((s) => s.baseUnitSize);
+  const riskProfileMode = useDeskStore((s) => s.riskProfileMode);
 
   const pick = parlay;
   const parlayCand = pick?.parlay || pick;
@@ -173,6 +178,17 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
     ? `+${Math.round((decPayout - 1) * 100)}`
     : `-${Math.round(100 / (decPayout - 1))}`;
 
+  const numericOdds = typeof americanOdds === "string" ? parseInt(americanOdds, 10) || -110 : americanOdds;
+  const dynWager = calculateDynamicWager({
+    totalBankroll,
+    baseUnitSize,
+    riskMode: riskProfileMode,
+    fairProb: parlayCand?.combinedFair || 0.5,
+    bookOdds: numericOdds,
+  });
+
+  const [customWager, setCustomWager] = useState<string | null>(null);
+  const wager = customWager !== null ? customWager : String(dynWager.wagerDollars || 10);
   const numWager = parseFloat(wager || "0");
   const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
   const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
