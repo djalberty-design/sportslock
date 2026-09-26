@@ -1,16 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/cron/sweep",
-      "schedule": "30 16,18,20,22,0,2 * * *"
+      "path": "/api/cron/morning-pull",
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/grade",
       "schedule": "0,15,30,45 * * * *"
     },
     {
-      "path": "/api/cron/morning-pull",
-      "schedule": "0 9 * * *"
+      "path": "/api/cron/sweep",
+      "schedule": "30 16,18,20,22,0,2 * * *"
     },
     {
       "path": "/api/cron/autopsy",

@@ -219,7 +219,7 @@ export async function calibrateWeights(): Promise<{ ok: boolean; updated: string
       where status in ('WIN', 'LOSS')
         and coalesce(start, snapped_at) >= now() - interval '30 days'
       group by upper(sport)
-      having count(*) >= 20
+      having count(*) >= 10
     `);
 
     for (const r of rows) {
@@ -235,7 +235,7 @@ export async function calibrateWeights(): Promise<{ ok: boolean; updated: string
       let note = base.notes || "";
 
       // Calibration logic:
-      // If win rate is extraordinarily high (> 62% over 20+ games), model simulation has proven alpha:
+      // If win rate is extraordinarily high (> 62% over 10+ games), model simulation has proven alpha:
       // Increase wSim up to max 0.18, pull from wMarket
       if (winRate >= 0.62) {
         const bonus = Math.min(0.06, (winRate - 0.60) * 0.5);
@@ -307,15 +307,24 @@ export async function calibrateWeights(): Promise<{ ok: boolean; updated: string
  * If >= 4 consecutive picks or >= 5 of the last 10 are classified as 'model_miss',
  * the circuit breaker trips, instantly reverting that sport's blend weights
  * to the defensive baseline consensus anchor (0.10 / 0.10 / 0.80) to protect bankroll.
+ * If a previously tripped sport has stabilized (<= 1 consecutive miss and <= 3 total misses),
+ * it autonomously clears and restores calibrated dynamic weights.
  */
-export async function checkCircuitBreakers(): Promise<{ tripped: string[]; summary: Record<string, string> }> {
+export async function checkCircuitBreakers(): Promise<{ tripped: string[]; summary: Record<string, string>; recovered: string[] }> {
   await ensureWeightsTable();
   const tripped: string[] = [];
+  const recovered: string[] = [];
   const summary: Record<string, string> = {};
 
   try {
     const sql = await getSql();
     const sports = ["NFL", "NCAAF", "MLB", "NBA", "NHL", "NCAAB"];
+
+    // Check existing states
+    const existing = await sql.query<{ sport: string; source: string }>(
+      `select sport, source from brain_model_weights`
+    );
+    const isTripped = new Map(existing.map((r) => [r.sport.toUpperCase(), r.source === "circuit_breaker"]));
 
     for (const sport of sports) {
       const rows = await sql.query<{
@@ -381,12 +390,87 @@ export async function checkCircuitBreakers(): Promise<{ tripped: string[]; summa
           note,
           "system"
         );
+      } else if (isTripped.get(sport) && consecutiveMisses <= 1 && totalMisses <= 3) {
+        // AUTONOMOUS RECOVERY: Performance has stabilized!
+        const base = DEFAULT_WEIGHTS[sport] || DEFAULT_WEIGHTS.DEFAULT;
+        const note = `✅ Alpha Circuit Breaker Auto-Cleared: ${sport} performance stabilized (${rows.length - totalMisses}/${rows.length} hits/variance). Restored calibrated dynamic weights.`;
+
+        await sql.query(`
+          update brain_model_weights
+          set source = 'calibrated', notes = $1, updated_at = now()
+          where sport = $2
+        `, [note, sport]);
+
+        const recoveredObj: BlendWeights = {
+          sport,
+          wSim: base.wSim,
+          wPool: base.wPool,
+          wMarket: base.wMarket,
+          source: "calibrated",
+          sampleSize: rows.length,
+          updatedAt: new Date().toISOString(),
+          notes: note,
+        };
+
+        weightsCache.set(sport, { weights: recoveredObj, expiresAt: Date.now() + CACHE_TTL_MS });
+        recovered.push(sport);
+        summary[sport] = note;
+
+        void logActivity(
+          "brain",
+          `Alpha Circuit Breaker Cleared: ${sport}`,
+          note,
+          "system"
+        );
       }
     }
   } catch (err) {
     console.error("checkCircuitBreakers error:", err);
   }
 
-  return { tripped, summary };
+  return { tripped, summary, recovered };
+}
+
+/**
+ * Manually reset a tripped circuit breaker for a sport back to standard weights.
+ */
+export async function resetCircuitBreaker(sport: string): Promise<BlendWeights> {
+  const key = sport.toUpperCase();
+  const def = DEFAULT_WEIGHTS[key] || DEFAULT_WEIGHTS.DEFAULT;
+  const sql = await getSql();
+  const note = `Circuit breaker manually cleared by admin. Restored standard ${def.notes}`;
+
+  await sql.query(`
+    insert into brain_model_weights (sport, w_sim, w_pool, w_market, source, sample_size, notes, updated_at)
+    values ($1, $2, $3, $4, 'default', 0, $5, now())
+    on conflict (sport) do update set
+      w_sim = excluded.w_sim,
+      w_pool = excluded.w_pool,
+      w_market = excluded.w_market,
+      source = 'default',
+      notes = excluded.notes,
+      updated_at = now()
+  `, [key, def.wSim, def.wPool, def.wMarket, note]);
+
+  const obj: BlendWeights = {
+    sport: key,
+    wSim: def.wSim,
+    wPool: def.wPool,
+    wMarket: def.wMarket,
+    source: "default",
+    sampleSize: 0,
+    updatedAt: new Date().toISOString(),
+    notes: note,
+  };
+  weightsCache.set(key, { weights: obj, expiresAt: Date.now() + CACHE_TTL_MS });
+
+  void logActivity(
+    "brain",
+    `Circuit Breaker Reset: ${key}`,
+    `Admin manually reset circuit breaker for ${key} back to standard baseline weights.`,
+    "admin"
+  );
+
+  return obj;
 }
 

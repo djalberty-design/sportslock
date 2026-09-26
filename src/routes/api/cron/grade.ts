@@ -42,19 +42,24 @@ async function handleGrade() {
     const calibrationResult = await calibrateWeights().catch(() => ({ ok: false, updated: [], summary: {} }));
 
     // Step 7b: Alpha Drawdown Circuit Breakers (auto-reverts any sport with >= 4 model misses to defensive baseline)
-    const circuitBreakerResult = await checkCircuitBreakers().catch(() => ({ tripped: [], summary: {} }));
+    const circuitBreakerResult = await checkCircuitBreakers().catch(() => ({ tripped: [] as string[], summary: {}, recovered: [] as string[] }));
 
     // Step 8: Algorithmic Suggestion Generation (haircuts, sit orders, model tweaks)
     const suggestionResult = await buildSuggestions().catch(() => ({ ok: false }));
 
     const totalGraded = tapeResult.graded + predResult.graded + propResult.graded;
 
-    // Log to activity feed if anything was graded or calibrated
-    if (totalGraded > 0 || (calibrationResult.updated && calibrationResult.updated.length > 0)) {
+    // Log to activity feed if anything was graded, calibrated, or circuit breakers changed
+    if (
+      totalGraded > 0 ||
+      (calibrationResult.updated && calibrationResult.updated.length > 0) ||
+      (circuitBreakerResult.recovered && circuitBreakerResult.recovered.length > 0) ||
+      (circuitBreakerResult.tripped && circuitBreakerResult.tripped.length > 0)
+    ) {
       void logActivity(
         "cron",
         `Autonomous Grading Sweep Complete: ${totalGraded} graded`,
-        `Market Tape: ${tapeResult.graded}, Props: ${propResult.graded}, Ledger: ${predResult.graded}. Sports Calibrated: ${calibrationResult.updated?.join(", ") || "None"}`,
+        `Market Tape: ${tapeResult.graded}, Props: ${propResult.graded}, Ledger: ${predResult.graded}. Sports Calibrated: ${calibrationResult.updated?.join(", ") || "None"}. Circuit Breakers Tripped: ${circuitBreakerResult.tripped?.join(", ") || "None"}${circuitBreakerResult.recovered?.length ? `, Cleared: ${circuitBreakerResult.recovered.join(", ")}` : ""}`,
         "system"
       ).catch(() => {});
     }

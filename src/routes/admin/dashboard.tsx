@@ -8,6 +8,7 @@ import {
   listHypothesesFn,
   submitHypothesisFn,
   checkCircuitBreakersFn,
+  resetCircuitBreakerFn,
 } from "@/lib/market/tape-server";
 import { cn } from "@/lib/utils";
 import {
@@ -164,11 +165,25 @@ function Dashboard() {
     mutationFn: () => checkCircuitBreakersFn(),
     onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
+      let msg = "";
       if (res.tripped?.length > 0) {
-        alert(`🛡️ Alpha Drawdown Circuit Breakers tripped for: ${res.tripped.join(", ")}. Reverted to baseline defensive consensus.`);
-      } else {
-        alert("✅ All sports passed circuit breaker audit. No consecutive model miss clusters detected.");
+        msg += `🛡️ Alpha Drawdown Circuit Breakers tripped for: ${res.tripped.join(", ")}. Reverted to baseline defensive consensus.\n`;
       }
+      if (res.recovered?.length > 0) {
+        msg += `✅ Performance stabilized! Circuit breakers cleared for: ${res.recovered.join(", ")}. Restored calibrated dynamic weights.\n`;
+      }
+      if (!res.tripped?.length && !res.recovered?.length) {
+        msg = "✅ All sports passed circuit breaker audit. No consecutive model miss clusters detected.";
+      }
+      alert(msg.trim());
+    },
+  });
+
+  const resetBreakerMut = useMutation({
+    mutationFn: (sport: string) => resetCircuitBreakerFn({ data: { sport } }),
+    onSuccess: (_, sport) => {
+      qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
+      alert(`Circuit breaker manually reset for ${sport}. Returned to default baseline.`);
     },
   });
 
@@ -629,6 +644,17 @@ function Dashboard() {
                   <p className="text-[10px] text-muted italic border-t border-line/30 pt-1.5 leading-snug break-words">
                     {w.notes}
                   </p>
+                )}
+
+                {isBreaker && (
+                  <button
+                    onClick={() => resetBreakerMut.mutate(w.sport)}
+                    disabled={resetBreakerMut.isPending}
+                    className="w-full flex items-center justify-center gap-1.5 py-1 px-2 text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                  >
+                    <RotateCcw className={cn("size-3", resetBreakerMut.isPending && "animate-spin")} />
+                    Reset Fail-Safe to Baseline
+                  </button>
                 )}
               </div>
             );

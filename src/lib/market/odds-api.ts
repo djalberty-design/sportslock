@@ -9,6 +9,7 @@ export const CACHE_TTL = 1000 * 60 * 60 * 26;
 const globalCache = (globalThis as any).__oddsApiCache || {
   mains: null as any,
   mainsLastFetch: 0,
+  mainsEtDay: "" as string,
   props: {} as Record<string, any>,
   quotaRemaining: null as number | null,
   activeProps: null as any[] | null,
@@ -259,38 +260,44 @@ export async function fetchOddsApiEvent(sportKey: string, eventId: string) {
 }
 
 export async function fetchOddsApiMains(force = false, bypassDailyGuard = false) {
-  if (!force && globalCache.mains && globalCache.mains.length > 0 && Date.now() - globalCache.mainsLastFetch < CACHE_TTL) {
-    console.log("[odds-api] L1 memory cache hit, age:", Math.round((Date.now() - globalCache.mainsLastFetch) / 60000), "min");
+  const now = Date.now();
+  const currentEtDay = nowEtDayKey();
+
+  // L1 Memory Cache: 60s TTL, valid only if fetched for today's ET calendar day
+  if (
+    !force &&
+    globalCache.mains &&
+    Array.isArray(globalCache.mains) &&
+    globalCache.mains.length > 0 &&
+    now - globalCache.mainsLastFetch < 60_000 &&
+    globalCache.mainsEtDay === currentEtDay
+  ) {
     return globalCache.mains;
   }
 
   const cached = await readDbCache("mains");
   if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
-    const age = Date.now() - cached.fetchedAt.getTime();
-    if (!force && age < CACHE_TTL) {
-      console.log("[odds-api] L2 DB cache hit, age:", Math.round(age / 60000), "min");
-      globalCache.mains = cached.data;
-      globalCache.mainsLastFetch = cached.fetchedAt.getTime();
-      return cached.data;
-    }
-
-    // STRICT ONCE-PER-DAY 5:00 AM ET GUARD:
-    // A daily pull belongs to a calendar day in Eastern Time (America/New_York).
-    // If today's pull has already completed TODAY in Eastern Time, do not re-pull
-    // unless bypassDailyGuard is explicitly requested.
     const cachedEtDay = etDayKey(cached.fetchedAt);
-    const currentEtDay = nowEtDayKey();
     const alreadyPulledToday = cachedEtDay === currentEtDay;
 
-    if (force && !bypassDailyGuard && alreadyPulledToday) {
-      console.log(`[odds-api] Daily pull already completed today (${currentEtDay} ET, ${Math.round(age / 3600000)}h ago). Quota guard active: returning cached mains.`);
+    // STRICT ONCE-PER-DAY 5:00 AM ET GUARD:
+    // If today's pull has already completed TODAY in Eastern Time, return cached mains
+    // unless bypassDailyGuard is explicitly requested by an admin.
+    if (alreadyPulledToday && (!force || !bypassDailyGuard)) {
       globalCache.mains = cached.data;
-      globalCache.mainsLastFetch = cached.fetchedAt.getTime();
+      globalCache.mainsLastFetch = now;
+      globalCache.mainsEtDay = currentEtDay;
       return cached.data;
     }
+
+    if (!alreadyPulledToday) {
+      console.log(`[odds-api] New Eastern Day detected (${currentEtDay} vs cached ${cachedEtDay}). Executing automated daily pull...`);
+    }
+  } else {
+    console.log("[odds-api] No DB cache found. Executing initial daily pull...");
   }
 
-  console.log("[odds-api] Cache miss / scheduled daily pull — fetching from Odds API...");
+  console.log("[odds-api] Fetching daily lines from Odds API for all active regular season sports...");
   const candidateSports = getActiveSports();
   const results = [];
 
@@ -327,7 +334,8 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
       }
     }
     globalCache.mains = merged;
-    globalCache.mainsLastFetch = Date.now();
+    globalCache.mainsLastFetch = now;
+    globalCache.mainsEtDay = currentEtDay;
     await writeOddsApiCache("mains", merged);
     console.log("[odds-api] Wrote", merged.length, "sport groups to DB cache. Quota remaining:", globalCache.quotaRemaining);
   } else {

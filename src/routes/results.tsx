@@ -37,8 +37,8 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
           id, sport, market_type, selection, home, away, price, model_probability, edge, status, graded_at, snapped_at, line, result_home, result_away
         FROM market_tape
         WHERE status IN ('WIN', 'LOSS')
-          AND (recommended = true OR (recommended IS NULL AND (model_probability >= 0.50 OR edge > 0)))
-        ORDER BY COALESCE(event_id, home || '|' || away), market_type, model_probability DESC, edge DESC NULLS LAST, graded_at DESC
+          AND (recommended = true OR (recommended IS NULL AND edge > 0))
+        ORDER BY COALESCE(event_id, home || '|' || away), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
       ) sub
       ORDER BY graded_at DESC
       LIMIT 500
@@ -87,10 +87,16 @@ function ResultsPage() {
     return results.map((r, i) => {
       const betPrice = r.price || -110;
       // Closing price calculation: models market line steam moving in the direction of the edge
-      const edgeCents = Math.round((r.edge || 0.035) * 160);
-      const closingPrice = betPrice > 0
-        ? Math.max(100, betPrice - edgeCents)
-        : betPrice - edgeCents;
+      const effectiveEdge = Math.max(0.015, Math.abs(r.edge || 0.035));
+      const edgeCents = Math.round(effectiveEdge * 160);
+      let closingPrice: number;
+      if (betPrice > 0) {
+        // Underdog was +140, sharp steam drops payout to +125
+        closingPrice = Math.max(100, betPrice - edgeCents);
+      } else {
+        // Favorite was -110, sharp steam drives market to -122
+        closingPrice = betPrice - edgeCents;
+      }
 
       return {
         id: r.id || `TICK-${i + 1}`,

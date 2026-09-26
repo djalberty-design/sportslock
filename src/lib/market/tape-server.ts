@@ -114,3 +114,11 @@ export const checkCircuitBreakersFn = createServerFn({ method: "POST" }).handler
   return checkCircuitBreakers();
 });
 
+export const resetCircuitBreakerFn = createServerFn({ method: "POST" })
+  .validator((d: { sport: string }) => d)
+  .handler(async ({ data }) => {
+    const { resetCircuitBreaker } = await import("./dynamic-weights");
+    return resetCircuitBreaker(data.sport);
+  });
+
+

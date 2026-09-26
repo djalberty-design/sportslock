@@ -79,7 +79,8 @@ async function alreadyOpen(fingerprint: string): Promise<boolean> {
     `select count(*)::int as n from brain_suggestions
      where fingerprint = $1
        and (
-         status in ('pending', 'accepted')
+         status = 'pending'
+         or (status in ('accepted', 'auto_applied') and created_at > now() - interval '5 days')
          or (status = 'rejected' and created_at > now() - interval '14 days')
          or (status = 'later' and created_at > now() - interval '2 days')
        )`,
@@ -368,6 +369,22 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
             evidence: { sport, highVarianceRatio: Math.round(varRate * 100), gradedLosses: losses },
           })) created++;
         }
+      }
+
+      // ─── Circuit Breaker Active Review Proposals ───
+      const trippedBreakers = await sql.query<{ sport: string; notes: string; updated_at: string }>(
+        `select sport, notes, updated_at from brain_model_weights where source = 'circuit_breaker'`
+      );
+      for (const b of trippedBreakers) {
+        const sport = b.sport?.toUpperCase();
+        if (await insertSuggestion({
+          fingerprint: `breaker-review|${sport}`,
+          title: `🛡️ Review Circuit Breaker: ${sport} fail-safe active`,
+          body: `${sport} is currently running in defensive baseline consensus (0.10/0.10/0.80) due to consecutive model misses. Check recent performance to audit if the model has stabilized to release the breaker.`,
+          knob: "none",
+          proposed: { sport, action: "review-breaker" },
+          evidence: { sport, notes: b.notes, trippedAt: b.updated_at },
+        })) created++;
       }
     } catch {
       // Graceful error isolation
