@@ -1,0 +1,71 @@
+diff --git a/src/components/app/game-page.tsx b/src/components/app/game-page.tsx
+index d3c78f9..e1e8a38 100644
+--- a/src/components/app/game-page.tsx
++++ b/src/components/app/game-page.tsx
+@@ -69,7 +69,7 @@ export function GamePage({ eventId }: { eventId: string }) {
+     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
+     setIsFetchingProps(true);
+     try {
+-      const result = await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
++      const result = await fetchRealPropsFn({ data: { sportKey, eventId: rawId, force: true } });
+       if (result.ok && result.props?.length) {
+         setFetchedProps(result.props);
+         setPropsFetched(true);
+diff --git a/src/lib/market/odds-api.ts b/src/lib/market/odds-api.ts
+index ee45e72..35394b1 100644
+--- a/src/lib/market/odds-api.ts
++++ b/src/lib/market/odds-api.ts
+@@ -130,7 +130,7 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
+       return true;
+     }
+     const json = await res.json();
+-    const seasonType = json?.season?.type;
++    const seasonType = json?.season?.type ?? json?.leagues?.[0]?.season?.type?.type ?? json?.leagues?.[0]?.season?.type;
+     if (seasonType === 1) {
+       console.log(`[odds-api] ${sportKey} is currently in PRESEASON (season.type = 1). Skipping daily Odds API pull.`);
+       return false;
+@@ -143,7 +143,15 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
+   }
+ }
+ 
+-function normalizeEventBooks(event: any) {
++function isMainMarketKey(key: string) {
++  return key === "h2h" || key === "spreads" || key === "totals";
++}
++
++function isPlayerMarketKey(key: string) {
++  return /^(player_|batter_|pitcher_)/.test(key);
++}
++
++function normalizeEventBooks(event: any, mode: "mains" | "props" = "mains") {
+   if (!event || typeof event !== "object") return event;
+   const books = Array.isArray(event.bookmakers) ? event.bookmakers : [];
+   for (const b of books) {
+@@ -158,12 +166,17 @@ function normalizeEventBooks(event: any) {
+       title: b.title || b.key,
+       markets: Array.isArray(b.markets)
+         ? b.markets
+-            .filter((m: any) => m && (m.key === "h2h" || m.key === "spreads" || m.key === "totals"))
++            .filter((m: any) => {
++              const key = String(m?.key || "");
++              if (mode === "props") return isPlayerMarketKey(key);
++              return isMainMarketKey(key);
++            })
+             .map((m: any) => ({
+               key: m.key,
+               outcomes: Array.isArray(m.outcomes)
+                 ? m.outcomes.map((o: any) => ({
+                     name: o.name,
++                    description: o.description,
+                     price: o.price,
+                     point: o.point,
+                   }))
+@@ -400,7 +413,7 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
+       console.error(detail);
+       return { __error: true, status: res.status, message: body.slice(0, 200) } as any;
+     }
+-    const data = normalizeEventBooks(await res.json());
++    const data = normalizeEventBooks(await res.json(), "props");
+     globalCache.props[eventId] = data;
+     await writeOddsApiCache(cacheKey, data);
+     return data;

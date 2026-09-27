@@ -130,7 +130,7 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
       return true;
     }
     const json = await res.json();
-    const seasonType = json?.season?.type;
+    const seasonType = json?.season?.type ?? json?.leagues?.[0]?.season?.type?.type ?? json?.leagues?.[0]?.season?.type;
     if (seasonType === 1) {
       console.log(`[odds-api] ${sportKey} is currently in PRESEASON (season.type = 1). Skipping daily Odds API pull.`);
       return false;
@@ -143,7 +143,15 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
   }
 }
 
-function normalizeEventBooks(event: any) {
+function isMainMarketKey(key: string) {
+  return key === "h2h" || key === "spreads" || key === "totals";
+}
+
+function isPlayerMarketKey(key: string) {
+  return /^(player_|batter_|pitcher_)/.test(key);
+}
+
+function normalizeEventBooks(event: any, mode: "mains" | "props" = "mains") {
   if (!event || typeof event !== "object") return event;
   const books = Array.isArray(event.bookmakers) ? event.bookmakers : [];
   for (const b of books) {
@@ -158,12 +166,17 @@ function normalizeEventBooks(event: any) {
       title: b.title || b.key,
       markets: Array.isArray(b.markets)
         ? b.markets
-            .filter((m: any) => m && (m.key === "h2h" || m.key === "spreads" || m.key === "totals"))
+            .filter((m: any) => {
+              const key = String(m?.key || "");
+              if (mode === "props") return isPlayerMarketKey(key);
+              return isMainMarketKey(key);
+            })
             .map((m: any) => ({
               key: m.key,
               outcomes: Array.isArray(m.outcomes)
                 ? m.outcomes.map((o: any) => ({
                     name: o.name,
+                    description: o.description,
                     price: o.price,
                     point: o.point,
                   }))
@@ -400,7 +413,7 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
       console.error(detail);
       return { __error: true, status: res.status, message: body.slice(0, 200) } as any;
     }
-    const data = normalizeEventBooks(await res.json());
+    const data = normalizeEventBooks(await res.json(), "props");
     globalCache.props[eventId] = data;
     await writeOddsApiCache(cacheKey, data);
     return data;

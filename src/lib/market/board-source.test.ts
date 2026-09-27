@@ -23,3 +23,19 @@ test("quota exhaustion always serves the last valid board", () => {
 test("empty store falls back to compute", () => {
   assert.equal(pickBoardSource({ storedAsOf: null, quotaAction: "fetch" }), "compute");
 });
+
+test("a board saved yesterday is recomputed on a new ET day", () => {
+  const now = Date.parse("2026-09-27T10:00:00.000-04:00");
+  assert.equal(
+    pickBoardSource({ storedAsOf: "2026-09-26T23:00:00.000-04:00", quotaAction: "fetch", now }),
+    "compute",
+  );
+});
+
+test("quota exhaustion still serves yesterday board", () => {
+  const now = Date.parse("2026-09-27T10:00:00.000-04:00");
+  assert.equal(
+    pickBoardSource({ storedAsOf: "2026-09-26T23:00:00.000-04:00", quotaAction: "serve_stale", now }),
+    "stored",
+  );
+});
