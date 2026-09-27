@@ -6,18 +6,18 @@ import { useAccess } from "@/lib/use-access";
 export const Route = createFileRoute("/admin")({ component: AdminOverseer });
 
 const TABS = [
-  { to: "/admin/dashboard", label: "🧠 Dashboard", icon: Brain },
-  { to: "/admin/analysis", label: "📊 Analysis", icon: BarChart2 },
-  { to: "/admin/engine", label: "⚙️ Engine", icon: Settings },
-  { to: "/admin/approvals", label: "🔐 Approvals", icon: UserCheck },
-  { to: "/admin/activity", label: "📋 Activity", icon: Clock },
+  { to: "/admin/dashboard", label: "Today", icon: Brain },
+  { to: "/admin/autopsy", label: "Why we missed", icon: BarChart2 },
+  { to: "/admin/suggestions", label: "Inbox", icon: Lightbulb },
+  { to: "/admin/approvals", label: "Access", icon: UserCheck },
 ];
 
 const LEGACY_TABS = [
+  { to: "/admin/analysis", label: "Analysis", icon: BarChart2 },
+  { to: "/admin/engine", label: "Engine sliders", icon: Settings },
+  { to: "/admin/activity", label: "Activity log", icon: Clock },
   { to: "/admin/terminal", label: "Live Status", icon: Activity },
   { to: "/admin/predictions", label: "Predictions", icon: BarChart2 },
-  { to: "/admin/autopsy", label: "Autopsy", icon: Brain },
-  { to: "/admin/suggestions", label: "Suggestions", icon: Lightbulb },
   { to: "/admin/brain-intel", label: "Brain Intel", icon: Target },
   { to: "/admin/brain", label: "Engine Bay", icon: Cpu },
   { to: "/admin/overrides", label: "Overrides", icon: Sliders },
@@ -47,7 +47,7 @@ function AdminOverseer() {
           The Overseer
         </h1>
         <p className="text-muted text-sm">
-          Self-improving prediction engine — every prediction tracked, graded, analyzed, and used to get smarter.
+          Grades finished games and records why we missed. Live model weights stay frozen until you approve a change.
         </p>
       </div>
 
@@ -70,10 +70,9 @@ function AdminOverseer() {
         })}
       </nav>
 
-      {/* Legacy tabs — smaller, secondary access to old views */}
       <details className="text-xs">
         <summary className="text-muted cursor-pointer hover:text-ink transition-colors">
-          Legacy views ▸
+          Old screens ▸
         </summary>
         <nav className="flex flex-wrap gap-1.5 mt-2">
           {LEGACY_TABS.map((tab) => {
@@ -101,4 +100,3 @@ function AdminOverseer() {
     </div>
   );
 }
-
