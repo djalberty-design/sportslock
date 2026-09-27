@@ -228,7 +228,7 @@ function TheMatrix() {
       <div className="flex flex-col gap-2 mb-6 border-b border-line pb-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
-            <LayoutGrid className="size-6 text-primary" /> Matchups
+            <LayoutGrid className="size-6 text-primary" /> Games
           </h1>
           {isAdmin && quota != null && quotaInfo && (
             <div className="flex items-center gap-2">

@@ -170,7 +170,7 @@ export function BoardPage() {
 
       <details className="paper-card overflow-x-auto p-0" open>
 <summary className="cursor-pointer bg-panel px-4 py-3 text-sm font-medium text-ink">
-  All numbers on this board (Wide Open — delayed consensus prices)
+  All board numbers — sportsbook consensus (not live to the second)
 </summary>
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-panel text-muted">
