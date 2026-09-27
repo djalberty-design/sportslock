@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "../db.ts";
+import { backfillClosePrices } from "./backfill-close.ts";
 import { buildPublicScorecard, type ScorecardPick } from "./scorecard.ts";
 
 export const getPublicScorecardFn = createServerFn({ method: "GET" }).handler(async () => {
   try {
+    await backfillClosePrices();
     const sql = await getSql();
     const rows = await sql`
       SELECT recommended, market_type, status, model_probability, price, close_price
