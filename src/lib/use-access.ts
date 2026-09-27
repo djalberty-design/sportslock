@@ -4,9 +4,8 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { isAdminEmail } from "@/lib/admin";
 
 /**
- * Required auth. No guest access. Unauthenticated → login wall.
- * Authenticated but not approved → "Access Pending".
- * Only djalberty@gmail.com is admin.
+ * Phase 2: Board + Ledger are guest-readable. Bankroll, photo-lock, and
+ * admin still require a signed-in approved user. Only djalberty@gmail.com is admin.
  */
 export function useAccess() {
   const { user, isPending } = useCurrentUserState();
