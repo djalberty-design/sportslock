@@ -12,6 +12,14 @@ function isDeskSnapshot(value: unknown): value is DeskSnapshot {
   return typeof snap.asOf === "string" && Array.isArray(snap.quotes);
 }
 
+function storedMlbIsThin(value: unknown): boolean {
+  if (!isDeskSnapshot(value)) return true;
+  const ids = new Set(
+    value.quotes.filter((q) => q.sport === "MLB").map((q) => q.eventId),
+  );
+  return ids.size > 0 && ids.size < 8;
+}
+
 function isFinishedQuote(q: QuoteLine): boolean {
   if ((q as { complete?: boolean }).complete) return true;
   const st = String(q.statusText || "").toLowerCase();
@@ -101,7 +109,7 @@ export async function snapshotWithLiveScores(asOf?: string): Promise<DeskSnapsho
   const source = pickBoardSource({
     storedAsOf: stored?.asOf ?? null,
     quotaAction: plan.action,
-    forceCompute: Boolean(asOf),
+    forceCompute: Boolean(asOf) || storedMlbIsThin(stored?.snapshot),
   });
 
   if (source === "stored" && stored && isDeskSnapshot(stored.snapshot)) {

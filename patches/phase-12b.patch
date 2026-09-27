@@ -1,0 +1,53 @@
+diff --git a/src/lib/market/with-live-scores.ts b/src/lib/market/with-live-scores.ts
+--- a/src/lib/market/with-live-scores.ts
++++ b/src/lib/market/with-live-scores.ts
+@@ -13,6 +13,15 @@ function isDeskSnapshot(value: unknown): value is DeskSnapshot {
+   return typeof snap.asOf === "string" && Array.isArray(snap.quotes);
+ }
+ 
++function storedMlbIsThin(value: unknown): boolean {
++  if (!isDeskSnapshot(value)) return true;
++  const ids = new Set(
++    value.quotes.filter((q) => q.sport === "MLB").map((q) => q.eventId),
++  );
++  return ids.size > 0 && ids.size < 8;
++}
++
+ function isFinishedQuote(q: QuoteLine): boolean {
+   if ((q as { complete?: boolean }).complete) return true;
+   const st = String(q.statusText || "").toLowerCase();
+@@ -99,10 +108,11 @@ export async function snapshotWithLiveScores(asOf?: string): Promise<DeskSnapshot
+   const stored = await readCurrentDailyBoard();
+   const plan = await planOddsCalls(1);
+   const source = pickBoardSource({
+     storedAsOf: stored?.asOf ?? null,
+     quotaAction: plan.action,
+-    forceCompute: Boolean(asOf),
++    forceCompute: Boolean(asOf) || storedMlbIsThin(stored?.snapshot),
+   });
+ 
+   if (source === "stored" && stored && isDeskSnapshot(stored.snapshot)) {
+     return overlayLiveScores({
+ diff --git a/src/lib/market/morning-pull.ts b/src/lib/market/morning-pull.ts
+--- a/src/lib/market/morning-pull.ts
++++ b/src/lib/market/morning-pull.ts
+@@ -1,8 +1,9 @@
+ import { fetchOddsApiMains, getOddsQuota, writeOddsApiCache } from "./odds-api.ts";
+ import { planOddsCalls } from "./quota-store.ts";
+ import { writeDailyBoard } from "./daily-board.ts";
++import { buildLiveSnapshot } from "./live-board.ts";
+ import { acquireMorningPullLock, releaseMorningPullLock } from "./morning-lock.ts";
+ import { nowEtDayKey } from "./slate-day.ts";
+@@ -119,8 +120,11 @@ export async function runMorningPull(bypassDailyGuard = false): Promise<MorningPu
+       espn,
+     };
+     await writeOddsApiCache("morning-pull", stamp);
+-    await writeDailyBoard({ source: "morning-pull", sports, eventCounts, mains }, new Date());
++    try {
++      const snap = await buildLiveSnapshot();
++      await writeDailyBoard(snap, new Date());
++    } catch (err) {
++      console.error("[morning-pull] snapshot rebuild failed:", err);
++    }
+     return stamp;
+   } finally {
