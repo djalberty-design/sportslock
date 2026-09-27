@@ -111,7 +111,7 @@ export function DeskPage() {
         </p>
         <h1 className="font-display mt-2 text-3xl text-ink">My Action</h1>
         <p className="mt-2 text-sm text-ink/80">
-          Locked-in tickets track in real time and automatically settle when games finish. No manual grading required.
+          Updates while the game is on. Settles when the official score is in.
         </p>
       </header>
 

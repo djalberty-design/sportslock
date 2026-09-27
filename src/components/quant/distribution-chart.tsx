@@ -35,45 +35,10 @@ export interface DistributionChartProps {
   historicalL10?: HistoricalGameLog[];
   compact?: boolean;
   marketType?: string;
+  sport?: string;
 }
 
-/**
- * Deterministically generates realistic L10 game log data if not provided.
- * Uses a pseudo-random hash of line and mean to ensure consistency across renders.
- */
-function generateDeterministicL10(
-  line: number,
-  mean: number,
-  stdDev: number,
-  isOver: boolean
-): HistoricalGameLog[] {
-  const opps = ["BOS", "LAL", "GSW", "MIA", "DEN", "MIL", "NYK", "PHX", "DAL", "PHI"];
-  const dates = [
-    "2 days ago", "4 days ago", "6 days ago", "8 days ago", "11 days ago",
-    "13 days ago", "15 days ago", "18 days ago", "20 days ago", "23 days ago",
-  ];
-
-  // Seeded pseudo-random variations
-  const seedBase = Math.abs(Math.sin(line * 17.3 + mean * 3.7));
-  const logs: HistoricalGameLog[] = [];
-
-  for (let i = 0; i < 10; i++) {
-    const pseudo = (Math.sin(seedBase * 100 + i * 4.9) + 1) / 2; // 0..1
-    const jitter = (pseudo - 0.45) * 1.8 * stdDev;
-    const rawVal = Math.max(0, Math.round((mean + jitter) * 10) / 10);
-    const hit = isOver ? rawVal >= line : rawVal <= line;
-
-    logs.push({
-      game: `G${10 - i}`,
-      opponent: opps[i % opps.length],
-      value: rawVal,
-      date: dates[i],
-      hit,
-    });
-  }
-
-  return logs;
-}
+/** Never invent last-10 logs. Only render L10 when the caller passes official game logs. */
 
 export function DistributionChart({
   title,
@@ -92,8 +57,8 @@ export function DistributionChart({
   const [activeTab, setActiveTab] = useState<"curve" | "l10">("curve");
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; val: number; dens: number } | null>(null);
 
-  // Safe numerical fallbacks
-  const safeLine = Number.isFinite(line) ? line : 20.5;
+  // Safe numerical fallbacks — never invent a 21.5 / 20.5 scoring line
+  const safeLine = Number.isFinite(line) ? line : 0.5;
   const safeMean = Number.isFinite(projectedMean)
     ? projectedMean!
     : (isOver ? safeLine * 1.08 : safeLine * 0.92);
@@ -109,14 +74,11 @@ export function DistributionChart({
   const edgePct = (fairProb - marketProb) * 100;
   const edgeFormatted = edgePct >= 0 ? `+${edgePct.toFixed(1)}%` : `${edgePct.toFixed(1)}%`;
 
-  // Resolved L10 log
-  const l10 = useMemo(() => {
-    if (historicalL10 && historicalL10.length > 0) return historicalL10;
-    return generateDeterministicL10(safeLine, safeMean, safeStdDev, isOver);
-  }, [historicalL10, safeLine, safeMean, safeStdDev, isOver]);
+  const l10 = historicalL10 && historicalL10.length > 0 ? historicalL10 : [];
+  const hasOfficialL10 = l10.length > 0;
 
   const l10Hits = l10.filter((g) => (g.hit !== undefined ? g.hit : isOver ? g.value >= safeLine : g.value <= safeLine)).length;
-  const l10HitRate = Math.round((l10Hits / l10.length) * 100);
+  const l10HitRate = l10.length ? Math.round((l10Hits / l10.length) * 100) : 0;
 
   // SVG Normal Distribution Curve computation
   const svgWidth = 460;
@@ -213,17 +175,13 @@ export function DistributionChart({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold font-display text-ink">
-                {title || (marketType === "prop" ? "Prop Quant Distribution" : "Monte Carlo Sim Distribution")}
-              </span>
-              <span className="text-[9px] font-mono font-bold bg-primary/15 text-primary border border-primary/25 rounded px-1.5 py-0.2">
-                10k Sims
+                {title || (marketType === "prop" ? "Chance vs this line" : "Chance vs this line")}
               </span>
             </div>
             {subtitle && <p className="text-[10px] text-muted truncate">{subtitle}</p>}
           </div>
         </div>
 
-        {/* Tab Switcher: Distribution Curve vs L10 Form */}
         <div className="flex rounded-lg border border-line/70 bg-panel overflow-hidden p-0.5 text-[10px] font-mono font-bold">
           <button
             type="button"
@@ -236,8 +194,9 @@ export function DistributionChart({
             )}
           >
             <Activity className="size-3" />
-            <span>Sim Curve</span>
+            <span>Curve</span>
           </button>
+          {hasOfficialL10 ? (
           <button
             type="button"
             onClick={() => setActiveTab("l10")}
@@ -249,8 +208,11 @@ export function DistributionChart({
             )}
           >
             <BarChart3 className="size-3" />
-            <span>L10 Form ({l10Hits}/10)</span>
+            <span>Last 10 games ({l10Hits}/{l10.length})</span>
           </button>
+          ) : (
+            <span className="px-2.5 py-1 text-muted/80 font-normal">No official last-10 log for this prop.</span>
+          )}
         </div>
       </div>
 
@@ -435,7 +397,7 @@ export function DistributionChart({
                 </span>
               </div>
               <div className="font-mono text-[9px] text-muted/70">
-                10k Monte Carlo Trials · σ = {safeStdDev.toFixed(1)}
+                σ = {safeStdDev.toFixed(1)}
               </div>
             </div>
           </div>

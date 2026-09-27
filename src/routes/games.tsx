@@ -180,7 +180,7 @@ function TheMatrix() {
         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
           <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
         </div>
-        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "\u2014" : `${hit}% hit`}</span>
+        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "\u2014" : `${hit}% to hit`}</span>
       </button>
     );
   }

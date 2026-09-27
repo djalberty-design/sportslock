@@ -207,11 +207,12 @@ function ResultsPage() {
             <div className="bg-panel border border-line rounded-xl p-3 text-center">
               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Cumulative P&L</span>
               <span className="text-xl font-mono font-bold text-primary">{stats.cumulativeUnits >= 0 ? `+${stats.cumulativeUnits}u` : `${stats.cumulativeUnits}u`}</span>
+              <span className="text-[10px] text-muted font-mono block">Units, 1u = one standard flat bet</span>
             </div>
             <div className="bg-panel border border-line rounded-xl p-3 text-center">
               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">BTCL Rate</span>
               <span className="text-xl font-mono font-bold text-emerald-400">{stats.btclRate}%</span>
-              <span className="text-[10px] text-muted font-mono block">{stats.btclCount}/{stats.totalBets} with a real close</span>
+              <span className="text-[10px] text-muted font-mono block">Share of picks that beat the last real close</span>
             </div>
             <div className="bg-panel border border-line rounded-xl p-3 text-center">
               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Average CLV</span>

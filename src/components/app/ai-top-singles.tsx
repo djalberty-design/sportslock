@@ -457,8 +457,8 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                     </div>
                   </div>
                   <div className="border-l border-line/50">
-                    <div className="text-[9px] text-muted font-mono uppercase">Rec</div>
-                    <div className="text-xs font-bold text-amber-400 font-mono mt-0.5 truncate" title={`Kelly Suggested Stake: $${dyn.wagerDollars} (${dyn.unitCount}u)`}>
+                    <div className="text-[9px] text-muted font-mono uppercase" title="Recommended stake from your bankroll">Suggested bet</div>
+                    <div className="text-xs font-bold text-amber-400 font-mono mt-0.5 truncate" title={`Recommended stake from your bankroll: $${dyn.wagerDollars}`}>
                       ${dyn.wagerDollars}
                     </div>
                   </div>
