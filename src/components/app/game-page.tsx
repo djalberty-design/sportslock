@@ -69,7 +69,7 @@ export function GamePage({ eventId }: { eventId: string }) {
     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
     setIsFetchingProps(true);
     try {
-      const result = await fetchRealPropsFn({ data: { sportKey, eventId: rawId } });
+      const result = await fetchRealPropsFn({ data: { sportKey, eventId: rawId, force: true } });
       if (result.ok && result.props?.length) {
         setFetchedProps(result.props);
         setPropsFetched(true);
