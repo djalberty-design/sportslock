@@ -16,6 +16,19 @@ test("rushing and receiving yards do not classify as passing", () => {
   assert.notEqual(classifyPropFamily("Amon-Ra St. Brown over 70.5 rec yds"), "pass");
 });
 
+test("Kelce rec yds + Hunt rush yds is not priced as two passing props", () => {
+  const mixed = sameGameRho([
+    { marketType: "prop", side: "over", selection: "Kelce over 55.5 receiving yards", fairProb: 0.55 },
+    { marketType: "prop", side: "over", selection: "Hunt over 45.5 rushing yards", fairProb: 0.55 },
+  ]);
+  const twoRecv = sameGameRho([
+    { marketType: "prop", side: "over", selection: "Kelce over 55.5 receiving yards", fairProb: 0.55 },
+    { marketType: "prop", side: "over", selection: "Worthy over 40.5 receiving yards", fairProb: 0.55 },
+  ]);
+  assert.ok(Math.abs(mixed) < Math.abs(twoRecv));
+  assert.ok(mixed > 0 && mixed < 0.3);
+});
+
 test("two-game eventIds stay distinct when building an SGP vs cross-game pair", () => {
   const rushOverMl = sameGameRho([
     { marketType: "prop", side: "over", selection: "Barkley over 80.5 rushing yards", fairProb: 0.52 },
