@@ -230,6 +230,28 @@ function TheMatrix() {
           <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
             <LayoutGrid className="size-6 text-primary" /> Matchups
           </h1>
+          {isAdmin && quota != null && quotaInfo && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePullDaily}
+                disabled={isPullingDaily}
+                className="px-2.5 py-1 text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                title="Trigger off-schedule Odds API pull for today's active games"
+              >
+                {isPullingDaily ? "Pulling..." : "⚡ Pull Daily Lines"}
+              </button>
+              <div
+                className="text-xs font-mono bg-panel border border-line rounded-md px-2.5 py-1 flex items-center gap-2"
+                title={`Monthly Free Tier: 500 requests · Quota: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days remaining)\nAvailable Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+              >
+                <span className={quotaInfo.propsAvail < 20 ? "text-red-400 font-bold" : quotaInfo.propsAvail < 80 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                  ⚡ {quotaInfo.propsAvail} props avail
+                </span>
+                <span className="text-muted/50">|</span>
+                <span className="text-muted font-normal">Quota: {quota}/500</span>
+              </div>
+            </div>
+          )}
         </div>
         {snapshot?.sourceNote && (<p className="text-xs text-muted">{snapshot.sourceNote}</p>)}
       </div>

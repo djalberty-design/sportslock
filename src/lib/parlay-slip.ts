@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { combineParlayFair, type JointLeg } from "./market/joint-grade";
+import { combineParlayFair, type JointLeg } from "./market/joint-grade.ts";
 
 export type ParlayLeg = {
   eventId: string;
