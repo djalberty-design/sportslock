@@ -1,6 +1,8 @@
 /** Free on-device slip reader. No xAI key. OCR text in, ticket fields out. */
-import type { MarketType, ParsedTicket } from "./types.ts";
-import { combineParlayFair, type JointLeg } from "./joint-grade.ts";
+import type { ParsedTicket } from "./types.ts";
+import { gradeParsedFields, type GradedTicketResult } from "./slip-ocr-grade.ts";
+
+export { slipEventId, gradeParsedFields, type GradedTicketResult } from "./slip-ocr-grade.ts";
 
 const SPORTS = ["NFL", "NBA", "MLB", "NHL", "NCAAF", "NCAAB", "CFB", "CBB"] as const;
 
@@ -264,20 +266,9 @@ function ticket(p: Omit<ParsedTicket, "confirmed">): ParsedTicket {
   return { ...p, confirmed: false };
 }
 
-export type GradedTicketResult = {
-  success: boolean;
-  legs: JointLeg[];
-  combinedFair: number;
-  correlation: string;
-  sameGame: boolean;
-  rawText: string;
-};
-
 /**
- * Text Extraction & Math Routing:
- * Scans an uploaded image using Tesseract to extract standard market indicators and odds.
- * Routes the parsed legs into the parlay calculation engine (Copula/Joint-Grade).
- * Enforces the Empty Look Law: Strictly fails if confidence is low or ticket is incomplete.
+ * Image path only. Parsing and event IDs live in slip-ocr-grade.ts so singles
+ * work and two games cannot share a quoted-string eventId.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function processAndGradeTicket(imageUrl: any): Promise<GradedTicketResult> {
@@ -287,55 +278,10 @@ export async function processAndGradeTicket(imageUrl: any): Promise<GradedTicket
     const Tesseract = (await import("tesseract.js")).default;
     const result = await (Tesseract as any).recognize(imageUrl, "eng");
     rawText = result.data.text;
-  } catch (err) {
+  } catch {
     throw new Error("OCR Parse Failed: Image Recognition Error");
   }
 
   const parsed = parseSlipText(rawText);
-  const { fields } = parsed;
-
-  // The Empty Look Law (Strict Guardrail)
-  if (fields.length < 2) {
-    throw new Error("OCR Parse Failed: Incomplete Ticket Data. Could not definitively parse at least two legs.");
-  }
-
-  const avgConfidence = fields.reduce((s, f) => s + f.confidence, 0) / fields.length;
-  if (avgConfidence < 0.45) {
-    throw new Error("OCR Parse Failed: Low Confidence Ticket Data.");
-  }
-
-  // Leg Parsing, Normalization, & Routing
-  const legs: JointLeg[] = fields.map((f) => {
-    // Determine event ID for SGP Copula explicitly
-    const eventId = f.home && f.away ? "${f.away}-at-".replace(/\s+/g, "-").toLowerCase() : "sgp_event";
-    
-    // Do not synthesize 50/50 odds to force the math to run; use exact implied probabilities from extracted prices.
-    let fairProb = 0.5;
-    if (f.price < 0) {
-      fairProb = -f.price / (-f.price + 100);
-    } else {
-      fairProb = 100 / (f.price + 100);
-    }
-
-    return {
-      eventId,
-      marketType: f.marketType,
-      side: f.side,
-      price: f.price,
-      fairProb,
-      isProp: f.marketType === "prop"
-    };
-  });
-
-  // Mathematical Integration
-  const evaluation = combineParlayFair(legs);
-
-  return {
-    success: true,
-    legs,
-    combinedFair: evaluation.combinedFair,
-    correlation: evaluation.correlation,
-    sameGame: evaluation.sameGame,
-    rawText
-  };
+  return gradeParsedFields(parsed.fields, rawText);
 }

@@ -47,9 +47,21 @@ export interface CumulativePoint {
 }
 
 /**
- * Computes Closing Line Value for an individual bet:
- * - CLV(cents) = Closing American - Bet American (favors getting +120 when it closes +105, or -105 when it closes -120)
- * - CLV(%) = (implied(close) / implied(bet) - 1) * 100%
+ * Signed distance from even money on the American scale.
+ * -110 -> -10, -100 / +100 -> 0, +120 -> +20.
+ */
+export function americanEvenDistance(american: number): number {
+  if (!Number.isFinite(american) || american === 0) return NaN;
+  return american < 0 ? american + 100 : american - 100;
+}
+
+/**
+ * Closing Line Value.
+ * - CLV% = (decimal(bet) / decimal(close) - 1) * 100. Positive = better price than close.
+ * - CLV cents = evenDistance(bet) - evenDistance(close).
+ *   Locked -105 / closed -120 -> +15. Locked +150 / closed +130 -> +20.
+ *   Crossing even money sums both distances with the same sign rule.
+ * beatTheClosingLine is clvPct > 0. Do not mix a percent noise floor into cents.
  */
 export function computeClv(betPrice: number, closingPrice: number): ClvAnalysisResult {
   const decBet = americanToDecimal(betPrice);
@@ -67,14 +79,15 @@ export function computeClv(betPrice: number, closingPrice: number): ClvAnalysisR
   const impBet = impliedFromAmerican(betPrice) ?? (1 / decBet);
   const impClose = impliedFromAmerican(closingPrice) ?? (1 / decClose);
 
-  // CLV% expresses how much cheaper we got the bet relative to the true closing price:
-  // e.g. Bet at +120 (dec 2.20) closing at -110 (dec 1.909) -> (2.20 / 1.909 - 1) * 100 = +15.2%
   const clvPct = ((decBet / decClose) - 1) * 100;
   const clvProbDiff = (impClose - impBet) * 100;
 
-  // Cents of value gained (e.g. locked -105, closed -120 -> +15 cents of CLV)
-  const clvCents = Math.round(clvPct * 10) / 10;
-  const beatTheClosingLine = clvPct > 0.05;
+  const betDist = americanEvenDistance(betPrice);
+  const closeDist = americanEvenDistance(closingPrice);
+  const clvCents = Number.isFinite(betDist) && Number.isFinite(closeDist)
+    ? Math.round(betDist - closeDist)
+    : 0;
+  const beatTheClosingLine = clvPct > 0;
 
   return {
     clvCents,
@@ -149,14 +162,12 @@ export function calculatePortfolioStats(records: ClvRecord[]): {
   const brierInputs: { fairProb: number; hit: boolean }[] = [];
   const curve: CumulativePoint[] = [];
 
-  // Sort chronological
   const sorted = [...records].sort((a, b) => {
     const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
     const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
     return ta - tb;
   });
 
-  // Track checksum
   let checksumAcc = 0x5f3759df;
 
   sorted.forEach((rec, idx) => {
@@ -171,7 +182,6 @@ export function calculatePortfolioStats(records: ClvRecord[]): {
       brierInputs.push({ fairProb: rec.fairProb, hit: isWin });
     }
 
-    // P&L calculation in units (standard 1.0u flat stake)
     const dec = americanToDecimal(rec.betPrice);
     const profitUnit = isWin ? dec - 1 : -1.0;
     currentUnits = Math.round((currentUnits + profitUnit) * 100) / 100;
@@ -184,7 +194,6 @@ export function calculatePortfolioStats(records: ClvRecord[]): {
       maxDrawdown = currentDrawdown;
     }
 
-    // Cumulative hash contribution
     const str = `${rec.selection}|${rec.betPrice}|${rec.closingPrice}|${isWin}`;
     for (let c = 0; c < str.length; c++) {
       checksumAcc = ((checksumAcc << 5) - checksumAcc + str.charCodeAt(c)) | 0;
