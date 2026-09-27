@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getPublicScorecardFn } from "@/lib/market/scorecard-server";
 import { buildPublicScorecard, type PublicScorecard } from "@/lib/market/scorecard";
+import { cn } from "@/lib/utils";
 
 export function PublicScorecardHome() {
   const [card, setCard] = useState<PublicScorecard>(() => buildPublicScorecard([]));
@@ -14,22 +15,28 @@ export function PublicScorecardHome() {
   return (
     <section className="paper-card p-4" data-testid="public-scorecard">
       <p className="stamp text-neon">Public scorecard</p>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-        <div>
-          <p className="text-muted">n</p>
-          <p className="font-mono text-ink">{card.n}</p>
+      <div className="mt-2 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+        <div className="bg-panel border border-line/60 rounded-xl p-3">
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">Total graded</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.n} picks</p>
+          <p className="text-[10px] text-muted mt-0.5">Audited single plays</p>
         </div>
-        <div>
-          <p className="text-muted">CLV beat</p>
-          <p className="font-mono text-ink">{card.clvBeatRate == null ? "—" : `${card.clvBeatRate}%`}</p>
+        <div className="bg-panel border border-line/60 rounded-xl p-3">
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">Beat the close</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.clvBeatRate == null ? "—" : `${card.clvBeatRate}%`}</p>
+          <p className="text-[10px] text-muted mt-0.5">Only when we stored a real kickoff/close price</p>
         </div>
-        <div>
-          <p className="text-muted">Brier vs book</p>
-          <p className="font-mono text-ink">{card.brierDelta == null ? "—" : card.brierDelta}</p>
+        <div className="bg-panel border border-line/60 rounded-xl p-3">
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">vs the book</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.brierDelta == null ? "—" : card.brierDelta}</p>
+          <p className="text-[10px] text-muted mt-0.5">Negative = closer to results than the book</p>
         </div>
-        <div>
-          <p className="text-muted">Last 30u</p>
-          <p className="font-mono text-ink">{card.last30Units >= 0 ? `+${card.last30Units}` : card.last30Units}</p>
+        <div className="bg-panel border border-line/60 rounded-xl p-3">
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">Last 30</p>
+          <p className={cn("font-mono text-xl font-bold mt-0.5", card.last30Units >= 0 ? "text-emerald-400" : "text-amber-400")}>
+            {card.last30Units >= 0 ? `+${card.last30Units}u` : `${card.last30Units}u`}
+          </p>
+          <p className="text-[10px] text-muted mt-0.5">Flat 1-unit profit/loss</p>
         </div>
       </div>
       {card.losingStretch > 0 ? (
