@@ -157,7 +157,9 @@ function Dashboard() {
     mutationFn: () => calibrateWeightsFn(),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
-      alert(`Dynamic blend weights calibrated across active sports based on 30-day performance.`);
+      alert(res?.frozen
+        ? "Weights frozen. Results were logged. Live blend was not changed."
+        : `Weights updated for: ${(res?.updated || []).join(", ") || "none"}.`);
     },
   });
 
@@ -254,13 +256,13 @@ function Dashboard() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
               <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
-              OVERSEER MISSION CONTROL v4.2
+              OVERSEER — operator desk
             </span>
-            <span className="text-xs text-muted font-mono">100% AUTONOMOUS</span>
+            <span className="text-xs text-amber-400 font-mono">WEIGHTS FROZEN — grades only</span>
           </div>
           <h1 className="font-display text-3xl text-ink mt-2">Brain Status & Visual Architecture</h1>
           <p className="text-sm text-muted mt-1">
-            Real-time visual flight control for the sports prediction engine. Inspect every layer, calibrate weights, and interact directly with the Brain.
+            See graded results, pending scores, and draft suggestions. Live weights do not move until you unfreeze and approve.
           </p>
         </div>
 
@@ -275,6 +277,12 @@ function Dashboard() {
           </button>
         </div>
       </header>
+
+
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-sm">
+        <p className="font-bold text-amber-400">Engine: frozen — grades games, does not change weights</p>
+        <p className="text-xs text-muted mt-1">Autopsy notes and inbox drafts still run. Approve in Inbox does not write production weights while this freeze is on.</p>
+      </div>
 
       {/* ── OVERSEER OPERATOR GUIDE & CONTROL MANUAL ── */}
       <div className="bg-obsidian border border-primary/30 rounded-xl p-4 sm:p-5 relative overflow-hidden shadow-lg">

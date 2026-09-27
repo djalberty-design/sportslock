@@ -40,6 +40,56 @@ export interface DistributionChartProps {
 
 /** Never invent last-10 logs. Only render L10 when the caller passes official game logs. */
 
+function isMoneylineMarket(marketType?: string) {
+  return /^(ml|moneyline|h2h)$/i.test(String(marketType || ""));
+}
+
+function isBinaryTdMarket(marketType?: string, title?: string) {
+  return /td|touchdown|anytime_td|first_td/i.test(`${marketType || ""} ${title || ""}`);
+}
+
+function ProbabilityGauge({
+  title,
+  kind,
+  fairProb,
+  marketProb,
+}: {
+  title?: string;
+  kind: "ml" | "td";
+  fairProb: number;
+  marketProb: number;
+}) {
+  const model = Math.round(Math.max(0, Math.min(1, fairProb)) * 100);
+  const book = Math.round(Math.round(Math.max(0, Math.min(1, marketProb)) * 100));
+  const edgePts = (fairProb - marketProb) * 100;
+  const edge = `${edgePts >= 0 ? "+" : ""}${edgePts.toFixed(1)} pts`;
+  const verdict =
+    kind === "ml"
+      ? edgePts >= 0
+        ? `Model win chance ${model}% vs the book's ${book}%. Price looks better than the book's implied chance.`
+        : `Likely to win (${model}%), but the book already prices ${book}%. Paying that price is a negative-value favorite.`
+      : `Yes or no — not a point total. Model ${model}% vs book ${book}% (${edge}).`;
+  return (
+    <div className="p-4 bg-obsidian/60 border border-line/60 rounded-xl space-y-3" data-testid="probability-gauge">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-bold text-ink">{title || (kind === "ml" ? "Win chance vs the book" : "Touchdown chance vs this line")}</span>
+        <span className="font-mono text-primary font-bold">{edge}</span>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-[11px] font-mono">
+          <span className="text-emerald-400 font-bold">Model {model}%</span>
+          <span className="text-muted">Book {book}%</span>
+        </div>
+        <div className="h-2 w-full bg-line/40 rounded-full overflow-hidden">
+          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${model}%` }} />
+        </div>
+      </div>
+      <p className="text-[11px] text-muted">{verdict}</p>
+    </div>
+  );
+}
+
+
 export function DistributionChart({
   title,
   subtitle,
@@ -56,12 +106,22 @@ export function DistributionChart({
 }: DistributionChartProps) {
   const [activeTab, setActiveTab] = useState<"curve" | "l10">("curve");
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; val: number; dens: number } | null>(null);
+  if (isMoneylineMarket(marketType) || isBinaryTdMarket(marketType, title)) {
+    return (
+      <ProbabilityGauge
+        title={title}
+        kind={isMoneylineMarket(marketType) ? "ml" : "td"}
+        fairProb={fairProb}
+        marketProb={marketProb}
+      />
+    );
+  }
 
   // Safe numerical fallbacks — never invent a 21.5 / 20.5 scoring line
-  const safeLine = Number.isFinite(line) ? line : 0.5;
+  const safeLine = Number.isFinite(line) ? line : Number.NaN;
   const safeMean = Number.isFinite(projectedMean)
     ? projectedMean!
-    : (isOver ? safeLine * 1.08 : safeLine * 0.92);
+    : (Number.isFinite(safeLine) ? safeLine : Number.NaN);
   const safeStdDev = Number.isFinite(projectedStdDev) && (projectedStdDev ?? 0) > 0
     ? projectedStdDev!
     : Math.max(1, safeLine * 0.22);
