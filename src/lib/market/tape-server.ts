@@ -4,6 +4,7 @@ import { gradeMarketTape, getGradeStats } from "./grade-tape";
 import { runTapeAutopsy, getAutopsySummary, type AutopsySummary } from "./autopsy-tape";
 import { buildSuggestions, decideSuggestion, listSuggestions, type BrainSuggestion, type SuggestionStatus } from "./suggestions";
 import { clearOverride, upsertOverride } from "./overrides";
+import { WEIGHT_STEERING_FROZEN } from "./weight-freeze.ts";
 
 export const getTapeStatsFn = createServerFn({ method: "GET" }).handler(async (): Promise<TapeStats & {
   wins: number;
@@ -66,13 +67,11 @@ export const decideSuggestionFn = createServerFn({ method: "POST" })
     }
     if (data.status === "rejected" || data.status === "later" || data.status === "revoked") {
       await clearOverride(current.fingerprint);
-      // Also clear auto-applied overrides
       if (data.status === "revoked" && current.proposed) {
         const autoFp = `auto|cold-sport|${current.proposed.sport || ""}`;
         await clearOverride(autoFp);
       }
     }
-    // Log to activity feed
     try {
       const { logActivity } = await import("@/lib/market/activity");
       void logActivity("suggestion", `Suggestion ${data.status}`, `${current.title} (${sport} ${market})`, "admin");
@@ -86,6 +85,9 @@ export const getDynamicWeightsFn = createServerFn({ method: "GET" }).handler(asy
 });
 
 export const calibrateWeightsFn = createServerFn({ method: "POST" }).handler(async () => {
+  if (WEIGHT_STEERING_FROZEN) {
+    return { ok: true, updated: [] as string[], summary: {}, frozen: true };
+  }
   const { calibrateWeights } = await import("./dynamic-weights");
   return calibrateWeights();
 });
@@ -120,5 +122,3 @@ export const resetCircuitBreakerFn = createServerFn({ method: "POST" })
     const { resetCircuitBreaker } = await import("./dynamic-weights");
     return resetCircuitBreaker(data.sport);
   });
-
-

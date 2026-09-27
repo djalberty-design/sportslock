@@ -1,6 +1,6 @@
 /**
- * Hard Rock Bet deep link generator.
- * Provides direct navigation to Hard Rock Bet (Florida's legal sportsbook).
+ * Hard Rock Bet sport-lobby URL. This is not slip injection and is not a
+ * game-level deep link — Phase 3 may tighten the path if a stable game URL exists.
  */
 export function getHardRockUrl(sport?: string): string {
   const base = "https://www.hardrock.bet";
@@ -12,6 +12,5 @@ export function getHardRockUrl(sport?: string): string {
   else if (s.includes("nba") || s.includes("basketball")) path = "/sports/basketball/nba";
   else if (s.includes("nhl") || s.includes("hockey")) path = "/sports/hockey/nhl";
   else path = "/sports";
-
   return `${base}${path}`;
 }

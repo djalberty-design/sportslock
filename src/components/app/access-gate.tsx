@@ -5,27 +5,26 @@ import { AppShell } from "./shell";
 import { DeskDecisionProvider } from "@/lib/market/desk-decision";
 import { LedgerSync } from "./ledger-sync";
 import { useAccess } from "@/lib/use-access";
-import { ShieldCheck, Clock, Lock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
+import { isGuestReadablePath } from "@/lib/auth/public-routes";
 
-/**
- * Auth-gated access (2026-09-19).
- * - Not signed in → login page
- * - Signed in but not approved → "Access Pending" screen
- * - Approved → full app
- * - Admin → full app + Overseer
- */
+/** Phase 2 auth split: Board and Ledger are public; ticket/profile/admin require sign-in. */
 export function AccessGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
   if (pathname === "/login" || pathname.startsWith("/api/")) return <>{children}</>;
-
-  return <AuthGate>{children}</AuthGate>;
+  return <AuthGate pathname={pathname}>{children}</AuthGate>;
 }
 
-function AuthGate({ children }: { children: ReactNode }) {
-  const { user, sessionPending, signedIn, isApproved, accessPending, access } = useAccess();
+function AuthGate({ children, pathname }: { children: ReactNode; pathname: string }) {
+  const { user, sessionPending, signedIn, isApproved, accessPending } = useAccess();
+  const guestOk = isGuestReadablePath(pathname);
+  const shell = (
+    <DeskDecisionProvider>
+      {signedIn ? <LedgerSync /> : null}
+      <AppShell>{children}</AppShell>
+    </DeskDecisionProvider>
+  );
 
-  // Session loading
   if (sessionPending) {
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
@@ -37,8 +36,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Not signed in → login wall
   if (!signedIn) {
+    if (guestOk) return shell;
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
         <div className="flex flex-col items-center gap-6 max-w-sm text-center animate-in fade-in duration-500">
@@ -46,9 +45,9 @@ function AuthGate({ children }: { children: ReactNode }) {
             <Lock className="size-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold text-ink">SportsLock AI</h1>
+            <h1 className="text-2xl font-display font-bold text-ink">SportsLock</h1>
             <p className="text-muted text-sm mt-2">
-              Research-grade sports betting intelligence. Sign in to access the desk.
+              Board and Ledger are public. Sign in to set a bankroll or photo-lock a ticket.
             </p>
           </div>
           <Link
@@ -57,16 +56,14 @@ function AuthGate({ children }: { children: ReactNode }) {
           >
             Sign in with Google
           </Link>
-          <p className="text-[10px] text-muted">
-            New users will be reviewed for access after signing in.
-          </p>
+          <p className="text-[10px] text-muted">This site never places a bet. 1-800-GAMBLER.</p>
         </div>
       </main>
     );
   }
 
-  // Signed in but access still loading
   if (accessPending) {
+    if (guestOk) return shell;
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
         <div className="flex flex-col items-center gap-4">
@@ -77,8 +74,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Signed in but not approved
   if (!isApproved) {
+    if (guestOk) return shell;
     return (
       <main className="grid min-h-dvh place-items-center bg-paper px-6">
         <div className="flex flex-col items-center gap-6 max-w-sm text-center animate-in fade-in duration-500">
@@ -88,7 +85,7 @@ function AuthGate({ children }: { children: ReactNode }) {
           <div>
             <h1 className="text-2xl font-display font-bold text-ink">Access Pending</h1>
             <p className="text-muted text-sm mt-2">
-              Your access request has been submitted. The admin will review it shortly.
+              Bankroll and photo-lock wait on approval. Board and Ledger stay readable.
             </p>
             <p className="text-xs text-muted mt-3 bg-wash rounded-lg p-3">
               Signed in as <strong className="text-ink">{user?.email}</strong>
@@ -99,11 +96,5 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Approved → show the app
-  return (
-    <DeskDecisionProvider>
-      <LedgerSync />
-      <AppShell>{children}</AppShell>
-    </DeskDecisionProvider>
-  );
+  return shell;
 }
