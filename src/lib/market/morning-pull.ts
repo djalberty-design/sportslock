@@ -2,6 +2,7 @@ import { fetchOddsApiMains, getOddsQuota, writeOddsApiCache } from "./odds-api";
 import { tryMorningPullLock, releaseMorningPullLock } from "./advisory-lock";
 import { planOddsCalls } from "./quota-store";
 import { writeDailyBoard } from "./daily-board";
+import { buildLiveSnapshot } from "./live-board";
 import { nowEtDayKey } from "./slate-day";
 
 export type EspnProbe = {
@@ -119,7 +120,12 @@ export async function runMorningPull(bypassDailyGuard = false): Promise<MorningP
       espn,
     };
     await writeOddsApiCache("morning-pull", stamp);
-    await writeDailyBoard({ source: "morning-pull", sports, eventCounts, mains }, new Date());
+    try {
+      const snap = await buildLiveSnapshot();
+      await writeDailyBoard(snap, new Date());
+    } catch (err) {
+      console.error("[morning-pull] snapshot rebuild failed:", err);
+    }
     return stamp;
   } finally {
     await releaseMorningPullLock();
