@@ -20,6 +20,8 @@ import { PickCardHeader } from "./pick-card-header";
 import { toPickCardView } from "@/lib/market/pick-card-contract";
 import { CallRibbon, ConfidenceChips, EdgeRow, TeamMarks, FeeTimingRow } from "./pick-card-extras";
 
+export { ConfidenceChips, EdgeRow } from "./pick-card-extras";
+
 export function PickCard({
   pick,
   featured = false,
