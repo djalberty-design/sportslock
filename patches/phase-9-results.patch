@@ -1,0 +1,227 @@
+diff --git a/src/routes/results.tsx b/src/routes/results.tsx
+index d744d1e..2c25ae3 100644
+--- a/src/routes/results.tsx
++++ b/src/routes/results.tsx
+@@ -25,11 +25,13 @@ import {
+   type ClvRecord,
+ } from "@/lib/clv-tracker";
+ import { formatAmerican } from "@/lib/market/hit-pct";
++import { americanToDecimal } from "@/lib/market/book-price";
+ 
+ export const getGradedResultsFn = createServerFn({ method: "POST" })
+   .handler(async () => {
+     const sql = await getSql();
+-    const rows = await sql`
++    const [rows, careerRows] = await Promise.all([
++    sql`
+       SELECT id, sport, market_type as market, selection, home, away, price, close_price, model_probability as model_prob, edge, status, graded_at, snapped_at, line, result_home, result_away
+       FROM (
+         SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away), market_type)
+@@ -41,7 +43,30 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
+       ) sub
+       ORDER BY graded_at DESC
+       LIMIT 500
+-    `;
++    `,
++    sql`
++        SELECT
++          count(*)::int as total_graded,
++          count(*) FILTER (WHERE status = 'WIN')::int as total_wins,
++          count(*) FILTER (WHERE status = 'LOSS')::int as total_losses,
++          round(coalesce(sum(
++            CASE
++              WHEN status = 'WIN' AND price IS NOT NULL AND price > 0 THEN (price::numeric / 100.0)
++              WHEN status = 'WIN' AND price IS NOT NULL AND price < 0 THEN (100.0 / abs(price)::numeric)
++              WHEN status = 'LOSS' AND price IS NOT NULL THEN -1.0
++              ELSE 0
++            END
++          ), 0)::numeric, 2) as career_units
++        FROM (
++          SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away), market_type)
++            price, status
++          FROM market_tape
++          WHERE status IN ('WIN', 'LOSS')
++            AND (recommended = true OR (recommended IS NULL AND edge > 0))
++          ORDER BY COALESCE(event_id, home || '|' || away), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
++        ) sub
++      `,
++    ]);
+     const mapped = (rows as any[]).map((r) => ({
+       id: String(r.id || ""),
+       sport: String(r.sport || ""),
+@@ -60,7 +85,14 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
+       result_home: r.result_home != null ? Number(r.result_home) : null,
+       result_away: r.result_away != null ? Number(r.result_away) : null,
+     }));
+-    return { ok: true, rows: mapped };
++    const rawCareer = (careerRows as any[])[0] || {};
++    const career = {
++      totalGraded: Number(rawCareer.total_graded) || 0,
++      totalWins: Number(rawCareer.total_wins) || 0,
++      totalLosses: Number(rawCareer.total_losses) || 0,
++      careerUnits: Number(rawCareer.career_units) || 0,
++    };
++    return { ok: true, rows: mapped, career };
+   });
+ 
+ export const Route = createFileRoute("/results")({
+@@ -69,6 +101,7 @@ export const Route = createFileRoute("/results")({
+ 
+ function ResultsPage() {
+   const [results, setResults] = useState<any[]>([]);
++  const [career, setCareer] = useState({ totalGraded: 0, totalWins: 0, totalLosses: 0, careerUnits: 0 });
+   const [selectedSport, setSelectedSport] = useState<string>("ALL");
+   const [loading, setLoading] = useState(true);
+   const [copiedAudit, setCopiedAudit] = useState(false);
+@@ -77,6 +110,7 @@ function ResultsPage() {
+     getGradedResultsFn()
+       .then((res) => {
+         if (res.ok && res.rows) setResults(res.rows);
++        if (res.ok && (res as any).career) setCareer((res as any).career);
+       })
+       .catch(() => {})
+       .finally(() => setLoading(false));
+@@ -102,7 +136,26 @@ function ResultsPage() {
+     });
+   }, [results]);
+ 
+-  const { stats, curve } = useMemo(() => calculatePortfolioStats(clvRecords), [clvRecords]);
++  const { stats } = useMemo(() => calculatePortfolioStats(clvRecords), [clvRecords]);
++
++  const pageCurve = useMemo(() => {
++    const priced = [...results]
++      .filter((r) => r.price != null && Number.isFinite(Number(r.price)))
++      .sort((a, b) => new Date(a.graded_at || a.snapped_at || 0).getTime() - new Date(b.graded_at || b.snapped_at || 0).getTime());
++    let run = 0;
++    let peak = 0;
++    return priced.map((r) => {
++      const price = Number(r.price);
++      const dec = americanToDecimal(price);
++      const add = r.status === "WIN" && Number.isFinite(dec) ? Math.round((dec - 1) * 100) / 100 : r.status === "LOSS" ? -1 : 0;
++      run = Math.round((run + add) * 100) / 100;
++      if (run > peak) peak = run;
++      return { cumulativeUnits: run, highWaterMark: peak };
++    });
++  }, [results]);
++  const curve = pageCurve;
++  const pageUnits = pageCurve.length ? pageCurve[pageCurve.length - 1].cumulativeUnits : 0;
++  const pagePeak = pageCurve.reduce((m, p) => Math.max(m, p.highWaterMark), 0);
+ 
+   const now = new Date();
+   const dayMs = 24 * 60 * 60 * 1000;
+@@ -148,7 +201,7 @@ function ResultsPage() {
+   const plotWidth = svgWidth - padX * 2;
+   const plotHeight = svgHeight - padY * 2;
+   const minUnits = Math.min(0, ...curve.map((p) => p.cumulativeUnits));
+-  const maxUnits = Math.max(10, stats.highWaterMarkUnits + 2, ...curve.map((p) => p.cumulativeUnits));
++  const maxUnits = Math.max(1, pagePeak + 2, ...curve.map((p) => p.cumulativeUnits));
+   const unitsSpan = maxUnits - minUnits || 1;
+   const points = useMemo(() => {
+     if (curve.length === 0) return [];
+@@ -171,7 +224,7 @@ function ResultsPage() {
+         <div>
+           <div className="flex items-center gap-2 flex-wrap mb-1">
+             <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/20 uppercase font-bold flex items-center gap-1">
+-              <ShieldCheck className="size-3.5" /> Cryptographically Audited
++              <ShieldCheck className="size-3.5" /> Public log
+             </span>
+             <button type="button" onClick={handleCopyHash} className="text-[10px] font-mono text-muted hover:text-ink bg-panel border border-line px-2 py-0.5 rounded flex items-center gap-1 transition-colors">
+               <Lock className="size-3 text-primary" />
+@@ -198,33 +251,57 @@ function ResultsPage() {
+         <div className="text-center p-12 text-muted">Loading ledger…</div>
+       ) : (
+         <div className="space-y-6">
++          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
++            <div className="bg-panel border border-line rounded-xl p-3 text-center">
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Career graded</span>
++              <span className="text-xl font-mono font-bold text-ink">{career.totalGraded}</span>
++              <span className="text-[10px] text-muted font-mono block">All-time settled recommended picks</span>
++            </div>
++            <div className="bg-panel border border-line rounded-xl p-3 text-center">
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Career record</span>
++              <span className="text-xl font-mono font-bold text-ink">{career.totalWins}–{career.totalLosses}</span>
++              <span className="text-[10px] text-muted font-mono block">Wins–losses, grows past 500</span>
++            </div>
++            <div className="bg-panel border border-line rounded-xl p-3 text-center">
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Career units</span>
++              <span className={`text-xl font-mono font-bold ${career.careerUnits < 0 ? "text-red-400" : career.careerUnits > 0 ? "text-emerald-400" : "text-ink"}`}>{career.careerUnits >= 0 ? `+${career.careerUnits}` : career.careerUnits}u</span>
++              <span className="text-[10px] text-muted font-mono block">Units, not dollars. 1u = one standard bet</span>
++            </div>
++            <div className="bg-panel border border-line rounded-xl p-3 text-center">
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">This page</span>
++              <span className="text-xl font-mono font-bold text-ink">{results.length}</span>
++              <span className="text-[10px] text-muted font-mono block">Latest 500 graded picks</span>
++            </div>
++          </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Win Rate</span>
+-              <span className="text-xl font-mono font-bold text-emerald-400">{pSeason}%</span>
+-              <span className="text-[10px] text-muted font-mono block">{wSeason}-{lSeason}</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Win rate</span>
++              <span className="text-xl font-mono font-bold text-ink">{pSeason}%</span>
++              <span className="text-[10px] text-muted font-mono block">{wSeason}–{lSeason} on this page (latest 500)</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Cumulative P&L</span>
+-              <span className="text-xl font-mono font-bold text-primary">{stats.cumulativeUnits >= 0 ? `+${stats.cumulativeUnits}u` : `${stats.cumulativeUnits}u`}</span>
+-              <span className="text-[10px] text-muted font-mono block">Units, 1u = one standard flat bet</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Page P&L</span>
++              <span className={`text-xl font-mono font-bold ${pageUnits < 0 ? "text-red-400" : pageUnits > 0 ? "text-emerald-400" : "text-ink"}`}>{pageUnits >= 0 ? `+${pageUnits}` : pageUnits}u</span>
++              <span className="text-[10px] text-muted font-mono block">Flat 1u on this page. Units, not dollars</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">BTCL Rate</span>
+-              <span className="text-xl font-mono font-bold text-emerald-400">{stats.btclRate}%</span>
+-              <span className="text-[10px] text-muted font-mono block">Share of picks that beat the last real close</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Beat the close</span>
++              <span className="text-xl font-mono font-bold text-ink">{stats.btclRate}%</span>
++              <span className="text-[10px] text-muted font-mono block">Based on {stats.totalBets} picks with a stored close</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Average CLV</span>
+-              <span className="text-xl font-mono font-bold text-amber-400">{stats.averageClvPct >= 0 ? `+${stats.averageClvPct}%` : `${stats.averageClvPct}%`}</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Vs the last close</span>
++              <span className="text-xl font-mono font-bold text-ink">{stats.averageClvPct >= 0 ? `+${stats.averageClvPct}%` : `${stats.averageClvPct}%`}</span>
++              <span className="text-[10px] text-muted font-mono block">Based on {stats.totalBets} picks with a stored close</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Max Drawdown</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Worst drop</span>
+               <span className="text-xl font-mono font-bold text-red-400">{stats.maxDrawdownUnits}u</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+-              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Brier Score</span>
+-              <span className="text-xl font-mono font-bold text-purple-400">{stats.brierScore}</span>
++              <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Forecast error (Brier)</span>
++              <span className="text-xl font-mono font-bold text-ink">{stats.brierScore}</span>
++              <span className="text-[10px] text-muted font-mono block">0.25 is a coin flip. Lower is better</span>
+             </div>
+           </div>
+           <div className="bg-panel border border-line rounded-2xl p-4 space-y-3">
+@@ -232,10 +309,14 @@ function ResultsPage() {
+               <Activity className="size-4 text-primary" />
+               <h3 className="text-sm font-bold text-ink font-display">Cumulative units</h3>
+             </div>
++            <p className="text-[11px] text-muted">Latest 500 graded picks. Career totals are above. Units, not dollars. If your unit is $100, −80u is about −$8,000.</p>
+             <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto">
+-              <line x1={padX} y1={zeroY} x2={svgWidth - padX} y2={zeroY} stroke="#3f3f46" strokeWidth="1" strokeDasharray="2 2" />
++              <text x="8" y={zeroY + 3} fill="#a1a1aa" fontSize="10" fontFamily="ui-monospace, monospace">0u break-even</text>
++              <text x="8" y={Math.min(svgHeight - 8, (svgHeight - padY) + 3)} fill="#a1a1aa" fontSize="10" fontFamily="ui-monospace, monospace">{`${Math.round(minUnits)}u`}</text>
++              <text x={svgWidth - padX} y={Math.max(12, hwmY - 4)} fill="#f59e0b" fontSize="10" fontFamily="ui-monospace, monospace" textAnchor="end">Peak</text>
++              <line x1={padX} y1={zeroY} x2={svgWidth - padX} y2={zeroY} stroke="#71717a" strokeWidth="1" strokeDasharray="2 2" />
+               <line x1={padX} y1={hwmY} x2={svgWidth - padX} y2={hwmY} stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 3" />
+-              {pathD && <path d={pathD} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
++              {pathD && <path d={pathD} fill="none" stroke={pageUnits > 0 ? "#10b981" : pageUnits < 0 ? "#ef4444" : "#71717a"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+             </svg>
+           </div>
+           <div className="flex flex-wrap gap-2">
+@@ -257,7 +338,7 @@ function ResultsPage() {
+                   <div className="min-w-0">
+                     <p className="text-sm font-bold text-ink truncate">{r.selection}</p>
+                     <p className="text-xs text-muted truncate">{r.away} @ {r.home}</p>
+-                    <p className="text-[10px] font-mono text-muted mt-1">{clv == null ? "CLV \u2014" : `${clv.beatTheClosingLine ? "BTCL" : "CLV"} ${clv.clvPct}% (${clv.clvCents}c)`}</p>
++                    <p className="text-[10px] font-mono text-muted mt-1">{clv == null ? "vs close \u2014" : `${clv.beatTheClosingLine ? "beat close" : "vs close"} ${clv.clvPct}%`}</p>
+                   </div>
+                   <div className="text-right shrink-0">
+                     {isWin ? <CheckCircle2 className="size-5 text-emerald-400 ml-auto" /> : <XCircle className="size-5 text-red-400 ml-auto" />}

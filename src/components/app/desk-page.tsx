@@ -109,7 +109,7 @@ export function DeskPage() {
         <p className="text-sm text-emerald-500 font-semibold flex items-center gap-1.5">
           <Zap className="size-4" /> 100% AUTOMATIC BET TRACKING
         </p>
-        <h1 className="font-display mt-2 text-3xl text-ink">My Action</h1>
+        <h1 className="font-display mt-2 text-3xl text-ink">My tracked bets</h1>
         <p className="mt-2 text-sm text-ink/80">
           Updates while the game is on. Settles when the official score is in.
         </p>

@@ -37,7 +37,7 @@ const MODEL_FILTERS: { key: ModelFilter; label: string; icon: string }[] = [
   { key: "all", label: "All Models", icon: "🧠" },
   { key: "sim", label: "SIM (10k Sim)", icon: "⚡" },
   { key: "prop", label: "PROP (Player Labs)", icon: "👤" },
-  { key: "sharp", label: "SHARP (Steam/RLM)", icon: "📈" },
+  { key: "sharp", label: "Sharp money", icon: "📈" },
   { key: "period", label: "PERIOD (1H/1P)", icon: "⏱️" },
 ];
 
