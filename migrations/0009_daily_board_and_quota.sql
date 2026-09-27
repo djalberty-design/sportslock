@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS odds_api_quota (
+  month TEXT PRIMARY KEY,
+  request_count INTEGER NOT NULL DEFAULT 0,
+  request_limit INTEGER NOT NULL DEFAULT 500,
+  weekly_count INTEGER NOT NULL DEFAULT 0,
+  week_key TEXT NOT NULL DEFAULT '',
+  last_request_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS daily_board (
+  version TEXT PRIMARY KEY,
+  as_of TIMESTAMPTZ NOT NULL,
+  snapshot JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
