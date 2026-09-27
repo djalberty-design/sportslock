@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
-import { LayoutGrid, ChevronRight, BarChart2, CloudSun, AlertTriangle, Zap } from "lucide-react";
+import { LayoutGrid, ChevronRight, BarChart2, Zap } from "lucide-react";
 import { resolveTeamLogo } from "@/lib/market/logos";
 import { leagueOfficialName, stripWrongCollegeLogo } from "@/lib/market/logo-guard";
 import { SportFilter, applySportFilter } from "@/components/app/sport-filter";
@@ -11,20 +11,20 @@ import { fetchRealPropsFn, getCachedPropsFn, getOddsQuotaFn, triggerMorningPullF
 import { ticketHitPct } from "@/lib/market/hit-pct";
 import { formatLivePeriod } from "@/lib/market/live-period";
 import { sportLabel } from "@/lib/copy";
-import { formatEasternShort, getEasternQuotaBreakdown } from "@/lib/utils";
+import { cn, formatEasternShort, getEasternQuotaBreakdown } from "@/lib/utils";
+import { useParlaySlip, isLegSelected } from "@/lib/parlay-slip";
 
 export const Route = createFileRoute("/games")({ component: TheMatrix });
 
 function TheMatrix() {
   const { snapshot, query, scan } = useDeskDecision();
   const { isAdmin } = useAccess();
+  const { legs: slipLegs, addLeg, removeLeg } = useParlaySlip();
   const [quota, setQuota] = useState<number | null>(null);
   const [fetchingEvent, setFetchingEvent] = useState<string | null>(null);
   const [cachedEvents, setCachedEvents] = useState<Set<string>>(new Set());
   const [isPullingDaily, setIsPullingDaily] = useState(false);
-
   const quotaInfo = useMemo(() => getEasternQuotaBreakdown(quota), [quota]);
-
   const SPORT_KEY: Record<string, string> = {
     NFL: "americanfootball_nfl", NCAAF: "americanfootball_ncaaf",
     MLB: "baseball_mlb", NBA: "basketball_nba",
@@ -54,7 +54,6 @@ function TheMatrix() {
   const handleFetchProps = async (eventId: string, sport: string) => {
     const sportKey = SPORT_KEY[sport];
     if (!sportKey) return;
-    // Confirm before re-pulling a cached event
     if (cachedEvents.has(eventId) && !confirm("Props already loaded. Use 1 API request to refresh?")) return;
     const rawId = eventId.replace(/^oddsapi-[A-Z]+-/, "");
     setFetchingEvent(eventId);
@@ -67,7 +66,6 @@ function TheMatrix() {
     setFetchingEvent(null);
   };
 
-  // Check which games already have cached props (free, no API cost)
   useEffect(() => {
     if (!isAdmin || !snapshot?.briefs?.length) return;
     const checkCache = async () => {
@@ -99,7 +97,6 @@ function TheMatrix() {
       markets: {}
     });
   });
-
   snapshot?.quotes?.forEach((q: any) => {
     let g = gamesMap.get(q.eventId);
     if (!g) {
@@ -142,7 +139,6 @@ function TheMatrix() {
     if (val == null || val === 0) return "-";
     const num = Number(val);
     if (!Number.isFinite(num)) return "-";
-    // Safety: convert decimal odds to American
     if (num > 1 && num < 20) {
       const am = num >= 2.0 ? Math.round((num - 1) * 100) : -Math.round(100 / (num - 1));
       return am > 0 ? `+${am}` : `${am}`;
@@ -167,18 +163,53 @@ function TheMatrix() {
     });
   }
 
-  function LineBox({ label, sub, hit }: { label: string; sub?: string; hit: number | null }) {
+  function LineBox({ label, sub, hit, selected, onToggle }: { label: string; sub?: string; hit: number | null; selected?: boolean; onToggle?: () => void }) {
     const empty = !label || label === "-";
     return (
-      <div className="min-h-14 flex flex-col items-center justify-center bg-obsidian rounded border border-line px-1 py-1.5">
+      <button
+        type="button"
+        disabled={empty || !onToggle}
+        onClick={onToggle}
+        className={cn(
+          "min-h-14 flex flex-col items-center justify-center rounded border px-1 py-1.5 w-full",
+          empty || !onToggle ? "bg-obsidian border-line cursor-default" : selected ? "bg-primary/15 border-primary cursor-pointer" : "bg-obsidian border-line hover:border-primary/60 cursor-pointer",
+        )}
+      >
         <span className="text-sm font-bold text-ink leading-none">{empty ? "-" : label}</span>
         {sub ? <span className="text-[10px] font-bold text-muted mt-0.5">{sub}</span> : null}
         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
           <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
         </div>
-        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "—" : `${hit}% hit`}</span>
-      </div>
+        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "\u2014" : `${hit}% hit`}</span>
+      </button>
     );
+  }
+
+  function toggleMatchupLeg(g: any, spec: { marketType: string; side: string; selection: string; price: any; point?: number }) {
+    const price = Number(spec.price);
+    if (!Number.isFinite(price) || price === 0) return;
+    const american = price > 1 && price < 20 ? (price >= 2 ? Math.round((price - 1) * 100) : -Math.round(100 / (price - 1))) : Math.round(price);
+    if (isLegSelected(slipLegs, spec.selection, spec.marketType, g.eventId)) {
+      removeLeg(spec.selection, spec.marketType, g.eventId);
+      return;
+    }
+    const implied = american < 0 ? (-american) / (-american + 100) : 100 / (american + 100);
+    addLeg({
+      eventId: g.eventId,
+      selection: spec.selection,
+      marketType: spec.marketType,
+      side: spec.side,
+      point: spec.point,
+      price: american,
+      fairProb: Number.isFinite(implied) ? implied : 0.5,
+      sport: g.sport,
+      home: g.home,
+      away: g.away,
+      homeLogo: g.homeLogo,
+      awayLogo: g.awayLogo,
+      homeAbbr: g.homeAbbr,
+      awayAbbr: g.awayAbbr,
+    });
   }
 
   function matchupLean(g: any): { label: string; pct: number | null } {
@@ -199,39 +230,10 @@ function TheMatrix() {
           <h1 className="text-2xl font-display font-bold tracking-tight text-ink flex items-center gap-3">
             <LayoutGrid className="size-6 text-primary" /> Matchups
           </h1>
-          {isAdmin && quota != null && quotaInfo && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePullDaily}
-                disabled={isPullingDaily}
-                className="px-2.5 py-1 text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                title="Trigger off-schedule Odds API pull for today's active games"
-              >
-                <Zap className="size-3" />
-                {isPullingDaily ? "Pulling..." : "Pull Daily Lines"}
-              </button>
-              <div
-                className="text-xs font-mono bg-panel border border-line rounded-md px-2.5 py-1 flex items-center gap-2"
-                title={`Monthly Free Tier: 500 requests · Quota: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days remaining)\nAvailable Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
-              >
-                <span className={quotaInfo.propsAvail < 20 ? "text-red-400 font-bold" : quotaInfo.propsAvail < 80 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
-                  ⚡ {quotaInfo.propsAvail} props avail
-                </span>
-                <span className="text-muted/50">|</span>
-                <span className="text-muted font-normal">Quota: {quota}/500</span>
-              </div>
-            </div>
-          )}
         </div>
-        {snapshot?.sourceNote && (
-          <p className="text-xs text-muted">{snapshot.sourceNote}</p>
-        )}
+        {snapshot?.sourceNote && (<p className="text-xs text-muted">{snapshot.sourceNote}</p>)}
       </div>
-
-      <div className="mb-4">
-        <SportFilter sports={liveSports} />
-      </div>
-
+      <div className="mb-4"><SportFilter sports={liveSports} /></div>
       <div className="flex flex-col gap-6">
         {games.map(g => {
           const startTime = g.start ? formatEasternShort(g.start) : "Upcoming";
@@ -239,25 +241,19 @@ function TheMatrix() {
           const lean = matchupLean(g);
           const awayMark = mark(g.sport, g.awayLogo, g.awayAbbr, g.away);
           const homeMark = mark(g.sport, g.homeLogo, g.homeAbbr, g.home);
-          
-          // Derive real implied probability from moneyline odds
           const homeML = g.markets?.homeML;
           const awayML = g.markets?.awayML;
           const impliedProb = (ml: number) => {
             if (!ml || ml === 0) return null;
-            // Safety: convert decimal odds if somehow still present
             if (ml > 1 && ml < 20) ml = ml >= 2.0 ? Math.round((ml - 1) * 100) : -Math.round(100 / (ml - 1));
             return ml < 0 ? (-ml) / (-ml + 100) : 100 / (ml + 100);
           };
           const homeProb = impliedProb(homeML);
           const awayProb = impliedProb(awayML);
           const hasOdds = homeProb !== null && awayProb !== null;
-          // Remove vig for fairer display: normalize so they sum to 100%
           const totalProb = hasOdds ? (homeProb! + awayProb!) : 1;
           const fairHomeProb = hasOdds ? Math.round((homeProb! / totalProb) * 100) : 50;
-          const projFavorite = fairHomeProb >= 50 ? g.home : g.away;
           const projProb = fairHomeProb >= 50 ? fairHomeProb : (100 - fairHomeProb);
-          
           return (
             <div key={g.eventId} className="flex flex-col bg-panel border border-line rounded-xl overflow-hidden hover:border-primary/50 transition-colors">
               <div className="bg-obsidian border-b border-line p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -265,15 +261,13 @@ function TheMatrix() {
                   {g.inPlay ? (
                      <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/20 shrink-0">
                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                       <span className="text-[10px] font-bold uppercase tracking-widest">LIVE{livePeriod ? ` · ${livePeriod}` : ""}</span>
+                       <span className="text-[10px] font-bold uppercase tracking-widest">LIVE{livePeriod ? ` \u00b7 ${livePeriod}` : ""}</span>
                      </div>
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-wider text-muted shrink-0">{startTime}</span>
                   )}
                   <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-2 py-0.5 rounded">{sportLabel(g.sport)}</span>
                 </div>
-                
-                {/* AI Hit Probability */}
                 {hasOdds && (
                 <div className="flex-1 max-w-sm w-full">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
@@ -302,28 +296,28 @@ function TheMatrix() {
                 <div className="w-full md:w-[60%] flex gap-2 md:pl-4">
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Spread</div>
-                    <LineBox label={g.markets?.awaySpread?.point != null ? `${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}` : "-"} sub={g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : undefined} hit={lineHit(g, "spread", "away", g.markets?.awaySpread?.price)} />
-                    <LineBox label={g.markets?.homeSpread?.point != null ? `${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}` : "-"} sub={g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : undefined} hit={lineHit(g, "spread", "home", g.markets?.homeSpread?.price)} />
+                    <LineBox label={g.markets?.awaySpread?.point != null ? `${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}` : "-"} sub={g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : undefined} hit={lineHit(g, "spread", "away", g.markets?.awaySpread?.price)} selected={isLegSelected(slipLegs, `${g.away} ${g.markets?.awaySpread?.point > 0 ? "+" : ""}${g.markets?.awaySpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.awaySpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "away", selection: `${g.away} ${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}`, price: g.markets.awaySpread.price, point: g.markets.awaySpread.point })} />
+                    <LineBox label={g.markets?.homeSpread?.point != null ? `${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}` : "-"} sub={g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : undefined} hit={lineHit(g, "spread", "home", g.markets?.homeSpread?.price)} selected={isLegSelected(slipLegs, `${g.home} ${g.markets?.homeSpread?.point > 0 ? "+" : ""}${g.markets?.homeSpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.homeSpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "home", selection: `${g.home} ${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}`, price: g.markets.homeSpread.price, point: g.markets.homeSpread.point })} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
-                    <LineBox label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} />
-                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under?.price)} />
+                    <LineBox label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} selected={isLegSelected(slipLegs, `Over ${g.markets?.over?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.over?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "over", selection: `Over ${g.markets.over.point}`, price: g.markets.over.price, point: g.markets.over.point })} />
+                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under?.price)} selected={isLegSelected(slipLegs, `Under ${g.markets?.under?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.under?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "under", selection: `Under ${g.markets.under.point}`, price: g.markets.under.price, point: g.markets.under.point })} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
-                    <LineBox label={g.markets?.awayML ? formatAm(g.markets.awayML) : "-"} hit={lineHit(g, "ml", "away", g.markets?.awayML)} />
-                    <LineBox label={g.markets?.homeML ? formatAm(g.markets.homeML) : "-"} hit={lineHit(g, "ml", "home", g.markets?.homeML)} />
+                    <LineBox label={g.markets?.awayML ? formatAm(g.markets.awayML) : "-"} hit={lineHit(g, "ml", "away", g.markets?.awayML)} selected={isLegSelected(slipLegs, g.away, "ml", g.eventId)} onToggle={() => g.markets?.awayML != null && toggleMatchupLeg(g, { marketType: "ml", side: "away", selection: g.away, price: g.markets.awayML })} />
+                    <LineBox label={g.markets?.homeML ? formatAm(g.markets.homeML) : "-"} hit={lineHit(g, "ml", "home", g.markets?.homeML)} selected={isLegSelected(slipLegs, g.home, "ml", g.eventId)} onToggle={() => g.markets?.homeML != null && toggleMatchupLeg(g, { marketType: "ml", side: "home", selection: g.home, price: g.markets.homeML })} />
                   </div>
                 </div>
               </div>
               <div className="bg-obsidian border-t border-line px-4 py-2 flex items-center justify-between">
-                 <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">SPORTSLOCK SGP BUILDER</span>
+                 <span className="text-[10px] text-primary/70 font-mono tracking-widest uppercase">Tap a line to add it to the slip</span>
                  <div className="flex items-center gap-3">
                     {isAdmin && (
                       <button onClick={(e) => { e.stopPropagation(); handleFetchProps(g.eventId, g.sport); }} disabled={fetchingEvent === g.eventId} className={`flex items-center gap-1 text-xs font-bold disabled:opacity-50 ${cachedEvents.has(g.eventId) ? "text-emerald-400 hover:text-emerald-300" : "text-amber-400 hover:text-amber-300"}`}>
                         <Zap className="size-3" />
-                        {fetchingEvent === g.eventId ? "Pulling..." : cachedEvents.has(g.eventId) ? "Props ✓" : "Fetch Props"}
+                        {fetchingEvent === g.eventId ? "Pulling..." : cachedEvents.has(g.eventId) ? "Props \u2713" : "Fetch Props"}
                       </button>
                     )}
                    <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>

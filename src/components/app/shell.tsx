@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Hexagon, Ticket, Settings, History, User } from "lucide-react";
+import { Hexagon, Sparkles, Beaker, Activity, Ticket, Settings, History, User } from "lucide-react";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
@@ -11,7 +11,9 @@ import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 import { BoardFreshnessBadge } from "./board-freshness-badge";
 
 const TAB_ICONS = {
-  "/": Hexagon,
+  "/": Sparkles,
+  "/picks": Beaker,
+  "/games": Activity,
   "/ticket": Ticket,
   "/results": History,
 } as const;
@@ -51,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!isAdmin) return;
     getOddsQuotaFn().then(setQuota).catch(() => {});
     const interval = setInterval(() => getOddsQuotaFn().then(setQuota).catch(() => {}), 120_000);
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [isAdmin]);
 
   const quotaInfo = useMemo(() => {

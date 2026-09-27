@@ -1,5 +1,5 @@
-/** Phase 2 guest-readable surfaces. Everything else stays behind sign-in. */
-export const GUEST_READABLE_PATHS = ["/", "/results"] as const;
+/** Guest-readable surfaces. Ticket / profile / admin stay behind sign-in. */
+export const GUEST_READABLE_PATHS = ["/", "/picks", "/games", "/results"] as const;
 
 export function normalizePathname(pathname: string): string {
   if (!pathname) return "/";
@@ -11,7 +11,7 @@ export function normalizePathname(pathname: string): string {
 export function isGuestReadablePath(pathname: string): boolean {
   const path = normalizePathname(pathname);
   if (path === "/") return true;
-  return path === "/results" || path.startsWith("/results/");
+  return GUEST_READABLE_PATHS.some((allowed) => allowed !== "/" && (path === allowed || path.startsWith(`${allowed}/`)));
 }
 
 export function requiresSignIn(pathname: string): boolean {

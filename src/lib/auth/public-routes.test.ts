@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isGuestReadablePath, requiresSignIn } from "./public-routes.ts";
 
-test("Board and Ledger are guest-readable", () => {
+test("Picks, Lab, Games, and Ledger are guest-readable", () => {
   assert.equal(isGuestReadablePath("/"), true);
+  assert.equal(isGuestReadablePath("/picks"), true);
+  assert.equal(isGuestReadablePath("/games"), true);
   assert.equal(isGuestReadablePath("/results"), true);
   assert.equal(requiresSignIn("/"), false);
+  assert.equal(requiresSignIn("/picks"), false);
+  assert.equal(requiresSignIn("/games"), false);
   assert.equal(requiresSignIn("/results"), false);
 });
 
@@ -18,7 +22,7 @@ test("Ticket, profile, and admin require sign-in", () => {
   assert.equal(requiresSignIn("/admin/approvals"), true);
 });
 
-test("Lab and arbitrage stay off the guest board even if the file route exists", () => {
-  assert.equal(isGuestReadablePath("/picks"), false);
+test("arbitrage stays gated", () => {
   assert.equal(isGuestReadablePath("/arbitrage"), false);
+  assert.equal(requiresSignIn("/arbitrage"), true);
 });
