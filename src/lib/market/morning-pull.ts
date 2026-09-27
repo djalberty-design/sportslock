@@ -1,4 +1,7 @@
 import { fetchOddsApiMains, getOddsQuota, writeOddsApiCache } from "./odds-api";
+import { tryMorningPullLock, releaseMorningPullLock } from "./advisory-lock";
+import { planOddsCalls } from "./quota-store";
+import { writeDailyBoard } from "./daily-board";
 
 export type EspnProbe = {
   sport: string;
@@ -16,6 +19,9 @@ export type MorningPullResult = {
   eventCounts: Record<string, number>;
   quotaRemaining: number | null;
   espn: EspnProbe[];
+  servedStale?: boolean;
+  lockMiss?: boolean;
+  quotaReason?: string;
 };
 
 const ESPN_SCOREBOARD: { sport: string; path: string }[] = [
@@ -60,23 +66,60 @@ export async function probeEspnMorning(): Promise<EspnProbe[]> {
 }
 
 export async function runMorningPull(bypassDailyGuard = false): Promise<MorningPullResult> {
-  const mains = await fetchOddsApiMains(true, bypassDailyGuard);
-  const eventCounts: Record<string, number> = {};
-  const sports: string[] = [];
-  for (const group of mains ?? []) {
-    const sport = group?.sport ?? "unknown";
-    sports.push(sport);
-    eventCounts[sport] = Array.isArray(group?.data) ? group.data.length : 0;
+  const locked = await tryMorningPullLock();
+  if (!locked) {
+    return {
+      at: new Date().toISOString(),
+      source: "morning-pull",
+      sports: [],
+      eventCounts: {},
+      quotaRemaining: getOddsQuota(),
+      espn: [],
+      lockMiss: true,
+      servedStale: true,
+      quotaReason: "Advisory lock held by another pull",
+    };
   }
-  const espn = await probeEspnMorning();
-  const stamp: MorningPullResult = {
-    at: new Date().toISOString(),
-    source: "morning-pull",
-    sports,
-    eventCounts,
-    quotaRemaining: getOddsQuota(),
-    espn,
-  };
-  await writeOddsApiCache("morning-pull", stamp);
-  return stamp;
+
+  try {
+    const plan = await planOddsCalls(6);
+    if (plan.action === "serve_stale") {
+      const espn = await probeEspnMorning();
+      const stamp: MorningPullResult = {
+        at: new Date().toISOString(),
+        source: "morning-pull",
+        sports: [],
+        eventCounts: {},
+        quotaRemaining: getOddsQuota(),
+        espn,
+        servedStale: true,
+        quotaReason: plan.reason,
+      };
+      await writeOddsApiCache("morning-pull", stamp);
+      return stamp;
+    }
+
+    const mains = await fetchOddsApiMains(true, bypassDailyGuard);
+    const eventCounts: Record<string, number> = {};
+    const sports: string[] = [];
+    for (const group of mains ?? []) {
+      const sport = group?.sport ?? "unknown";
+      sports.push(sport);
+      eventCounts[sport] = Array.isArray(group?.data) ? group.data.length : 0;
+    }
+    const espn = await probeEspnMorning();
+    const stamp: MorningPullResult = {
+      at: new Date().toISOString(),
+      source: "morning-pull",
+      sports,
+      eventCounts,
+      quotaRemaining: getOddsQuota(),
+      espn,
+    };
+    await writeOddsApiCache("morning-pull", stamp);
+    await writeDailyBoard({ source: "morning-pull", sports, eventCounts, mains }, new Date());
+    return stamp;
+  } finally {
+    await releaseMorningPullLock();
+  }
 }

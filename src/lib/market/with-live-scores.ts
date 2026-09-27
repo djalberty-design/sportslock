@@ -1,7 +1,16 @@
 import { buildLiveSnapshot } from "./live-board";
 import { applyLiveScores, fetchLiveScores, teamsMatch, type LiveScore } from "./live-scores";
 import { etDayKey, nowEtDayKey } from "./slate-day";
+import { pickBoardSource } from "./board-source";
+import { readCurrentDailyBoard, writeDailyBoard } from "./daily-board";
+import { planOddsCalls } from "./quota-store";
 import type { DeskSnapshot, QuoteLine } from "./types";
+
+function isDeskSnapshot(value: unknown): value is DeskSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snap = value as DeskSnapshot;
+  return typeof snap.asOf === "string" && Array.isArray(snap.quotes);
+}
 
 function isFinishedQuote(q: QuoteLine): boolean {
   if ((q as { complete?: boolean }).complete) return true;
@@ -27,7 +36,6 @@ function occupyingScores(scores: LiveScore[], sport: string, team?: string) {
 }
 
 function stalePairing(home: string, away: string, sport: string, scores: LiveScore[], start?: string): boolean {
-  // If a game is scheduled for today or in the future, it is a canonical upcoming game and NEVER stale.
   const today = nowEtDayKey();
   const day = etDayKey(start);
   if (day && day >= today) return false;
@@ -75,17 +83,35 @@ export function dropFinishedGames(snap: DeskSnapshot, scores: LiveScore[] = []):
   };
 }
 
-export async function snapshotWithLiveScores(asOf?: string): Promise<DeskSnapshot> {
-  const snap = await buildLiveSnapshot(asOf);
+async function overlayLiveScores(snap: DeskSnapshot): Promise<DeskSnapshot> {
   const scores = await fetchLiveScores().catch(() => []);
   if (!scores.length) return dropFinishedGames(snap);
   const liveN = scores.filter((s) => s.inPlay).length;
   const withLive = {
     ...snap,
     quotes: applyLiveScores(snap.quotes, scores),
-    sourceNote: liveN
-      ? `${snap.sourceNote} Live scores: ${liveN} in play.`
-      : snap.sourceNote,
+    sourceNote: liveN ? `${snap.sourceNote} Live scores: ${liveN} in play.` : snap.sourceNote,
   };
   return dropFinishedGames(withLive, scores);
+}
+
+export async function snapshotWithLiveScores(asOf?: string): Promise<DeskSnapshot> {
+  const stored = await readCurrentDailyBoard();
+  const plan = await planOddsCalls(1);
+  const source = pickBoardSource({
+    storedAsOf: stored?.asOf ?? null,
+    quotaAction: plan.action,
+    forceCompute: Boolean(asOf),
+  });
+
+  if (source === "stored" && stored && isDeskSnapshot(stored.snapshot)) {
+    return overlayLiveScores({
+      ...stored.snapshot,
+      sourceNote: `${stored.snapshot.sourceNote || "Stored daily board."} Served from daily_board.`,
+    });
+  }
+
+  const snap = await buildLiveSnapshot(asOf);
+  await writeDailyBoard(snap, new Date(snap.asOf || Date.now()));
+  return overlayLiveScores(snap);
 }

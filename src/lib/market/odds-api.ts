@@ -1,5 +1,6 @@
 import { getSql } from "../db.ts";
 import { etDayKey, nowEtDayKey } from "./slate-day.ts";
+import { planOddsCalls, recordOddsCalls } from "./quota-store.ts";
 
 export const ODDS_API_KEY = process.env.ODDS_API_KEY ?? "";
 
@@ -54,7 +55,6 @@ export async function writeOddsApiCache(key: string, data: any): Promise<void> {
 
 export async function getActiveCachedProps(): Promise<any[]> {
   const now = Date.now();
-  // 90-second in-memory cache to prevent polling queries from hitting Neon repeatedly
   if (globalCache.activeProps && Array.isArray(globalCache.activeProps) && now - globalCache.activePropsLastFetch < 90_000) {
     return globalCache.activeProps;
   }
@@ -116,7 +116,6 @@ const SPORT_TO_ESPN_PATH: Record<string, string> = {
   basketball_ncaab: "basketball/mens-college-basketball",
 };
 
-/** Verify if a sport is in active regular-season or playoffs (strictly excludes preseason: season.type === 1) */
 export async function isSportInRegularOrPostseason(sportKey: string): Promise<boolean> {
   const path = SPORT_TO_ESPN_PATH[sportKey];
   if (!path) return true;
@@ -131,7 +130,6 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
     }
     const json = await res.json();
     const seasonType = json?.season?.type;
-    // 1 = preseason (EXCLUDE), 2 = regular season (INCLUDE), 3 = postseason/playoffs (INCLUDE)
     if (seasonType === 1) {
       console.log(`[odds-api] ${sportKey} is currently in PRESEASON (season.type = 1). Skipping daily Odds API pull.`);
       return false;
@@ -140,7 +138,7 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
     return Boolean(json?.events && json.events.length > 0 && seasonType !== 1);
   } catch (err) {
     console.warn(`[odds-api] ESPN probe failed for ${sportKey}, defaulting to active:`, err);
-    return true; // Fallback to calendar if ESPN network fails
+    return true;
   }
 }
 
@@ -151,7 +149,6 @@ function normalizeEventBooks(event: any) {
     if (b && (b.key === "hardrockbet_fl" || b.key === "hardrockbet")) b.key = "hardrock";
   }
 
-  // Prune down to ONLY the monitored sportsbooks to prevent storing and transferring dozens of unused offshore books
   const allowedBooks = new Set(["hardrock", "draftkings", "fanduel"]);
   const filteredBooks = books
     .filter((b: any) => b && allowedBooks.has(b.key))
@@ -197,14 +194,12 @@ function normalizeSportGroup(data: any) {
 }
 
 export const ODDS_REGIONS = "us,us2";
-/** Florida Hard Rock first. `hardrock` is not a valid Odds API key. */
 export const ODDS_BOOKS = "hardrockbet_fl,hardrockbet,draftkings,fanduel";
 
 export function getOddsQuota() {
   return globalCache.quotaRemaining;
 }
 
-/** Check quota via the lightweight /sports endpoint (free, doesn't count) */
 export async function getOddsQuotaLive(): Promise<number | null> {
   if (globalCache.quotaRemaining != null) return globalCache.quotaRemaining;
   try {
@@ -243,11 +238,16 @@ async function patchMainsEvent(sportKey: string, eventId: string, event: any) {
   await writeOddsApiCache("mains", mains);
 }
 
-/** One-event mains pull. Admin ticket button. 1 Odds API request. */
 export async function fetchOddsApiEvent(sportKey: string, eventId: string) {
+  const plan = await planOddsCalls(1);
+  if (plan.action === "serve_stale") {
+    console.warn("[odds-api] event fetch denied:", plan.reason);
+    return null;
+  }
   const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, "markets=h2h,spreads,totals");
   const res = await fetch(url);
   noteQuota(res);
+  await recordOddsCalls(1);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.error(`[odds-api] Event error for ${eventId}:`, res.status, body);
@@ -263,7 +263,6 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
   const now = Date.now();
   const currentEtDay = nowEtDayKey();
 
-  // L1 Memory Cache: 60s TTL, valid only if fetched for today's ET calendar day
   if (
     !force &&
     globalCache.mains &&
@@ -280,9 +279,6 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
     const cachedEtDay = etDayKey(cached.fetchedAt);
     const alreadyPulledToday = cachedEtDay === currentEtDay;
 
-    // STRICT ONCE-PER-DAY 5:00 AM ET GUARD:
-    // If today's pull has already completed TODAY in Eastern Time, return cached mains
-    // unless bypassDailyGuard is explicitly requested by an admin.
     if (alreadyPulledToday && (!force || !bypassDailyGuard)) {
       globalCache.mains = cached.data;
       globalCache.mainsLastFetch = now;
@@ -297,9 +293,22 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
     console.log("[odds-api] No DB cache found. Executing initial daily pull...");
   }
 
-  console.log("[odds-api] Fetching daily lines from Odds API for all active regular season sports...");
   const candidateSports = getActiveSports();
+  const plan = await planOddsCalls(Math.max(1, candidateSports.length));
+  if (plan.action === "serve_stale") {
+    console.warn("[odds-api] fail-closed, serving last mains:", plan.reason);
+    if (cached?.data && Array.isArray(cached.data)) {
+      globalCache.mains = cached.data;
+      globalCache.mainsLastFetch = now;
+      globalCache.mainsEtDay = currentEtDay;
+      return cached.data;
+    }
+    return [];
+  }
+
+  console.log("[odds-api] Fetching daily lines from Odds API for all active regular season sports...");
   const results = [];
+  let spent = 0;
 
   for (const sport of candidateSports) {
     const isLiveRegularSeason = await isSportInRegularOrPostseason(sport);
@@ -312,6 +321,7 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
       const url = oddsUrl(`sports/${sport}/odds/`, "markets=h2h,spreads,totals");
       const res = await fetch(url);
       noteQuota(res);
+      spent += 1;
       if (!res.ok) {
         console.error(`[odds-api] Error for ${sport}:`, res.status, await res.text().catch(() => ""));
         continue;
@@ -323,6 +333,8 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
       console.error(`[odds-api] Fetch error for ${sport}:`, e);
     }
   }
+
+  await recordOddsCalls(spent);
 
   if (results.length > 0) {
     const merged = [...results];
@@ -346,7 +358,7 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
 }
 
 export async function fetchOddsApiProps(sportKey: string, eventId: string, force = false) {
-  console.log(`[odds-api] ⚡ fetchOddsApiProps invoked: sport=${sportKey}, event=${eventId}, force=${force}`);
+  console.log(`[odds-api] fetchOddsApiProps invoked: sport=${sportKey}, event=${eventId}, force=${force}`);
   if (!force && globalCache.props[eventId]) {
     return globalCache.props[eventId];
   }
@@ -360,8 +372,14 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
     }
   }
 
+  const plan = await planOddsCalls(1);
+  if (plan.action === "serve_stale") {
+    console.warn("[odds-api] props fetch denied:", plan.reason);
+    if (cached?.data) return cached.data;
+    return { __error: true, status: 429, message: plan.reason } as any;
+  }
+
   try {
-    // Sport-specific prop markets — sending invalid ones causes HTTP 422
     const SPORT_MARKETS: Record<string, string> = {
       americanfootball_nfl: "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_anytime_td",
       americanfootball_ncaaf: "player_pass_tds,player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_anytime_td",
@@ -374,6 +392,7 @@ export async function fetchOddsApiProps(sportKey: string, eventId: string, force
     const url = oddsUrl(`sports/${sportKey}/events/${eventId}/odds`, `markets=${markets}`);
     const res = await fetch(url);
     noteQuota(res);
+    await recordOddsCalls(1);
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       const detail = `[odds-api] Props error for ${eventId}: HTTP ${res.status} — ${body.slice(0, 200)}`;
