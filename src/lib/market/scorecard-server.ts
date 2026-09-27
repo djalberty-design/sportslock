@@ -6,7 +6,7 @@ export const getPublicScorecardFn = createServerFn({ method: "GET" }).handler(as
   try {
     const sql = await getSql();
     const rows = await sql`
-      SELECT recommended, market_type, status, model_probability, price
+      SELECT recommended, market_type, status, model_probability, price, close_price
       FROM market_tape
       WHERE status IN ('WIN', 'LOSS')
       ORDER BY COALESCE(graded_at, snapped_at) ASC
@@ -18,7 +18,7 @@ export const getPublicScorecardFn = createServerFn({ method: "GET" }).handler(as
       status: String(r.status || ""),
       modelProb: r.model_probability != null ? Number(r.model_probability) : null,
       marketPrice: r.price != null ? Number(r.price) : null,
-      closePrice: null,
+      closePrice: r.close_price != null ? Number(r.close_price) : null,
     }));
     return { ok: true as const, card: buildPublicScorecard(picks) };
   } catch (e) {
