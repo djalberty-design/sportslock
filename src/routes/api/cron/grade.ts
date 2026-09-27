@@ -6,6 +6,7 @@ import { runTapeAutopsy } from "@/lib/market/autopsy-tape";
 import { runPostGradeAnalysis } from "@/lib/market/post-grade-analysis";
 import { calibrateWeights, checkCircuitBreakers } from "@/lib/market/dynamic-weights";
 import { WEIGHT_STEERING_FROZEN } from "@/lib/market/weight-freeze";
+import { backfillClosePrices } from "@/lib/market/backfill-close";
 import { buildSuggestions } from "@/lib/market/suggestions";
 import { logActivity } from "@/lib/market/activity";
 
@@ -25,6 +26,7 @@ async function handleGrade() {
     const tapeResult = await gradeMarketTape().catch((e) => ({ graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) }));
     const predResult = await gradePredictionLogs().catch((e) => ({ graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) }));
     const propResult = await gradePlayerProps().catch(() => ({ graded: 0, unmatched: 0, skipped: 0, expired: 0 }));
+    await backfillClosePrices().catch(() => 0);
     const autopsyResult = await runTapeAutopsy().catch(() => ({ ok: false }));
     const postGradeResult = await runPostGradeAnalysis().catch(() => ({ ok: false }));
 
@@ -32,7 +34,9 @@ async function handleGrade() {
       ? { ok: true, updated: [] as string[], summary: {} }
       : await calibrateWeights().catch(() => ({ ok: false, updated: [] as string[], summary: {} }));
 
-    const circuitBreakerResult = await checkCircuitBreakers().catch(() => ({ tripped: [] as string[], summary: {}, recovered: [] as string[] }));
+    const circuitBreakerResult = WEIGHT_STEERING_FROZEN
+      ? { tripped: [] as string[], summary: {}, recovered: [] as string[] }
+      : await checkCircuitBreakers().catch(() => ({ tripped: [] as string[], summary: {}, recovered: [] as string[] }));
     const suggestionResult = await buildSuggestions().catch(() => ({ ok: false }));
     const totalGraded = tapeResult.graded + predResult.graded + propResult.graded;
 
