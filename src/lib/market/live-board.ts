@@ -9,6 +9,7 @@ import { fetchKalshiContracts, kalshiHomeWin } from "./kalshi.ts";
 import { fetchPolymarketContracts, fetchPolymarketBySlug, type PolyContract, guessPolySlug, polymarketHomeWin } from "./polymarket.ts";
 import { fetchOddsApiMains, getOddsPropsCache, getActiveCachedProps } from "./odds-api.ts";
 import { buildChance, parseEra } from "./chance.ts";
+import { mergeEspnTodaySchedule } from "./espn-today-slate.ts";
 import { twoWayNoVig } from "./engine.ts";
 import { ALL_SPORTS } from "./universe.ts";
 import { teamAbbrFromName, espnLogoUrl } from "./logos.ts";
@@ -747,6 +748,7 @@ export async function buildLiveSnapshot(asOf = new Date().toISOString()): Promis
   if (quotes.length === 0 && oddsApiMains && oddsApiMains.length > 0) {
     quotes = quotesFromOddsApi(oddsApiMains);
   }
+  quotes = await mergeEspnTodaySchedule(quotes).catch(() => quotes);
   const uniqueQuotes: QuoteLine[] = [];
   const seen = new Set<string>();
   const nowMs = Date.now();
