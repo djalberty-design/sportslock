@@ -8,6 +8,7 @@ import { cn, formatKickoff, getEasternQuotaBreakdown } from "@/lib/utils";
 import { PRIMARY_TABS } from "@/lib/app/nav-tabs";
 import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
+import { BoardFreshnessBadge } from "./board-freshness-badge";
 
 const TAB_ICONS = {
   "/": Hexagon,
@@ -61,8 +62,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row w-full max-w-full overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 z-50 bg-obsidian border-b border-line/50 pt-[env(safe-area-inset-top,0px)]">
         <div className="h-7 flex items-center justify-between px-3 sm:px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 min-w-0">
             <DeskStamp />
+            <span className="text-muted/40">|</span>
+            <BoardFreshnessBadge />
           </div>
           {isAdmin && quota != null && quotaInfo && (
             <div
