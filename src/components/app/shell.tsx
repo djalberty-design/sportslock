@@ -6,6 +6,7 @@ import { useAccess } from "@/lib/use-access";
 import { getOddsQuotaFn } from "@/lib/market/server";
 import { cn, formatKickoff, getEasternQuotaBreakdown } from "@/lib/utils";
 import { PRIMARY_TABS } from "@/lib/app/nav-tabs";
+import { useParlaySlip } from "@/lib/parlay-slip";
 import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 import { BoardFreshnessBadge } from "./board-freshness-badge";
@@ -47,6 +48,7 @@ function DeskStamp() {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin } = useAccess();
+  const slipOpen = useParlaySlip((s) => s.legs.length > 0);
   const [quota, setQuota] = useState<number | null>(null);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [quota]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground pb-16 md:pb-0 md:flex-row w-full max-w-full overflow-x-hidden">
+    <div className={cn("flex min-h-dvh flex-col bg-background text-foreground md:flex-row w-full max-w-full overflow-x-hidden", slipOpen ? "pb-28 md:pb-12" : "pb-16 md:pb-0")}>
       <div className="fixed top-0 left-0 right-0 z-50 bg-obsidian border-b border-line/50 pt-[env(safe-area-inset-top,0px)]">
         <div className="h-7 flex items-center justify-between px-3 sm:px-4 text-[10px] font-bold uppercase tracking-widest text-muted">
           <div className="flex items-center gap-2 shrink-0 min-w-0">
@@ -72,10 +74,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           {isAdmin && quota != null && quotaInfo && (
             <div
               className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]"
-              title={`Monthly Free Tier: 500 requests · Quota Remaining: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports × ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+              title={`Monthly Free Tier: 500 requests \u00b7 Quota Remaining: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports \u00d7 ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
             >
               <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
-                ⚡ {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls avail</span><span className="sm:hidden">props</span>
+                \u26a1 {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls avail</span><span className="sm:hidden">props</span>
               </span>
               <span className="text-muted/40 hidden sm:inline">|</span>
               <span className="text-muted/70 font-mono hidden sm:inline" title="API Quota Remaining">{quota}/500</span>
@@ -129,7 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        
+
         <div className="p-3 border-t border-line/50 flex flex-col gap-2">
           <ThemeToggle />
           <Link
@@ -188,7 +190,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="mx-auto max-w-5xl px-4 pt-7 pb-4 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden sm:pt-6">
+        <div className={cn("mx-auto max-w-5xl px-4 pt-7 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden sm:pt-6", slipOpen ? "pb-24" : "pb-4")}>
           {children}
           {isAdmin && (
             <div className="md:hidden mt-8 mb-16 pt-4 border-t border-line/40 flex items-center justify-between px-2 text-xs text-muted">

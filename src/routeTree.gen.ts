@@ -15,6 +15,7 @@ import { Route as ArbitrageRouteImport } from './routes/arbitrage'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ParlayRouteImport } from './routes/parlay'
 import { Route as PicksRouteImport } from './routes/picks'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResultsRouteImport } from './routes/results'
@@ -72,6 +73,11 @@ const GamesRoute = GamesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParlayRoute = ParlayRouteImport.update({
+  id: '/parlay',
+  path: '/parlay',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PicksRoute = PicksRouteImport.update({
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/parlay': typeof ParlayRoute
   '/picks': typeof PicksRoute
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/parlay': typeof ParlayRoute
   '/picks': typeof PicksRoute
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/desk': typeof DeskRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/parlay': typeof ParlayRoute
   '/picks': typeof PicksRoute
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/games'
     | '/login'
+    | '/parlay'
     | '/picks'
     | '/profile'
     | '/results'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/games'
     | '/login'
+    | '/parlay'
     | '/picks'
     | '/profile'
     | '/results'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/desk'
     | '/games'
     | '/login'
+    | '/parlay'
     | '/picks'
     | '/profile'
     | '/results'
@@ -442,6 +454,7 @@ export interface RootRouteChildren {
   DeskRoute: typeof DeskRoute
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
+  ParlayRoute: typeof ParlayRoute
   PicksRoute: typeof PicksRoute
   ProfileRoute: typeof ProfileRoute
   ResultsRoute: typeof ResultsRoute
@@ -502,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parlay': {
+      id: '/parlay'
+      path: '/parlay'
+      fullPath: '/parlay'
+      preLoaderRoute: typeof ParlayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/picks': {
@@ -742,6 +762,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeskRoute: DeskRoute,
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
+  ParlayRoute: ParlayRoute,
   PicksRoute: PicksRoute,
   ProfileRoute: ProfileRoute,
   ResultsRoute: ResultsRoute,

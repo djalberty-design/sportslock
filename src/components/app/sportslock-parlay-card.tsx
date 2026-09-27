@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar, Plus } from "lucide-react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { classifyMix } from "@/lib/market/feed-mix";
 import { matchSnapshotEvent, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
 import { FeedLockModal } from "./feed-lock-modal";
@@ -8,6 +8,8 @@ import { cn, formatEasternTime } from "@/lib/utils";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
 import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
 import { useDeskStore } from "@/lib/desk-store";
+import { useParlaySlip, type ParlayLeg } from "@/lib/parlay-slip";
+import { toast } from "sonner";
 import { calculateDynamicWager } from "@/lib/kelly";
 
 function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
@@ -188,6 +190,36 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
   });
 
   const [customWager, setCustomWager] = useState<string | null>(null);
+  const addLeg = useParlaySlip((s) => s.addLeg);
+
+  function toSlipLeg(leg: any): ParlayLeg {
+    return {
+      eventId: String(leg?.eventId || ""),
+      selection: String(leg?.selection || ""),
+      marketType: String(leg?.marketType || "unknown"),
+      side: leg?.side,
+      point: leg?.point,
+      price: Number(leg?.price) || -110,
+      fairProb: Number(leg?.fairProb) || 0.5,
+      sport: leg?.sport,
+      home: leg?.home,
+      away: leg?.away,
+      player: leg?.player,
+      isProp: Boolean(leg?.isProp || leg?.player),
+    };
+  }
+
+  function addAllLegsToSlip(e?: MouseEvent) {
+    e?.stopPropagation();
+    let n = 0;
+    for (const leg of legs) {
+      if (!leg?.selection) continue;
+      addLeg(toSlipLeg(leg));
+      n += 1;
+    }
+    if (n) toast.success(`Added ${n} leg${n === 1 ? "" : "s"} to slip`);
+  }
+
   const wager = customWager !== null ? customWager : String(dynWager.wagerDollars || 10);
   const numWager = parseFloat(wager || "0");
   const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
@@ -303,6 +335,14 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
           "{aiInsight}"
         </div>
 
+        <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={addAllLegsToSlip}
+          className="w-full font-bold py-2.5 px-4 rounded-lg border border-line bg-obsidian text-ink hover:border-primary/50 transition-colors"
+        >
+          Add to Slip
+        </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -318,6 +358,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
             ${wager} pays ${(numWager * decPayout).toFixed(2)}
           </span>
         </button>
+        </div>
       </motion.div>
 
       <AnimatePresence>
@@ -396,6 +437,19 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                                 </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addLeg(toSlipLeg(leg));
+                                toast.success("Added 1 leg to slip");
+                              }}
+                              className="p-1 rounded-md text-primary hover:bg-primary/10"
+                              aria-label="Add leg to slip"
+                            >
+                              <Plus className="size-5" />
+                            </button>
                             <button
                               type="button"
                               className="p-1 rounded-md text-muted hover:text-ink shrink-0"
@@ -403,6 +457,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                             >
                               <ChevronDown className={cn("size-5 transition-transform duration-200", isExp && "rotate-180 text-primary")} />
                             </button>
+                            </div>
                           </div>
 
                           {/* % to hit this leg */}
