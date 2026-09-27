@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { SportsLockParlayCard } from "@/components/app/sportslock-parlay-card";
 import { AiTopSingles } from "@/components/app/ai-top-singles";
+import { PublicScorecardHome } from "@/components/app/public-scorecard-home";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
 import { Sparkles, Activity, Calendar } from "lucide-react";
 import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
@@ -75,7 +76,6 @@ function SportsLockCommandCenter() {
     });
   }, [cachedProps, todayOnly, snapshot]);
 
-  // Combined pool of today's rows + props for synthesizing today's parlays if standard feed has 0 today-only parlays
   const candidateTodayRows = useMemo(() => {
     const rows = [...singlesRows];
     const seen = new Set(rows.map(r => `${r.eventId}|${r.selection}`));
@@ -118,7 +118,6 @@ function SportsLockCommandCenter() {
       const sgpPicks = sgps.map(p => fromParlay(p, "sgp"));
       const twoPicks = cross2.map(p => fromParlay(p, p.sameGame ? "sgp" : "parlay2"));
       const combined = [...twoPicks, ...sgpPicks];
-      // Only grant gold if a 2-leg cross legitimately satisfies the strict ribbon standard
       const goldEligible = buildRibbon(twoPicks);
       const goldId = goldEligible[0]?.id;
       return combined.map(p => ({
@@ -137,7 +136,6 @@ function SportsLockCommandCenter() {
     return fallbackTodayParlays;
   }, [todayOnly, feed, slateFilteredFeed, fallbackTodayParlays]);
 
-  // Top filters: Sport Filter (All, NFL, MLB, etc.) & Mix Filter (All mixes, SGP, 2-leg, 3-leg, etc.)
   const displayParlays = useMemo(() => {
     return applyMixFilter(
       applyRibbonSportFilter(rawFeed, sportFilter),
@@ -157,6 +155,7 @@ function SportsLockCommandCenter() {
         </h1>
         <p className="text-muted text-xs sm:text-sm">Top value picks ranked by probability, payout, and edge. Gold is the best bet on the board. Research, not a lock.</p>
       </div>
+      <PublicScorecardHome />
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -180,7 +179,6 @@ function SportsLockCommandCenter() {
           </button>
         </div>
       </div>
-      {/* ── TOP AI SINGLE BETS SHOWCASE ── */}
       <AiTopSingles rows={singlesRows} cachedProps={singlesProps} />
 
       {gold.length === 0 && catalog.length === 0 ? (
