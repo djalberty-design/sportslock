@@ -88,9 +88,6 @@ export function ParlayBar() {
             const dec = l.price > 0 ? (l.price / 100) + 1 : (100 / Math.abs(l.price)) + 1;
             return acc * dec;
           }, 1);
-      const americanCombined = legData.length === 1
-        ? legData[0].price
-        : (combinedPrice >= 2 ? Math.round((combinedPrice - 1) * 100) : Math.round(-100 / (combinedPrice - 1)));
 
       placePaper({
         kind: legData.length === 1 ? "main" : "parlay",
@@ -149,7 +146,7 @@ export function ParlayBar() {
   if (legs.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-2 duration-200">
+    <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-2 duration-200">
       {expanded && (
         <div className="bg-obsidian/95 backdrop-blur-xl border-t border-line max-h-[35vh] overflow-y-auto">
           <div className="max-w-2xl mx-auto px-3 py-2 space-y-1">
@@ -190,7 +187,7 @@ export function ParlayBar() {
                     {leg.price > 0 ? `+${leg.price}` : leg.price}
                   </span>
                   <button
-                    onClick={() => removeLeg(leg.selection, leg.marketType)}
+                    onClick={() => removeLeg(leg.selection, leg.marketType, leg.eventId, leg.player)}
                     className="size-5 rounded-full bg-line hover:bg-red-500/20 flex items-center justify-center text-muted hover:text-red-400"
                   >
                     <X className="size-2.5" />
