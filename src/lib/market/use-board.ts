@@ -25,13 +25,13 @@ export const DeskDecisionContext = createContext<DeskDecision | null>(null);
 
 export function useBoardQuery() {
   return useQuery({
-    queryKey: ["board"],
+    queryKey: ["board", "slate-v12e"],
     queryFn: () => getLiveBoardSnapshot(),
-    staleTime: 60_000,
+    staleTime: 0,
     gcTime: 5 * 60_000,
     refetchInterval: 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 

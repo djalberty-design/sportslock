@@ -4,9 +4,8 @@ import { boardFreshness } from "./board-freshness";
 import { readOddsApiCache } from "./odds-api";
 import type { DeskSnapshot } from "./types";
 
-export const getLiveBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
+export const getLiveBoardSnapshot = createServerFn({ method: "POST" }).handler(async (): Promise<DeskSnapshot> => {
   try {
-    // Force a compute so a thin same-day snapshot cannot hide today's ESPN slate.
     const snap = await snapshotWithLiveScores(new Date().toISOString());
     const cleaned = dropFinishedGames(snap);
     const cached = await readOddsApiCache("mains");
