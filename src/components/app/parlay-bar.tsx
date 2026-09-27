@@ -1,10 +1,12 @@
 import { useParlaySlip, combinedOdds } from "@/lib/parlay-slip";
 import { cn } from "@/lib/utils";
-import { X, Trash2, ChevronUp, ChevronDown, Lock, ExternalLink } from "lucide-react";
+import { X, Trash2, ChevronUp, ChevronDown, Lock, ExternalLink, Copy } from "lucide-react";
 import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useDeskStore } from "@/lib/desk-store";
 import { lockPredictionFn } from "@/lib/market/server";
 import { getHardRockUrl } from "@/lib/market/hard-rock-links";
+import { slipCopyText } from "@/lib/market/slip-copy";
 import { calculateDynamicWager } from "@/lib/kelly";
 import { formatMarketName } from "@/lib/market/logos";
 
@@ -42,6 +44,17 @@ export function ParlayBar() {
   const decOdds = finalOddsNum > 0 ? (finalOddsNum / 100) + 1 : (100 / Math.abs(finalOddsNum)) + 1;
   const potentialPayout = (stakeAmount * (customOdds ? decOdds : decPayout)).toFixed(2);
 
+  const handleCopyTicket = useCallback(async () => {
+    const text = slipCopyText(legs);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Ticket copied for Hard Rock");
+    } catch {
+      toast.error("Could not copy ticket");
+    }
+  }, [legs]);
+
   const handleLockIn = useCallback(async () => {
     if (legs.length === 0 || saving) return;
     setSaving(true);
@@ -65,12 +78,10 @@ export function ParlayBar() {
         isProp: q.isProp,
       }));
 
-      // Build clean description
       const desc = legData.length === 1
         ? `${legData[0].selection} (${formatMarketName(legData[0].marketType, legData[0].selection)})`
         : `${legData.length}-leg parlay: ${legData.map(l => l.selection).join(" + ")}`;
 
-      // Calculate combined odds
       const combinedPrice = legData.length === 1
         ? legData[0].price
         : legData.reduce((acc, l) => {
@@ -81,7 +92,6 @@ export function ParlayBar() {
         ? legData[0].price
         : (combinedPrice >= 2 ? Math.round((combinedPrice - 1) * 100) : Math.round(-100 / (combinedPrice - 1)));
 
-      // Add to local paper tickets (shows in My Action)
       placePaper({
         kind: legData.length === 1 ? "main" : "parlay",
         description: desc,
@@ -121,7 +131,6 @@ export function ParlayBar() {
         } : {}),
       });
 
-      // Also log to server (prediction_logs for self-improvement)
       await lockPredictionFn({ data: { legs: legData } });
 
       setSaved(true);
@@ -141,7 +150,6 @@ export function ParlayBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-2 duration-200">
-      {/* Expanded leg list */}
       {expanded && (
         <div className="bg-obsidian/95 backdrop-blur-xl border-t border-line max-h-[35vh] overflow-y-auto">
           <div className="max-w-2xl mx-auto px-3 py-2 space-y-1">
@@ -194,7 +202,6 @@ export function ParlayBar() {
         </div>
       )}
 
-      {/* Compact bar — single thin row */}
       <div className="bg-obsidian/95 backdrop-blur-sm border-t border-primary/40">
         <div className="max-w-2xl mx-auto px-3 h-10 flex items-center justify-between gap-2">
           <button
@@ -205,7 +212,7 @@ export function ParlayBar() {
             <span className="text-xs font-bold text-ink">{label}</span>
             {isCorrelated && (
               <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-tight">
-                ⚡ SGP
+                SGP
               </span>
             )}
             <span className="font-mono font-bold text-primary text-sm">{american}</span>
@@ -217,8 +224,7 @@ export function ParlayBar() {
             )}>
               {probPct}%
             </span>
-            
-            {/* Dynamic Stake Input & Payout */}
+
             <div className="flex items-center gap-1 bg-panel border border-line rounded px-1.5 py-0.5" title={`Recommended: $${dynWager.wagerDollars} (${dynWager.unitCount}u)`}>
               <span className="text-[10px] text-muted font-mono">$</span>
               <input
@@ -235,19 +241,27 @@ export function ParlayBar() {
               </span>
             </div>
 
-            {/* Hard Rock Bet Deep Link */}
+            <button
+              type="button"
+              onClick={handleCopyTicket}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-all shrink-0"
+              title="Copy ticket for Hard Rock"
+            >
+              <Copy className="size-2.5" />
+              <span className="hidden sm:inline">Copy</span>
+            </button>
+
             <a
               href={getHardRockUrl(legs[0]?.sport)}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-all shrink-0"
-              title="Open in Hard Rock Bet"
+              title="Open Hard Rock lobby"
             >
-              <span>HR Bet</span>
+              <span>HR</span>
               <ExternalLink className="size-2.5" />
             </a>
 
-            {/* Lock It In button */}
             <button
               onClick={handleLockIn}
               disabled={saving || saved}
