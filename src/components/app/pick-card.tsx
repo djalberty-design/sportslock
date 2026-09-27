@@ -1,11 +1,10 @@
 // @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { formatChancePct, formatBetUsd, profitOnStake, sportLabel } from "@/lib/copy";
-import { Camera, EyeOff, Pin } from "lucide-react";
+import { formatChancePct, formatBetUsd } from "@/lib/copy";
+import { Camera, Copy, EyeOff, Pin } from "lucide-react";
 import { feeBadge, timingKind, TIMING_COPY } from "@/lib/market/edge";
-import { espnLogoUrl } from "@/lib/market/logos";
-import { belowSixty, candidateToPicks, highestTodayLabel, pickMatchup, qualityBand, type DeskPick } from "@/lib/market/picks";
+import { belowSixty, candidateToPicks, highestTodayLabel, qualityBand, type DeskPick } from "@/lib/market/picks";
 import { lookChipId, LOOK_LABEL, tapeChip, type ChipId } from "@/lib/plain-words";
 import { useDeskStore, selectUnit } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
@@ -14,12 +13,15 @@ import { useDeskDecision } from "@/lib/market/use-board";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PaperTicket, ParsedTicket } from "@/lib/market/types";
 import { cn, formatKickoff } from "@/lib/utils";
-import { HitReadout, WagerMeter, getEdgeTone } from "./wager-meter";
 import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
 import { FastLogModal } from "./fast-log-modal";
-import { SharePickButton } from "./share-pick";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+import {
+  formatAmerican,
+  formatLineAge,
+  toPickCardView,
+} from "@/lib/market/pick-card-contract";
 
 export function PickCard({
   pick,
@@ -35,204 +37,189 @@ export function PickCard({
   onToggle?: (e: React.MouseEvent) => void;
 }) {
   const [fastLogOpen, setFastLogOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const unit = useDeskStore(selectUnit);
   const bankroll = useDeskStore((s) => s.liveBankroll);
   const setParlayLegs = useDeskStore((s) => s.setParlayLegs);
-  const { isAdmin } = useAccess();
+  const { isAdmin, signedIn } = useAccess();
   const { settings } = useDeskDecision();
   const qc = useQueryClient();
   const hidePick = useDeskStore((s) => s.hidePick);
   const pinPick = useDeskStore((s) => s.pinPick);
-  const liveFits = bankroll >= 100 && unit >= 1;
-  const profit = pick.price != null ? profitOnStake(unit, pick.price) : null;
   const pinned = settings.pinnedPickId === pick.id;
   const row = pick.row;
-  const isSharp = row?.ticketPct != null && row?.handlePct != null && (row.handlePct - row.ticketPct >= 15);
-  const edgeTone = getEdgeTone(pick.chance, pick.decimalPayout, pick.price);
+  const view = toPickCardView(pick, {
+    bankroll: bankroll > 0 ? bankroll : 200,
+    unit: unit > 0 ? unit : 20,
+  });
+  const priceLabel = formatAmerican(view.price);
+  const edgeLabel = view.edgePct == null ? "—" : `${view.edgePct > 0 ? "+" : ""}${view.edgePct}%`;
+  const stakeLabel = view.kellyStake == null ? "Set bankroll" : formatBetUsd(view.kellyStake);
+
+  async function copyTicket(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(view.copyText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
-    <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured || isSelected ? "ring-2 ring-neon" : ""))}>
-      {/* Confidence badge */}
-      <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider w-fit ml-auto mb-1",
-        edgeTone === "high" ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30" :
-        edgeTone === "medium" ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30" :
-        "bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30"
-      )}>
-        <span className={cn("size-1.5 rounded-full", edgeTone === "high" ? "bg-emerald-400" : edgeTone === "medium" ? "bg-amber-400" : "bg-zinc-400")} />
-        {edgeTone === "high" ? "High Value" : edgeTone === "medium" ? "Value" : "Fair Price"}
-      </div>
-      {isSharp && (
-        <div className="absolute top-10 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
-          🔥 SHARP
-        </div>
-      )}
-      {featured ? <CallRibbon /> : null}
-      <Link
-        to="/ticket"
-        search={{ id: pick.id }}
-        onClick={() => {
-          if (pick.parlay) setParlayLegs(candidateToPicks(pick.parlay, []));
-        }}
-        className="block"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {onToggle && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggle(e);
-                }}
-                className={cn("flex size-5 items-center justify-center rounded-full border border-neon/50 bg-obsidian text-neon transition-colors", isSelected && "bg-neon text-obsidian")}
-              >
-                {isSelected ? "✓" : "+"}
-              </button>
-            )}
-            <p className="stamp text-neon">
-            {featured ? "The Call" : rank ? `${rank}` : sportLabel(pick.sport)}
-            {pick.parlay ? ` · ${pick.parlay.legs.length}-pick combo` : ""}
-            {pick.parlay?.sameGame ? " · same-game combo" : ""}
+    <article className={cn("paper-card relative p-4", pick.row?.inPlay ? "ring-2 ring-red-500" : featured || isSelected ? "ring-2 ring-neon" : "")}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="stamp text-muted">
+            {view.sport}
+            {rank ? ` · ${rank}` : ""}
+            {pick.parlay ? ` · ${pick.parlay.legs.length}-leg` : ""}
+            {view.sameGame ? " · same-game" : ""}
           </p>
-          </div>
-          <TeamMarks pick={pick} />
+          <p className="mt-1 text-xs text-muted">{view.matchup}</p>
+          <h3 className="font-display mt-1 text-xl text-ink">{view.pick}</h3>
         </div>
-        <LiveStamp row={pick.row} className="mt-1 block" />
-        <h3 className={cn("font-display mt-2 text-ink", featured ? "text-2xl md:text-3xl" : "text-lg")}>
-          {pick.selection}
-        </h3>
-        <p className="mt-1 text-sm text-muted">
-          {pick.start && !pick.row?.inPlay ? formatKickoff(pick.start, true) : ""}
-          {pick.away && pick.home ? ` · ${pickMatchup(pick)}` : ""}
-        </p>
-        {featured ? (
-          <>
-            <WagerMeter
-              className="mt-3"
-              size="lg"
-              chance={pick.chance}
-              price={pick.price}
-              decimalPayout={pick.decimalPayout}
-              heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
-              label={pick.parlay ? "% to hit all legs" : "% to hit"}
-            />
-            {pick.implied != null ? <EdgeRow pick={pick} className="mt-3" /> : null}
-            {profit ? (
-              <p className="mt-2 text-sm text-ink">
-                {formatBetUsd(unit)} to win {formatBetUsd(profit.profit)}
-                {!liveFits ? " · names the ticket — This ticket is under $1 or money on Start is under $100" : ""}
-              </p>
-            ) : null}
-            <p className="mt-3 text-sm text-ink/85">{pick.why}</p>
-          </>
-        ) : pick.parlay ? (
-          <>
-            <WagerMeter
-              className="mt-3"
-              size="sm"
-              chance={pick.chance}
-              decimalPayout={pick.decimalPayout}
-              heatTone={getEdgeTone(pick.chance, pick.decimalPayout)}
-              label="% to hit all legs"
-            />
-            {pick.parlay?.sameGame ? (
-              <p className="mt-2 text-xs text-neon">Same-game combo. They move together.</p>
-            ) : null}
-          </>
-        ) : (
-          <div className="mt-3 rounded-md bg-panel px-3 py-2">
-            <HitReadout chance={pick.chance} price={pick.price} heatTone={getEdgeTone(pick.chance, pick.decimalPayout)} hero align="left" />
-          </div>
-        )}
-        {pick.parlay ? (
-          <div className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon px-3 text-sm font-bold text-obsidian shadow-[0_0_15px_rgba(57,255,20,0.4)] hover:bg-neon/90 cursor-pointer transition-colors">
-            Open Combo →
-          </div>
-        ) : (
-          <div
+        <div className="text-right shrink-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
+            ●{view.confidenceGrade}
+          </p>
+          <p className="text-xs text-muted mt-1">{formatLineAge(view.lineAgeSeconds)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-md bg-panel px-2 py-2">
+          <p className="stamp text-muted">{view.book}</p>
+          <p className="font-display mt-1 text-lg tabular-nums text-ink">{priceLabel}</p>
+        </div>
+        <div className="rounded-md bg-panel px-2 py-2">
+          <p className="stamp text-muted">Edge</p>
+          <p className="font-display mt-1 text-lg tabular-nums text-neon">{edgeLabel}</p>
+        </div>
+        <div className="rounded-md bg-panel px-2 py-2">
+          <p className="stamp text-muted">Bet</p>
+          <p className="font-display mt-1 text-lg tabular-nums text-ink">{stakeLabel}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={copyTicket}
+          className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-panel px-3 text-sm font-medium text-ink"
+        >
+          <Copy className="size-3.5" />
+          {copied ? "Copied" : "Copy ticket"}
+        </button>
+        {signedIn ? (
+          <button
+            type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              if (pick.parlay) setParlayLegs(candidateToPicks(pick.parlay, []));
               setFastLogOpen(true);
             }}
-            className="mt-4 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20 hover:bg-neon/20 cursor-pointer transition-colors"
+            className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20"
           >
-            ⚡ Fast Log Ticket
-          </div>
+            <Camera className="size-3.5" />
+            Photo lock
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className="inline-flex min-h-9 flex-1 items-center justify-center rounded-md bg-neon/10 px-3 text-sm font-medium text-neon ring-1 ring-inset ring-neon/20"
+          >
+            Sign in to lock
+          </Link>
         )}
-      </Link>
-      <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
-      {row?.waterfall && (
-        <div className="mt-3">
-          <QuantFactorWaterfall waterfall={row.waterfall} compact={true} />
-        </div>
-      )}
-      <div className="mt-2 flex items-center justify-between">
-        <FeeTimingRow pick={pick} />
-        <SharePickButton
-          selection={pick.selection}
-          odds={pick.price != null ? (pick.price > 0 ? `+${pick.price}` : `${pick.price}`) : ""}
-          probability={Math.round((pick.chance || 0) * 100)}
-          matchup={pick.home && pick.away ? `${pick.away} @ ${pick.home}` : ""}
-          sport={pick.sport || ""}
-        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setWhyOpen((v) => !v);
+          }}
+          className="inline-flex min-h-9 items-center justify-center rounded-md bg-panel px-3 text-sm font-medium text-muted"
+        >
+          Why
+        </button>
       </div>
-      
-      {isAdmin ? (
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              pinPick(pick.id);
-              void saveDeskSettings({ data: { pinnedPickId: pinned ? null : pick.id } }).then((s) => {
-                qc.setQueryData(["desk-settings"], s);
-              });
-            }}
-            className={cn(
-              "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted hover:text-neon",
-              pinned && "text-neon",
-            )}
-          >
-            <Pin className="size-4" strokeWidth={1.75} />
-            {pinned ? "Unpin The Call" : "Pin as The Call"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              hidePick(pick.id);
-              void hidePickRemote({ data: { pickId: pick.id, hide: true } }).then((ids) => {
-                qc.setQueryData(["desk-hidden"], ids);
-              });
-            }}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted hover:text-neon"
-          >
-            <EyeOff className="size-4" strokeWidth={1.75} />
-            Hide
-          </button>
+
+      {whyOpen ? (
+        <div className="mt-4 border-t border-line/60 pt-3 space-y-3">
+          <LiveStamp row={pick.row} className="block" />
+          {pick.start && !pick.row?.inPlay ? (
+            <p className="text-xs text-muted">{formatKickoff(pick.start, true)}</p>
+          ) : null}
+          {pick.implied != null ? <EdgeRow pick={pick} /> : null}
+          {view.sameGame ? (
+            <p className="text-xs text-muted">
+              Same-game correlation is provisional — not fit from graded SGP tape.
+            </p>
+          ) : null}
+          {pick.why ? <p className="text-sm text-ink/85">{pick.why}</p> : null}
+          {row?.waterfall ? <QuantFactorWaterfall waterfall={row.waterfall} compact={true} /> : null}
+          <ConfidenceChips pick={pick} showCall={featured} />
+          <FeeTimingRow pick={pick} />
+          {isAdmin ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  pinPick(pick.id);
+                  void saveDeskSettings({ data: { pinnedPickId: pinned ? null : pick.id } }).then((s) => {
+                    qc.setQueryData(["desk-settings"], s);
+                  });
+                }}
+                className={cn(
+                  "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted",
+                  pinned && "text-neon",
+                )}
+              >
+                <Pin className="size-4" strokeWidth={1.75} />
+                {pinned ? "Unpin" : "Pin"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  hidePick(pick.id);
+                  void hidePickRemote({ data: { pickId: pick.id, hide: true } }).then((ids) => {
+                    qc.setQueryData(["desk-hidden"], ids);
+                  });
+                }}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-panel px-3 text-sm font-medium text-muted"
+              >
+                <EyeOff className="size-4" strokeWidth={1.75} />
+                Hide
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
+
+      {onToggle ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggle(e);
+          }}
+          className={cn(
+            "absolute top-3 left-3 flex size-5 items-center justify-center rounded-full border border-neon/50 bg-obsidian text-neon",
+            isSelected && "bg-neon text-obsidian",
+          )}
+        >
+          {isSelected ? "✓" : "+"}
+        </button>
+      ) : null}
+
       {fastLogOpen && <FastLogModal item={pick} onClose={() => setFastLogOpen(false)} />}
     </article>
-  );
-}
-
-function CallRibbon() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        className="ticket-ribbon absolute -top-2 right-4 rounded-sm px-2 py-1 stamp"
-      >
-        The Call
-      </button>
-      <WordSheet id={open ? "the-call" : null} onClose={() => setOpen(false)} />
-    </>
   );
 }
 
@@ -274,20 +261,13 @@ export function ConfidenceChips({
   }
   chips.push({ id: lookChipId(band), label: LOOK_LABEL[band], tone: "neon" });
   chips.push({ id: tape.id, label: tape.label, tone: "muted" });
-  if (!fromUserPhoto && tape.id !== "research") {
-    chips.push({ id: "photo-needed", label: "Fast Log to lock this price", tone: "muted" });
-  }
   if (edge != null && Math.abs(edge) >= 0.008) {
     const pts = Math.round(edge * 100);
     chips.push({
       id: edge > 0 ? "edge-up" : "edge-down",
-      label:
-        edge > 0 ? `+${pts} pts better than the book’s chance` : `${pts} pts worse than the book’s chance`,
+      label: edge > 0 ? `+${pts} pts vs book` : `${pts} pts vs book`,
       tone: edge > 0 ? "up" : "muted",
     });
-  }
-  if (pick.row?.marketType === "ml" && pick.earlyMover) {
-    chips.push({ id: "early-mover", label: "Early Mover Advantage", tone: "neon" });
   }
   const seen = new Set<string>();
   const unique = chips.filter((c) => {
@@ -326,39 +306,27 @@ export function EdgeRow({ pick, className }: { pick: DeskPick; className?: strin
   return (
     <div className={className}>
       <div className="grid grid-cols-3 gap-2">
-        <MiniStat label="Book" value={formatChancePct(pick.implied) ?? "—"} />
-        <MiniStat label="Desk" value={formatChancePct(pick.chance) ?? "—"} neon/>
+        <MiniStat label="Book" value={formatChancePct(pick.implied) ?? "—"} neon={false} />
+        <MiniStat label="Desk" value={formatChancePct(pick.chance) ?? "—"} neon />
         <MiniStat
           label="Edge"
           value={
             pick.edge == null ? "—" : `${pick.edge > 0 ? "+" : ""}${Math.round(pick.edge * 100)} pts`
           }
+          neon={false}
         />
       </div>
-      <p className="mt-2 text-xs text-muted">Book = what the price implies. Desk = our chance. Edge = the gap.</p>
+      <p className="mt-2 text-xs text-muted">Book = price implied. Desk = our chance. Edge = the gap.</p>
     </div>
   );
 }
 
-function MiniStat({ label, value, neon= false }: { label: string; value: string; neon: boolean }) {
+function MiniStat({ label, value, neon = false }: { label: string; value: string; neon: boolean }) {
   return (
     <div className="rounded-md bg-panel px-2 py-2 text-center">
       <p className="stamp text-muted">{label}</p>
-      <p className={cn("font-display mt-1 text-lg tabular-nums", neon? "text-neon" : "text-ink")}>{value}</p>
+      <p className={cn("font-display mt-1 text-lg tabular-nums", neon ? "text-neon" : "text-ink")}>{value}</p>
     </div>
-  );
-}
-
-function TeamMarks({ pick }: { pick: DeskPick }) {
-  if (pick.parlay) return <span className="stamp text-muted">{pick.parlay.legs.length} legs</span>;
-  const home = pick.homeLogo || (pick.homeAbbr ? espnLogoUrl(pick.sport, pick.homeAbbr) : undefined);
-  const away = pick.awayLogo || (pick.awayAbbr ? espnLogoUrl(pick.sport, pick.awayAbbr) : undefined);
-  if (!home && !away) return null;
-  return (
-    <span className="flex -space-x-2">
-      {away ? <img src={away} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-      {home ? <img src={home} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-    </span>
   );
 }
 
@@ -388,7 +356,6 @@ function photoLocksThisPick(
   }
   return false;
 }
-
 
 function FeeTimingRow({ pick }: { pick: DeskPick }) {
   const [open, setOpen] = useState<ChipId | null>(null);
@@ -431,6 +398,3 @@ function FeeTimingRow({ pick }: { pick: DeskPick }) {
     </div>
   );
 }
-
-
-
