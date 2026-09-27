@@ -85,6 +85,7 @@ export type DeskState = {
   updateTicket: (id: string, patch: Partial<PaperTicket>) => void;
   reopenTicket: (id: string) => void;
   dismissTicket: (id: string) => void;
+  clearSettledTickets: () => void;
   confirmParsed: (ticket: ParsedTicket) => void;
   removeConfirmed: (selection: string) => void;
   setSlate: (slate: SlateBundle | null) => void;
@@ -366,7 +367,7 @@ export const useDeskStore = create<DeskState>()(
         }
         let s = get();
         let ticket = s.paperTickets.find((x) => x.id === id);
-        if (!ticket) return;
+        if (!ticket || ticket.status === "dismissed") return;
         if (ticket.status === result) {
           if (extra?.finalScore || extra?.legs) {
             set({
@@ -474,7 +475,11 @@ export const useDeskStore = create<DeskState>()(
       },
       dismissTicket: (id) =>
         set({
-          paperTickets: get().paperTickets.map((x) => (x.id === id ? { ...x, status: "dismissed" } : x)),
+          paperTickets: get().paperTickets.filter((x) => x.id !== id),
+        }),
+      clearSettledTickets: () =>
+        set({
+          paperTickets: get().paperTickets.filter((x) => x.status === "open"),
         }),
       confirmParsed: (ticket) =>
         set({

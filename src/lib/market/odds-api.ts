@@ -120,7 +120,8 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
   const path = SPORT_TO_ESPN_PATH[sportKey];
   if (!path) return true;
   try {
-    const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/${path}/scoreboard`, {
+    const dates = nowEtDayKey().replace(/-/g, "");
+    const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/${path}/scoreboard?dates=${dates}`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(6000),
     });
@@ -279,7 +280,7 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
     const cachedEtDay = etDayKey(cached.fetchedAt);
     const alreadyPulledToday = cachedEtDay === currentEtDay;
 
-    if (alreadyPulledToday && (!force || !bypassDailyGuard)) {
+    if (alreadyPulledToday && !force && !bypassDailyGuard) {
       globalCache.mains = cached.data;
       globalCache.mainsLastFetch = now;
       globalCache.mainsEtDay = currentEtDay;
