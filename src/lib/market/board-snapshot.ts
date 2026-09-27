@@ -6,7 +6,8 @@ import type { DeskSnapshot } from "./types";
 
 export const getLiveBoardSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<DeskSnapshot> => {
   try {
-    const snap = await snapshotWithLiveScores();
+    // Force a compute so a thin same-day snapshot cannot hide today's ESPN slate.
+    const snap = await snapshotWithLiveScores(new Date().toISOString());
     const cleaned = dropFinishedGames(snap);
     const cached = await readOddsApiCache("mains");
     const fresh = boardFreshness(cached?.fetchedAt?.toISOString() ?? cleaned.asOf);
