@@ -1,21 +1,24 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Beaker, Hexagon, Ticket, Settings, History, User, Scale } from "lucide-react";
+import { Hexagon, Ticket, Settings, History, User } from "lucide-react";
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useAccess } from "@/lib/use-access";
 import { getOddsQuotaFn } from "@/lib/market/server";
 import { cn, formatKickoff, getEasternQuotaBreakdown } from "@/lib/utils";
+import { PRIMARY_TABS } from "@/lib/app/nav-tabs";
 import { TicketChip } from "./ticket-lock";
 import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 
-const TABS = [
-  { to: "/", label: "AI Picks", icon: Hexagon },
-  { to: "/picks", label: "The Lab", icon: Beaker },
-  { to: "/arbitrage", label: "Arbitrage", icon: Scale },
-  { to: "/games", label: "Matchups", icon: Activity },
-  { to: "/ticket", label: "My Action", icon: Ticket },
-  { to: "/results", label: "Track Record", icon: History },
-] as const;
+const TAB_ICONS = {
+  "/": Hexagon,
+  "/ticket": Ticket,
+  "/results": History,
+} as const;
+
+const TABS = PRIMARY_TABS.map((tab) => ({
+  ...tab,
+  icon: TAB_ICONS[tab.to],
+}));
 
 function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
@@ -43,7 +46,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useAccess();
   const [quota, setQuota] = useState<number | null>(null);
 
-  // Fetch quota on mount for admin
   useEffect(() => {
     if (!isAdmin) return;
     getOddsQuotaFn().then(setQuota).catch(() => {});
@@ -51,7 +53,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [isAdmin]);
 
-  // Real sport season schedule → active daily pulls needed formulate available prop pulls
   const quotaInfo = useMemo(() => {
     return getEasternQuotaBreakdown(quota);
   }, [quota]);
@@ -81,7 +82,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </div>
-      {/* Mobile Bottom App Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-line/80 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden w-full max-w-full">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.to);
@@ -101,11 +101,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
-      {/* Desktop Side Rail */}
       <aside className="sticky top-7 hidden h-[calc(100dvh-1.75rem)] w-64 flex-col border-r border-line bg-panel md:flex mt-7">
         <div className="flex h-16 items-center gap-3 px-6">
           <Hexagon className="size-6 text-primary" />
-          <span className="font-display text-xl font-bold tracking-tight text-ink">SportsLock AI</span>
+          <span className="font-display text-xl font-bold tracking-tight text-ink">SportsLock</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {TABS.map((tab) => {
@@ -154,9 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 bg-background relative mt-[calc(1.75rem+env(safe-area-inset-top,0px))] md:mt-7 w-full max-w-full overflow-x-hidden" id="main">
-        {/* Top Header for Mobile */}
         <header className="sticky top-[calc(1.75rem+env(safe-area-inset-top,0px))] z-40 flex h-14 items-center justify-between border-b border-line bg-background/95 px-3 backdrop-blur-md md:hidden w-full max-w-full gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/" className="flex items-center gap-1.5 shrink-0 text-ink">
