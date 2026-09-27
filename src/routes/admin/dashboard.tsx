@@ -155,7 +155,7 @@ function Dashboard() {
 
   const calibrateMut = useMutation({
     mutationFn: () => calibrateWeightsFn(),
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
       alert(res?.frozen
         ? "Weights frozen. Results were logged. Live blend was not changed."
