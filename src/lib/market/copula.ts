@@ -18,6 +18,7 @@ export const COPULA_CALIBRATION = {
   propOver: 0.55,
   propUnder: 0.45,
   propMixed: -0.40,
+  propDifferentFamily: 0.12,
 };
 
 export type PropFamily = "pass" | "rush" | "receiving" | "other";
@@ -33,6 +34,11 @@ export function classifyPropFamily(
   if (/\breceiv(ing|er)?\b|\brec(eptions)?\b/.test(blob)) return "receiving";
   if (/\bpass(ing)?\b|\bqb\b/.test(blob)) return "pass";
   return "other";
+}
+
+export function isPropLeg(leg: { marketType?: string; isProp?: boolean; player?: string }): boolean {
+  const m = String(leg.marketType || "");
+  return Boolean(leg.isProp) || Boolean(leg.player) || m === "prop" || m.startsWith("player_") || m.startsWith("batter_") || m.startsWith("pitcher_");
 }
 
 export function updateCopulaCalibration(empiricalData: Partial<typeof COPULA_CALIBRATION>) {
@@ -64,10 +70,11 @@ export function jointFromLegs(probs: number[], rho: number): number {
   return p;
 }
 
-export function sameGameRho(legs: { marketType: string; side: string; fairProb?: number; selection?: string; sport?: string }[]): number {
+export function sameGameRho(legs: { marketType: string; side: string; fairProb?: number; selection?: string; sport?: string; isProp?: boolean; player?: string }[]): number {
   if (legs.length < 2) return 0;
   const types = new Set(legs.map((l) => l.marketType));
   const mlSpread = types.has("ml") && types.has("spread");
+  const anyProp = legs.some(isPropLeg);
 
   let baseRho = 0;
   const mlSpreadSides = new Set(legs.filter(l => l.marketType === "ml" || l.marketType === "spread").map(l => l.side));
@@ -76,8 +83,8 @@ export function sameGameRho(legs: { marketType: string; side: string; fairProb?:
   else if (types.has("total") && (types.has("ml") || types.has("spread"))) {
     const tot = legs.find((l) => l.marketType === "total");
     baseRho = tot?.side === "under" ? COPULA_CALIBRATION.totalUnder : COPULA_CALIBRATION.totalSame;
-  } else if (types.has("prop") && (types.has("ml") || types.has("spread"))) {
-    const prop = legs.find((l) => l.marketType === "prop");
+  } else if (anyProp && (types.has("ml") || types.has("spread"))) {
+    const prop = legs.find(isPropLeg);
     const game = legs.find((l) => l.marketType === "ml" || l.marketType === "spread");
 
     if (prop && game && (prop.selection || prop.marketType)) {
@@ -97,11 +104,17 @@ export function sameGameRho(legs: { marketType: string; side: string; fairProb?:
     } else {
       baseRho = 0.15;
     }
-  } else if (types.has("prop")) {
-    const overs = legs.filter((l) => /over/i.test(l.side)).length;
-    if (overs === legs.length) baseRho = COPULA_CALIBRATION.propOver;
-    else if (overs === 0) baseRho = COPULA_CALIBRATION.propUnder;
-    else baseRho = COPULA_CALIBRATION.propMixed;
+  } else if (anyProp) {
+    const propLegs = legs.filter(isPropLeg);
+    const families = new Set(propLegs.map((l) => classifyPropFamily(l.selection, l.marketType)).filter((f) => f !== "other"));
+    if (families.size > 1) {
+      baseRho = COPULA_CALIBRATION.propDifferentFamily;
+    } else {
+      const overs = legs.filter((l) => /over/i.test(l.side) || /over/i.test(l.selection ?? "")).length;
+      if (overs === legs.length) baseRho = COPULA_CALIBRATION.propOver;
+      else if (overs === 0) baseRho = COPULA_CALIBRATION.propUnder;
+      else baseRho = COPULA_CALIBRATION.propMixed;
+    }
   } else {
     baseRho = 0.35;
   }
