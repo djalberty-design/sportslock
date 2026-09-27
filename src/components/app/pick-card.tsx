@@ -1,25 +1,24 @@
 // @ts-nocheck
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { formatChancePct, formatBetUsd, profitOnStake, sportLabel } from "@/lib/copy";
-import { Camera, EyeOff, Pin } from "lucide-react";
-import { feeBadge, timingKind, TIMING_COPY } from "@/lib/market/edge";
-import { espnLogoUrl } from "@/lib/market/logos";
-import { belowSixty, candidateToPicks, highestTodayLabel, pickMatchup, qualityBand, type DeskPick } from "@/lib/market/picks";
-import { lookChipId, LOOK_LABEL, tapeChip, type ChipId } from "@/lib/plain-words";
+import { formatBetUsd, profitOnStake, sportLabel } from "@/lib/copy";
+import { EyeOff, Pin } from "lucide-react";
+import { candidateToPicks, pickMatchup, type DeskPick } from "@/lib/market/picks";
 import { useDeskStore, selectUnit } from "@/lib/desk-store";
 import { useAccess } from "@/lib/use-access";
 import { hidePickRemote, saveDeskSettings } from "@/lib/desk-api";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { useQueryClient } from "@tanstack/react-query";
-import type { PaperTicket, ParsedTicket } from "@/lib/market/types";
 import { cn, formatKickoff } from "@/lib/utils";
 import { HitReadout, WagerMeter, getEdgeTone } from "./wager-meter";
-import { WordSheet } from "./word-sheet";
 import { LiveStamp } from "./live-stamp";
 import { FastLogModal } from "./fast-log-modal";
 import { SharePickButton } from "./share-pick";
 import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+import { WhyDrawer } from "./why-drawer";
+import { PickCardHeader } from "./pick-card-header";
+import { toPickCardView } from "@/lib/market/pick-card-contract";
+import { CallRibbon, ConfidenceChips, EdgeRow, TeamMarks, FeeTimingRow } from "./pick-card-extras";
 
 export function PickCard({
   pick,
@@ -48,19 +47,11 @@ export function PickCard({
   const pinned = settings.pinnedPickId === pick.id;
   const row = pick.row;
   const isSharp = row?.ticketPct != null && row?.handlePct != null && (row.handlePct - row.ticketPct >= 15);
-  const edgeTone = getEdgeTone(pick.chance, pick.decimalPayout, pick.price);
+  const card = toPickCardView(pick, { bankroll, unit });
 
   return (
     <article className={cn("paper-card relative p-4", (featured || pick.row?.inPlay) && "p-5 md:p-6", pick.row?.inPlay ? "ring-2 ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] border-red-500 z-10" : (featured || isSelected ? "ring-2 ring-neon" : ""))}>
-      {/* Confidence badge */}
-      <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider w-fit ml-auto mb-1",
-        edgeTone === "high" ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30" :
-        edgeTone === "medium" ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30" :
-        "bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30"
-      )}>
-        <span className={cn("size-1.5 rounded-full", edgeTone === "high" ? "bg-emerald-400" : edgeTone === "medium" ? "bg-amber-400" : "bg-zinc-400")} />
-        {edgeTone === "high" ? "High Value" : edgeTone === "medium" ? "Value" : "Fair Price"}
-      </div>
+      <PickCardHeader card={card} />
       {isSharp && (
         <div className="absolute top-10 right-4 flex items-center gap-1.5 rounded-md bg-obsidian/90 px-2 py-1 text-xs font-bold text-neon ring-1 ring-neon/40 shadow-lg backdrop-blur-sm animate-pulse z-10">
           🔥 SHARP
@@ -123,7 +114,6 @@ export function PickCard({
                 {!liveFits ? " · names the ticket — This ticket is under $1 or money on Start is under $100" : ""}
               </p>
             ) : null}
-            <p className="mt-3 text-sm text-ink/85">{pick.why}</p>
           </>
         ) : pick.parlay ? (
           <>
@@ -161,12 +151,18 @@ export function PickCard({
           </div>
         )}
       </Link>
-      <ConfidenceChips pick={pick} showCall={featured} className="mt-3" />
-      {row?.waterfall && (
-        <div className="mt-3">
-          <QuantFactorWaterfall waterfall={row.waterfall} compact={true} />
-        </div>
-      )}
+      <WhyDrawer>
+        {pick.why ? <p className="mb-2 text-sm text-ink/85">{pick.why}</p> : null}
+        <ConfidenceChips pick={pick} showCall={featured} className="mt-1" />
+        {row?.waterfall && (
+          <div className="mt-3">
+            <QuantFactorWaterfall waterfall={row.waterfall} compact={true} />
+          </div>
+        )}
+        <p className="mt-2 text-[11px] text-muted">
+          Hard Rock link is a sport lobby, not slip injection. This card does not place a bet.
+        </p>
+      </WhyDrawer>
       <div className="mt-2 flex items-center justify-between">
         <FeeTimingRow pick={pick} />
         <SharePickButton
@@ -177,7 +173,6 @@ export function PickCard({
           sport={pick.sport || ""}
         />
       </div>
-      
       {isAdmin ? (
         <div className="mt-2 flex gap-2">
           <button
@@ -215,222 +210,3 @@ export function PickCard({
     </article>
   );
 }
-
-function CallRibbon() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        className="ticket-ribbon absolute -top-2 right-4 rounded-sm px-2 py-1 stamp"
-      >
-        The Call
-      </button>
-      <WordSheet id={open ? "the-call" : null} onClose={() => setOpen(false)} />
-    </>
-  );
-}
-
-export function ConfidenceChips({
-  pick,
-  className,
-  showCall = false,
-}: {
-  pick: DeskPick;
-  className?: string;
-  showCall?: boolean;
-}) {
-  const [open, setOpen] = useState<ChipId | null>(null);
-  const confirmed = useDeskStore((s) => s.confirmedTickets);
-  const paper = useDeskStore((s) => s.paperTickets);
-  const fromUserPhoto = photoLocksThisPick(pick, confirmed, paper);
-  const edge = pick.edge;
-  const q = Number(pick.infoQuality);
-  const qualityForBand =
-    Number.isFinite(q) && q > 0
-      ? q
-      : pick.parlay
-        ? pick.parlay.sameGame
-          ? 0.62
-          : pick.parlay.legs.length >= 4
-            ? 0.4
-            : pick.parlay.legs.length === 3
-              ? 0.55
-              : 0.7
-        : 0;
-  const band = qualityBand(qualityForBand);
-  const tape = tapeChip(pick.tapeStamp, pick.researchOnly, fromUserPhoto);
-  const chips: { id: ChipId; label: string; tone: "neon" | "muted" | "up" }[] = [];
-  if (showCall) chips.push({ id: "the-call", label: "The Call", tone: "neon" });
-  if (pick.safestFallback) {
-    chips.push({ id: "highest-today", label: highestTodayLabel(pick), tone: "neon" });
-  } else if (belowSixty(pick)) {
-    chips.push({ id: "under-60", label: "Under 60%", tone: "muted" });
-  }
-  chips.push({ id: lookChipId(band), label: LOOK_LABEL[band], tone: "neon" });
-  chips.push({ id: tape.id, label: tape.label, tone: "muted" });
-  if (!fromUserPhoto && tape.id !== "research") {
-    chips.push({ id: "photo-needed", label: "Fast Log to lock this price", tone: "muted" });
-  }
-  if (edge != null && Math.abs(edge) >= 0.008) {
-    const pts = Math.round(edge * 100);
-    chips.push({
-      id: edge > 0 ? "edge-up" : "edge-down",
-      label:
-        edge > 0 ? `+${pts} pts better than the book’s chance` : `${pts} pts worse than the book’s chance`,
-      tone: edge > 0 ? "up" : "muted",
-    });
-  }
-  if (pick.row?.marketType === "ml" && pick.earlyMover) {
-    chips.push({ id: "early-mover", label: "Early Mover Advantage", tone: "neon" });
-  }
-  const seen = new Set<string>();
-  const unique = chips.filter((c) => {
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
-    return true;
-  });
-  return (
-    <>
-      <div className={cn("flex flex-wrap gap-1.5", className)}>
-        {unique.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setOpen(c.id);
-            }}
-            className={cn(
-              "rounded-sm bg-panel px-2 py-1 text-left text-xs tracking-wide",
-              c.tone === "neon" ? "text-neon" : c.tone === "up" ? "text-up" : "text-muted",
-            )}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-      <WordSheet id={open} onClose={() => setOpen(null)} />
-    </>
-  );
-}
-
-export function EdgeRow({ pick, className }: { pick: DeskPick; className?: string }) {
-  if (pick.implied == null) return null;
-  return (
-    <div className={className}>
-      <div className="grid grid-cols-3 gap-2">
-        <MiniStat label="Book" value={formatChancePct(pick.implied) ?? "—"} />
-        <MiniStat label="Desk" value={formatChancePct(pick.chance) ?? "—"} neon/>
-        <MiniStat
-          label="Edge"
-          value={
-            pick.edge == null ? "—" : `${pick.edge > 0 ? "+" : ""}${Math.round(pick.edge * 100)} pts`
-          }
-        />
-      </div>
-      <p className="mt-2 text-xs text-muted">Book = what the price implies. Desk = our chance. Edge = the gap.</p>
-    </div>
-  );
-}
-
-function MiniStat({ label, value, neon= false }: { label: string; value: string; neon: boolean }) {
-  return (
-    <div className="rounded-md bg-panel px-2 py-2 text-center">
-      <p className="stamp text-muted">{label}</p>
-      <p className={cn("font-display mt-1 text-lg tabular-nums", neon? "text-neon" : "text-ink")}>{value}</p>
-    </div>
-  );
-}
-
-function TeamMarks({ pick }: { pick: DeskPick }) {
-  if (pick.parlay) return <span className="stamp text-muted">{pick.parlay.legs.length} legs</span>;
-  const home = pick.homeLogo || (pick.homeAbbr ? espnLogoUrl(pick.sport, pick.homeAbbr) : undefined);
-  const away = pick.awayLogo || (pick.awayAbbr ? espnLogoUrl(pick.sport, pick.awayAbbr) : undefined);
-  if (!home && !away) return null;
-  return (
-    <span className="flex -space-x-2">
-      {away ? <img src={away} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-      {home ? <img src={home} alt="" className="size-8 rounded-full bg-panel object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-    </span>
-  );
-}
-
-function photoLocksThisPick(
-  pick: DeskPick,
-  confirmed: ParsedTicket[],
-  paper: PaperTicket[],
-): boolean {
-  const sel = (pick.selection || "").toLowerCase();
-  if (
-    paper.some((t) => {
-      if (pick.eventId && t.gameIds?.includes(pick.eventId)) return true;
-      const d = (t.description || "").toLowerCase();
-      return Boolean(sel && d && d.includes(sel.slice(0, 18)));
-    })
-  ) {
-    return true;
-  }
-  if (
-    confirmed.some((t) => {
-      if (pick.home && pick.away && t.home === pick.home && t.away === pick.away) return true;
-      const s = (t.selection || "").toLowerCase();
-      return Boolean(sel && s && sel.includes(s));
-    })
-  ) {
-    return true;
-  }
-  return false;
-}
-
-
-function FeeTimingRow({ pick }: { pick: DeskPick }) {
-  const [open, setOpen] = useState<ChipId | null>(null);
-  const fee = feeBadge(pick.row?.hold);
-  const kind = timingKind({
-    steam: pick.tapeLean === "sharp",
-    tapeLean: pick.tapeLean,
-    favorite: (pick.price ?? 0) < 0,
-  });
-  if (!fee && !kind) return null;
-  return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {fee ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen("fee");
-          }}
-          className={cn("rounded-sm bg-panel px-2 py-1 text-xs", fee.tone === "avoid" ? "text-down" : fee.tone === "high" ? "text-neon" : "text-muted")}
-        >
-          {fee.text}
-        </button>
-      ) : null}
-      {kind ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen(kind);
-          }}
-          className="rounded-sm bg-neon/10 px-2 py-1 text-xs text-neon"
-        >
-          {TIMING_COPY[kind].title}
-        </button>
-      ) : null}
-      <WordSheet id={open} onClose={() => setOpen(null)} />
-    </div>
-  );
-}
-
-
-
