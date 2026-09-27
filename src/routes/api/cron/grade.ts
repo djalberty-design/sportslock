@@ -5,6 +5,7 @@ import { gradePlayerProps } from "@/lib/market/prop-grader";
 import { runTapeAutopsy } from "@/lib/market/autopsy-tape";
 import { runPostGradeAnalysis } from "@/lib/market/post-grade-analysis";
 import { calibrateWeights, checkCircuitBreakers } from "@/lib/market/dynamic-weights";
+import { WEIGHT_STEERING_FROZEN } from "@/lib/market/weight-freeze";
 import { buildSuggestions } from "@/lib/market/suggestions";
 import { logActivity } from "@/lib/market/activity";
 
@@ -20,36 +21,21 @@ export const Route = createFileRoute("/api/cron/grade")({
 async function handleGrade() {
   const startedAt = Date.now();
   try {
-    // Step 1: Snapshot current board state into market_tape
     const tapeSnapshot = await runMarketTape().catch((e) => ({ ok: false, wrote: 0, skipped: 0, error: String(e) }));
-
-    // Step 2: Grade game tape lines (ML, Spread, Totals) against ESPN live/final scores
     const tapeResult = await gradeMarketTape().catch((e) => ({ graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) }));
-
-    // Step 3: Grade prediction logs (legacy ledger)
     const predResult = await gradePredictionLogs().catch((e) => ({ graded: 0, unmatched: 0, historical: 0, expired: 0, error: String(e) }));
-
-    // Step 4: Grade player props against completed ESPN boxscores
     const propResult = await gradePlayerProps().catch(() => ({ graded: 0, unmatched: 0, skipped: 0, expired: 0 }));
-
-    // Step 5: Loss Autopsy classification (categorizes into 4 buckets: model_miss, echoed_book, high_variance, settled)
     const autopsyResult = await runTapeAutopsy().catch(() => ({ ok: false }));
-
-    // Step 6: Post-Grade Deep Analysis (segmented Brier scores, calibration drift, edge profitability)
     const postGradeResult = await runPostGradeAnalysis().catch(() => ({ ok: false }));
 
-    // Step 7: Dynamic Blend Weights Calibration (re-weights 7d/30d performance safely)
-    const calibrationResult = await calibrateWeights().catch(() => ({ ok: false, updated: [], summary: {} }));
+    const calibrationResult = WEIGHT_STEERING_FROZEN
+      ? { ok: true, updated: [] as string[], summary: {} }
+      : await calibrateWeights().catch(() => ({ ok: false, updated: [] as string[], summary: {} }));
 
-    // Step 7b: Alpha Drawdown Circuit Breakers (auto-reverts any sport with >= 4 model misses to defensive baseline)
     const circuitBreakerResult = await checkCircuitBreakers().catch(() => ({ tripped: [] as string[], summary: {}, recovered: [] as string[] }));
-
-    // Step 8: Algorithmic Suggestion Generation (haircuts, sit orders, model tweaks)
     const suggestionResult = await buildSuggestions().catch(() => ({ ok: false }));
-
     const totalGraded = tapeResult.graded + predResult.graded + propResult.graded;
 
-    // Log to activity feed if anything was graded, calibrated, or circuit breakers changed
     if (
       totalGraded > 0 ||
       (calibrationResult.updated && calibrationResult.updated.length > 0) ||
@@ -64,8 +50,8 @@ async function handleGrade() {
       ).catch(() => {});
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       durationMs: Date.now() - startedAt,
       snappedTape: tapeSnapshot.wrote || 0,
       totalGraded,
@@ -77,6 +63,7 @@ async function handleGrade() {
       autopsyRun: autopsyResult.ok,
       postGradeRun: postGradeResult.ok,
       recalibratedSports: calibrationResult.updated || [],
+      weightsFrozen: WEIGHT_STEERING_FROZEN,
       suggestionsBuilt: suggestionResult.ok,
     }), { headers: { "Content-Type": "application/json" } });
   } catch (err) {
