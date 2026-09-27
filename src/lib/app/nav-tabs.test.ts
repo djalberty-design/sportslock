@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isPrimaryTab, OFF_NAV_ROUTES, PRIMARY_TABS } from "./nav-tabs.ts";
 
-test("primary nav is Board / Ticket / Ledger", () => {
+test("primary nav is Picks / Lab / Games / Ticket / Ledger", () => {
   assert.deepEqual(
     PRIMARY_TABS.map((t) => t.label),
-    ["Board", "Ticket", "Ledger"],
+    ["Picks", "Lab", "Games", "Ticket", "Ledger"],
   );
   assert.deepEqual(
     PRIMARY_TABS.map((t) => t.to),
-    ["/", "/ticket", "/results"],
+    ["/", "/picks", "/games", "/ticket", "/results"],
   );
 });
 
-test("Lab, arbitrage, and matchups stay off the bar", () => {
-  assert.equal(isPrimaryTab("/picks"), false);
+test("arbitrage stays off the primary bar", () => {
   assert.equal(isPrimaryTab("/arbitrage"), false);
-  assert.equal(isPrimaryTab("/games"), false);
-  assert.ok(OFF_NAV_ROUTES.includes("/picks"));
+  assert.ok(OFF_NAV_ROUTES.includes("/arbitrage"));
+  assert.equal(isPrimaryTab("/picks"), true);
+  assert.equal(isPrimaryTab("/games"), true);
 });
