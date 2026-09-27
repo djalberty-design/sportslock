@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectSport, gradeParsedFields, parseSlipText, slipEventId } from "./slip-ocr.ts";
+import { detectSport, parseSlipText } from "./slip-ocr.ts";
+import { gradeParsedFields, slipEventId } from "./slip-ocr-grade.ts";
 
 test("reads an NFL moneyline from messy OCR", () => {
   const r = parseSlipText("Hard Rock Bet Florida\nNFL\nChiefs vs Ravens\nKansas City to win  -115");
