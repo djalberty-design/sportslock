@@ -7,4 +7,4 @@ Supersedes `GROK-2026-09-18-CURRENT.md` §6 item 3 wherever they conflict.
 - **CLV cents:** `evenDistance(bet) - evenDistance(close)` on the American scale. Locked -105 / closed -120 → +15. Not `clvPct / 10`.
 - **Copula ρ:** provisional hardcoded values. Sequential pairwise Clayton. Not Gaussian. Not an n-copula. Do not show ρ on a straight.
 - **Park pressure:** omitted unless a station feed supplies inHg. Do not invent 29.92.
-- **Weight calibration:** win-rate steering is off until n ≥ 50 and Phase 4 Brier/CLV time-split exists.
+- **Weight calibration:** win-rate steering is off. `calibrateWeights()` records sample size when n ≥ 50 but does not move `wSim`/`wPool`/`wMarket`. Phase 4 replaces the objective with time-split Brier/CLV.
