@@ -130,7 +130,7 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
       return true;
     }
     const json = await res.json();
-    const seasonType = json?.season?.type;
+    const seasonType = json?.season?.type ?? json?.leagues?.[0]?.season?.type?.type;
     if (seasonType === 1) {
       console.log(`[odds-api] ${sportKey} is currently in PRESEASON (season.type = 1). Skipping daily Odds API pull.`);
       return false;

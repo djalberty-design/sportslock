@@ -340,7 +340,7 @@ export function quotesFromEspnEvent(event: EspnEvent, sport: QuoteLine["sport"] 
 
 export function quotesFromScoreboard(board: EspnScoreboard | null, sport: string): QuoteLine[] {
   if (!board?.events?.length) return [];
-  const type = board.season?.type;
+  const type = board.season?.type ?? (board as any).leagues?.[0]?.season?.type?.type;
   const phase: QuoteLine["phase"] = type === 1 ? "preseason" : type === 3 ? "playoff" : "regular";
   return board.events.flatMap((e) => quotesFromEspnEvent(e, sport, phase));
 }
