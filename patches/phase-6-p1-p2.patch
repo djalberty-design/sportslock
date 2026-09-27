@@ -1,0 +1,217 @@
+diff --git a/src/components/app/board-page.tsx b/src/components/app/board-page.tsx
+index 1ea5455..24c3e1d 100644
+--- a/src/components/app/board-page.tsx
++++ b/src/components/app/board-page.tsx
+@@ -62,7 +62,7 @@ export function BoardPage() {
+ 
+       if (legs.length > 1) {
+         setParlayLegs(legs);
+-        navigate({ to: "/parlay" });
++        navigate({ to: "/picks" });
+       } else {
+         alert("Could not build combo: Found " + legs.length + " valid legs for " + comboLegs.length + " selected games.");
+       }
+@@ -254,7 +254,7 @@ export function BoardPage() {
+ 
+       <p className="text-sm">
+         Build a custom ticket on{" "}
+-        <Link to="/parlay" className="font-medium text-neon underline-offset-4 hover:underline">
++        <Link to="/picks" className="font-medium text-neon underline-offset-4 hover:underline">
+           Your parlay
+         </Link>
+         .
+diff --git a/src/components/app/sportslock-parlay-card.tsx b/src/components/app/sportslock-parlay-card.tsx
+index 86fff1f..555c2ec 100644
+--- a/src/components/app/sportslock-parlay-card.tsx
++++ b/src/components/app/sportslock-parlay-card.tsx
+@@ -1,6 +1,6 @@
+ import { motion, AnimatePresence } from "framer-motion";
+-import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar } from "lucide-react";
+-import { useState, useEffect } from "react";
++import { ShieldCheck, Flame, BarChart2, X, CheckCircle2, ChevronDown, Clock, Calendar, Plus } from "lucide-react";
++import { useState, useEffect, type MouseEvent } from "react";
+ import { classifyMix } from "@/lib/market/feed-mix";
+ import { matchSnapshotEvent, resolveLegTeam, resolvePlayerHeadshotSync, fetchPlayerHeadshot } from "@/lib/market/logos";
+ import { FeedLockModal } from "./feed-lock-modal";
+@@ -8,6 +8,8 @@ import { cn, formatEasternTime } from "@/lib/utils";
+ import { QuantFactorWaterfall } from "./quant-factor-waterfall";
+ import { computeQuantFactorWaterfall } from "@/lib/market/waterfall";
+ import { useDeskStore } from "@/lib/desk-store";
++import { useParlaySlip, type ParlayLeg } from "@/lib/parlay-slip";
++import { toast } from "sonner";
+ import { calculateDynamicWager } from "@/lib/kelly";
+ 
+ function getLegTimeInfo(leg: any, quote?: any, allQuotes?: any[]) {
+@@ -188,6 +190,36 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
+   });
+ 
+   const [customWager, setCustomWager] = useState<string | null>(null);
++  const addLeg = useParlaySlip((s) => s.addLeg);
++
++  function toSlipLeg(leg: any): ParlayLeg {
++    return {
++      eventId: String(leg?.eventId || ""),
++      selection: String(leg?.selection || ""),
++      marketType: String(leg?.marketType || "unknown"),
++      side: leg?.side,
++      point: leg?.point,
++      price: Number(leg?.price) || -110,
++      fairProb: Number(leg?.fairProb) || 0.5,
++      sport: leg?.sport,
++      home: leg?.home,
++      away: leg?.away,
++      player: leg?.player,
++      isProp: Boolean(leg?.isProp || leg?.player),
++    };
++  }
++
++  function addAllLegsToSlip(e?: MouseEvent) {
++    e?.stopPropagation();
++    let n = 0;
++    for (const leg of legs) {
++      if (!leg?.selection) continue;
++      addLeg(toSlipLeg(leg));
++      n += 1;
++    }
++    if (n) toast.success(`Added ${n} leg${n === 1 ? "" : "s"} to slip`);
++  }
++
+   const wager = customWager !== null ? customWager : String(dynWager.wagerDollars || 10);
+   const numWager = parseFloat(wager || "0");
+   const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
+@@ -303,6 +335,14 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
+           "{aiInsight}"
+         </div>
+ 
++        <div className="flex flex-col gap-2">
++        <button
++          type="button"
++          onClick={addAllLegsToSlip}
++          className="w-full font-bold py-2.5 px-4 rounded-lg border border-line bg-obsidian text-ink hover:border-primary/50 transition-colors"
++        >
++          Add to Slip
++        </button>
+         <button
+           onClick={(e) => {
+             e.stopPropagation();
+@@ -318,6 +358,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
+             ${wager} pays ${(numWager * decPayout).toFixed(2)}
+           </span>
+         </button>
++        </div>
+       </motion.div>
+ 
+       <AnimatePresence>
+@@ -396,6 +437,19 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
+                                 </div>
+                               </div>
+                             </div>
++                            <div className="flex items-center gap-1 shrink-0">
++                            <button
++                              type="button"
++                              onClick={(e) => {
++                                e.stopPropagation();
++                                addLeg(toSlipLeg(leg));
++                                toast.success("Added 1 leg to slip");
++                              }}
++                              className="p-1 rounded-md text-primary hover:bg-primary/10"
++                              aria-label="Add leg to slip"
++                            >
++                              <Plus className="size-5" />
++                            </button>
+                             <button
+                               type="button"
+                               className="p-1 rounded-md text-muted hover:text-ink shrink-0"
+@@ -403,6 +457,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
+                             >
+                               <ChevronDown className={cn("size-5 transition-transform duration-200", isExp && "rotate-180 text-primary")} />
+                             </button>
++                            </div>
+                           </div>
+ 
+                           {/* % to hit this leg */}
+diff --git a/src/components/app/ticket-page.tsx b/src/components/app/ticket-page.tsx
+index 198475e..cb3834f 100644
+--- a/src/components/app/ticket-page.tsx
++++ b/src/components/app/ticket-page.tsx
+@@ -250,7 +250,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
+             Hard Rock sheet
+           </Link>
+         ) : (
+-          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
++          <Link to="/picks" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
+             Open Parlay
+           </Link>
+         )}
+@@ -302,7 +302,7 @@ function ParlayTicketView({
+     const next = parlay.legs.filter((_, i) => i !== index);
+     setParlayLegs(candidateToPicks({ ...parlay, legs: next }, scan.rows));
+     if (next.length < 2) {
+-      navigate({ to: "/parlay" });
++      navigate({ to: "/picks" });
+       return;
+     }
+     navigate({ to: "/ticket", search: { id: parlayTicketIdFromLegs(next) } });
+@@ -495,12 +495,12 @@ function ParlayTicketView({
+ 
+       <div className="mt-6 flex flex-wrap gap-3 justify-center">
+         <Link
+-          to="/parlay"
++          to="/picks"
+           className="inline-flex min-h-11 items-center rounded-md bg-wash px-4 text-sm font-medium text-ink"
+         >
+           Add a leg
+         </Link>
+-        <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
++        <Link to="/picks" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
+           Back to Parlay
+         </Link>
+       </div>
+@@ -944,7 +944,7 @@ function bucketLabel(pick: DeskPick): string {
+ function BackLink({ parlay = false }: { parlay?: boolean }) {
+   return (
+     <Link
+-      to={parlay ? "/parlay" : "/today"}
++      to={parlay ? "/picks" : "/"}
+       className="inline-flex min-h-11 items-center gap-1 text-sm text-emerald-500"
+     >
+       <ChevronLeft className="size-4" strokeWidth={1.75} />
+diff --git a/src/routes/picks.tsx b/src/routes/picks.tsx
+index 5b166ff..65c2845 100644
+--- a/src/routes/picks.tsx
++++ b/src/routes/picks.tsx
+@@ -585,13 +585,13 @@ function TheLab() {
+     });
+ 
+     return sorted;
+-  }, [sportFiltered, tab, modelFilter, minStars, searchQuery, sortMode]);
++  }, [todayFiltered, todayOnly, sportFiltered, tab, modelFilter, minStars, searchQuery, sortMode]);
+ 
+   // Add-to-parlay handler
+   const toggleLeg = useCallback((b: LabBet) => {
+     const mkt = b.marketType || "unknown";
+-    if (isLegSelected(sgpSlip, b.selection, mkt)) {
+-      removeLeg(b.selection, mkt);
++    if (isLegSelected(sgpSlip, b.selection, mkt, b.eventId, b.player)) {
++      removeLeg(b.selection, mkt, b.eventId, b.player);
+     } else {
+       addLeg({
+         eventId: b.eventId,
+@@ -605,11 +605,16 @@ function TheLab() {
+         home: b.home,
+         away: b.away,
+         player: b.player,
++        homeLogo: b.homeLogo,
++        awayLogo: b.awayLogo,
++        homeAbbr: b.homeAbbr,
++        awayAbbr: b.awayAbbr,
++        isProp: b.isProp,
+       });
+     }
+   }, [sgpSlip, addLeg, removeLeg]);
+ 
+-  const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
++  const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown", b.eventId, b.player);
+ 
+   return (
+     <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500 pt-4 sm:pt-0">
