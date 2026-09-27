@@ -208,7 +208,7 @@ function normalizeSportGroup(data: any) {
 }
 
 export const ODDS_REGIONS = "us,us2";
-export const ODDS_BOOKS = "hardrockbet_fl,hardrockbet,draftkings,fanduel";
+export const ODDS_BOOKS = "hardrockbet_fl,hardrockbet,draftkings,fanduel,betmgm";
 
 export function getOddsQuota() {
   return globalCache.quotaRemaining;
