@@ -74,15 +74,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           {isAdmin && quota != null && quotaInfo && (
             <div
               className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]"
-              title={`Monthly Free Tier: 500 requests \u00b7 Quota Remaining: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports \u00d7 ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+              title={`Monthly free tier: ${quota} left of 500\nActive sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nHeld for daily slates: ${quotaInfo.reservedForDaily}\nProp pulls left: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
             >
               <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
-                \u26a1 {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls avail</span><span className="sm:hidden">props</span>
+                {"\u26a1"} {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls left</span><span className="sm:hidden">props left</span>
               </span>
               <span className="text-muted/40 hidden sm:inline">|</span>
-              <span className="text-muted/70 font-mono hidden sm:inline" title="API Quota Remaining">{quota}/500</span>
+              <span className="text-muted/70 font-mono hidden sm:inline" title="API quota remaining">{quota} left of 500</span>
               <span className="text-muted/40 hidden md:inline">|</span>
-              <span className="text-muted/50 hidden md:inline">{quotaInfo.reservedForDaily} daily reserved ({quotaInfo.activeSportNames.join("/")})</span>
+              <span className="text-muted/50 hidden md:inline">{quotaInfo.reservedForDaily} held for daily slates ({quotaInfo.activeSportNames.join("/")})</span>
               <span className="text-muted/40 hidden lg:inline">|</span>
               <span className="text-muted/50 hidden lg:inline">resets {quotaInfo.resetLabel}</span>
             </div>

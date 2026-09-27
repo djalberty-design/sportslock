@@ -1043,14 +1043,15 @@ function TheLab() {
                           className="mt-3 pt-2 border-t border-line/60 overflow-hidden"
                         >
                           <DistributionChart
-                            title={`${displayName} — Quant Distribution & Form`}
-                            subtitle="10,000 Monte Carlo Simulation Trials vs Market Line & Historical Performance"
-                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : 21.5}
+                            title={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "Touchdown chance vs this line" : `${displayName} — chance vs this line`}
+                            subtitle="Model chance versus the posted line. Last-10 only appears when we have official game logs."
+                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : (/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? 0.5 : Number.NaN)}
                             fairProb={b.fairProb}
                             marketProb={b.chance}
                             isOver={/over/i.test(b.selection) || !/under/i.test(b.selection)}
-                            unit={b.marketType === "total" ? "pts" : ""}
+                            unit={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "TD" : b.marketType === "total" ? "pts" : ""}
                             marketType={b.isProp ? "prop" : b.marketType}
+                            sport={b.sport}
                           />
                         </motion.div>
                       )}

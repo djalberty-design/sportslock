@@ -1,0 +1,240 @@
+diff --git a/src/components/app/ai-top-singles.tsx b/src/components/app/ai-top-singles.tsx
+index c47b911..3dc5b8f 100644
+--- a/src/components/app/ai-top-singles.tsx
++++ b/src/components/app/ai-top-singles.tsx
+@@ -457,8 +457,8 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
+                     </div>
+                   </div>
+                   <div className="border-l border-line/50">
+-                    <div className="text-[9px] text-muted font-mono uppercase">Rec</div>
+-                    <div className="text-xs font-bold text-amber-400 font-mono mt-0.5 truncate" title={`Kelly Suggested Stake: $${dyn.wagerDollars} (${dyn.unitCount}u)`}>
++                    <div className="text-[9px] text-muted font-mono uppercase" title="Recommended stake from your bankroll">Suggested bet</div>
++                    <div className="text-xs font-bold text-amber-400 font-mono mt-0.5 truncate" title={`Recommended stake from your bankroll: $${dyn.wagerDollars}`}>
+                       ${dyn.wagerDollars}
+                     </div>
+                   </div>
+diff --git a/src/components/app/desk-page.tsx b/src/components/app/desk-page.tsx
+index e3448a7..ec27a5f 100644
+--- a/src/components/app/desk-page.tsx
++++ b/src/components/app/desk-page.tsx
+@@ -111,7 +111,7 @@ export function DeskPage() {
+         </p>
+         <h1 className="font-display mt-2 text-3xl text-ink">My Action</h1>
+         <p className="mt-2 text-sm text-ink/80">
+-          Locked-in tickets track in real time and automatically settle when games finish. No manual grading required.
++          Updates while the game is on. Settles when the official score is in.
+         </p>
+       </header>
+ 
+diff --git a/src/components/app/shell.tsx b/src/components/app/shell.tsx
+index 1a984b8..a4da3a9 100644
+--- a/src/components/app/shell.tsx
++++ b/src/components/app/shell.tsx
+@@ -74,15 +74,15 @@ export function AppShell({ children }: { children: ReactNode }) {
+           {isAdmin && quota != null && quotaInfo && (
+             <div
+               className="flex items-center gap-1.5 sm:gap-2 normal-case tracking-normal shrink-0 text-[10px]"
+-              title={`Monthly Free Tier: 500 requests \u00b7 Quota Remaining: ${quota}/500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports \u00d7 ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
++              title={`Monthly Free Tier: 500 requests \u00b7 Quota Remaining: ${quota} left of 500\nActive Sports (${quotaInfo.activeSports}): ${quotaInfo.activeSportNames.join(", ")}\nReserved for Daily 5 AM ET Game Lines: ${quotaInfo.reservedForDaily} (${quotaInfo.activeSports} sports \u00d7 ${quotaInfo.daysLeft} days remaining)\nAvailable Player Prop Pulls: ${quotaInfo.propsAvail}\nResets: ${quotaInfo.resetLabel}`}
+             >
+               <span className={cn("font-mono font-bold", quotaInfo.propsAvail < 20 ? "text-red-400" : quotaInfo.propsAvail < 80 ? "text-amber-400" : "text-emerald-400")}>
+-                \u26a1 {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls avail</span><span className="sm:hidden">props</span>
++                {"\u26a1"} {quotaInfo.propsAvail} <span className="hidden sm:inline">prop pulls left</span><span className="sm:hidden">props left</span>
+               </span>
+               <span className="text-muted/40 hidden sm:inline">|</span>
+-              <span className="text-muted/70 font-mono hidden sm:inline" title="API Quota Remaining">{quota}/500</span>
++              <span className="text-muted/70 font-mono hidden sm:inline" title="API Quota Remaining">{quota} left of 500</span>
+               <span className="text-muted/40 hidden md:inline">|</span>
+-              <span className="text-muted/50 hidden md:inline">{quotaInfo.reservedForDaily} daily reserved ({quotaInfo.activeSportNames.join("/")})</span>
++              <span className="text-muted/50 hidden md:inline">{quotaInfo.reservedForDaily} held for daily slates ({quotaInfo.activeSportNames.join("/")})</span>
+               <span className="text-muted/40 hidden lg:inline">|</span>
+               <span className="text-muted/50 hidden lg:inline">resets {quotaInfo.resetLabel}</span>
+             </div>
+diff --git a/src/components/quant/distribution-chart.tsx b/src/components/quant/distribution-chart.tsx
+index 8de5162..340abdb 100644
+--- a/src/components/quant/distribution-chart.tsx
++++ b/src/components/quant/distribution-chart.tsx
+@@ -35,45 +35,10 @@ export interface DistributionChartProps {
+   historicalL10?: HistoricalGameLog[];
+   compact?: boolean;
+   marketType?: string;
++  sport?: string;
+ }
+ 
+-/**
+- * Deterministically generates realistic L10 game log data if not provided.
+- * Uses a pseudo-random hash of line and mean to ensure consistency across renders.
+- */
+-function generateDeterministicL10(
+-  line: number,
+-  mean: number,
+-  stdDev: number,
+-  isOver: boolean
+-): HistoricalGameLog[] {
+-  const opps = ["BOS", "LAL", "GSW", "MIA", "DEN", "MIL", "NYK", "PHX", "DAL", "PHI"];
+-  const dates = [
+-    "2 days ago", "4 days ago", "6 days ago", "8 days ago", "11 days ago",
+-    "13 days ago", "15 days ago", "18 days ago", "20 days ago", "23 days ago",
+-  ];
+-
+-  // Seeded pseudo-random variations
+-  const seedBase = Math.abs(Math.sin(line * 17.3 + mean * 3.7));
+-  const logs: HistoricalGameLog[] = [];
+-
+-  for (let i = 0; i < 10; i++) {
+-    const pseudo = (Math.sin(seedBase * 100 + i * 4.9) + 1) / 2; // 0..1
+-    const jitter = (pseudo - 0.45) * 1.8 * stdDev;
+-    const rawVal = Math.max(0, Math.round((mean + jitter) * 10) / 10);
+-    const hit = isOver ? rawVal >= line : rawVal <= line;
+-
+-    logs.push({
+-      game: `G${10 - i}`,
+-      opponent: opps[i % opps.length],
+-      value: rawVal,
+-      date: dates[i],
+-      hit,
+-    });
+-  }
+-
+-  return logs;
+-}
++/** Never invent last-10 logs. Only render L10 when the caller passes official game logs. */
+ 
+ export function DistributionChart({
+   title,
+@@ -92,8 +57,8 @@ export function DistributionChart({
+   const [activeTab, setActiveTab] = useState<"curve" | "l10">("curve");
+   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; val: number; dens: number } | null>(null);
+ 
+-  // Safe numerical fallbacks
+-  const safeLine = Number.isFinite(line) ? line : 20.5;
++  // Safe numerical fallbacks — never invent a 21.5 / 20.5 scoring line
++  const safeLine = Number.isFinite(line) ? line : 0.5;
+   const safeMean = Number.isFinite(projectedMean)
+     ? projectedMean!
+     : (isOver ? safeLine * 1.08 : safeLine * 0.92);
+@@ -109,14 +74,11 @@ export function DistributionChart({
+   const edgePct = (fairProb - marketProb) * 100;
+   const edgeFormatted = edgePct >= 0 ? `+${edgePct.toFixed(1)}%` : `${edgePct.toFixed(1)}%`;
+ 
+-  // Resolved L10 log
+-  const l10 = useMemo(() => {
+-    if (historicalL10 && historicalL10.length > 0) return historicalL10;
+-    return generateDeterministicL10(safeLine, safeMean, safeStdDev, isOver);
+-  }, [historicalL10, safeLine, safeMean, safeStdDev, isOver]);
++  const l10 = historicalL10 && historicalL10.length > 0 ? historicalL10 : [];
++  const hasOfficialL10 = l10.length > 0;
+ 
+   const l10Hits = l10.filter((g) => (g.hit !== undefined ? g.hit : isOver ? g.value >= safeLine : g.value <= safeLine)).length;
+-  const l10HitRate = Math.round((l10Hits / l10.length) * 100);
++  const l10HitRate = l10.length ? Math.round((l10Hits / l10.length) * 100) : 0;
+ 
+   // SVG Normal Distribution Curve computation
+   const svgWidth = 460;
+@@ -213,17 +175,13 @@ export function DistributionChart({
+           <div>
+             <div className="flex items-center gap-1.5">
+               <span className="text-xs font-bold font-display text-ink">
+-                {title || (marketType === "prop" ? "Prop Quant Distribution" : "Monte Carlo Sim Distribution")}
+-              </span>
+-              <span className="text-[9px] font-mono font-bold bg-primary/15 text-primary border border-primary/25 rounded px-1.5 py-0.2">
+-                10k Sims
++                {title || (marketType === "prop" ? "Chance vs this line" : "Chance vs this line")}
+               </span>
+             </div>
+             {subtitle && <p className="text-[10px] text-muted truncate">{subtitle}</p>}
+           </div>
+         </div>
+ 
+-        {/* Tab Switcher: Distribution Curve vs L10 Form */}
+         <div className="flex rounded-lg border border-line/70 bg-panel overflow-hidden p-0.5 text-[10px] font-mono font-bold">
+           <button
+             type="button"
+@@ -236,8 +194,9 @@ export function DistributionChart({
+             )}
+           >
+             <Activity className="size-3" />
+-            <span>Sim Curve</span>
++            <span>Curve</span>
+           </button>
++          {hasOfficialL10 ? (
+           <button
+             type="button"
+             onClick={() => setActiveTab("l10")}
+@@ -249,8 +208,11 @@ export function DistributionChart({
+             )}
+           >
+             <BarChart3 className="size-3" />
+-            <span>L10 Form ({l10Hits}/10)</span>
++            <span>Last 10 games ({l10Hits}/{l10.length})</span>
+           </button>
++          ) : (
++            <span className="px-2.5 py-1 text-muted/80 font-normal">No official last-10 log for this prop.</span>
++          )}
+         </div>
+       </div>
+ 
+@@ -435,7 +397,7 @@ export function DistributionChart({
+                 </span>
+               </div>
+               <div className="font-mono text-[9px] text-muted/70">
+-                10k Monte Carlo Trials · σ = {safeStdDev.toFixed(1)}
++                σ = {safeStdDev.toFixed(1)}
+               </div>
+             </div>
+           </div>
+diff --git a/src/routes/games.tsx b/src/routes/games.tsx
+index 66f4a41..d1cd9b3 100644
+--- a/src/routes/games.tsx
++++ b/src/routes/games.tsx
+@@ -180,7 +180,7 @@ function TheMatrix() {
+         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
+           <div className={`h-full rounded-full ${empty || hit == null ? "bg-line/70" : "bg-primary"}`} style={{ width: empty || hit == null ? "0%" : `${hit}%` }} />
+         </div>
+-        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "\u2014" : `${hit}% hit`}</span>
++        <span className="text-[9px] font-mono text-muted mt-0.5">{empty || hit == null ? "\u2014" : `${hit}% to hit`}</span>
+       </button>
+     );
+   }
+diff --git a/src/routes/picks.tsx b/src/routes/picks.tsx
+index 65c2845..343b829 100644
+--- a/src/routes/picks.tsx
++++ b/src/routes/picks.tsx
+@@ -1043,14 +1043,15 @@ function TheLab() {
+                           className="mt-3 pt-2 border-t border-line/60 overflow-hidden"
+                         >
+                           <DistributionChart
+-                            title={`${displayName} — Quant Distribution & Form`}
+-                            subtitle="10,000 Monte Carlo Simulation Trials vs Market Line & Historical Performance"
+-                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : 21.5}
++                            title={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "Touchdown chance vs this line" : `${displayName} — chance vs this line`}
++                            subtitle="Model chance versus the posted line. Last-10 only appears when we have official game logs."
++                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : (/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? 0.5 : Number.NaN)}
+                             fairProb={b.fairProb}
+                             marketProb={b.chance}
+                             isOver={/over/i.test(b.selection) || !/under/i.test(b.selection)}
+-                            unit={b.marketType === "total" ? "pts" : ""}
++                            unit={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "TD" : b.marketType === "total" ? "pts" : ""}
+                             marketType={b.isProp ? "prop" : b.marketType}
++                            sport={b.sport}
+                           />
+                         </motion.div>
+                       )}
+diff --git a/src/routes/results.tsx b/src/routes/results.tsx
+index 4c34898..d744d1e 100644
+--- a/src/routes/results.tsx
++++ b/src/routes/results.tsx
+@@ -207,11 +207,12 @@ function ResultsPage() {
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Cumulative P&L</span>
+               <span className="text-xl font-mono font-bold text-primary">{stats.cumulativeUnits >= 0 ? `+${stats.cumulativeUnits}u` : `${stats.cumulativeUnits}u`}</span>
++              <span className="text-[10px] text-muted font-mono block">Units, 1u = one standard flat bet</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">BTCL Rate</span>
+               <span className="text-xl font-mono font-bold text-emerald-400">{stats.btclRate}%</span>
+-              <span className="text-[10px] text-muted font-mono block">{stats.btclCount}/{stats.totalBets} with a real close</span>
++              <span className="text-[10px] text-muted font-mono block">Share of picks that beat the last real close</span>
+             </div>
+             <div className="bg-panel border border-line rounded-xl p-3 text-center">
+               <span className="text-[10px] uppercase tracking-wider text-muted font-mono block">Average CLV</span>
