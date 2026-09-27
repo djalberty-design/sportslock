@@ -2,6 +2,7 @@ import { fetchOddsApiMains, getOddsQuota, writeOddsApiCache } from "./odds-api";
 import { tryMorningPullLock, releaseMorningPullLock } from "./advisory-lock";
 import { planOddsCalls } from "./quota-store";
 import { writeDailyBoard } from "./daily-board";
+import { nowEtDayKey } from "./slate-day";
 
 export type EspnProbe = {
   sport: string;
@@ -36,7 +37,8 @@ const ESPN_SCOREBOARD: { sport: string; path: string }[] = [
 export async function probeEspnMorning(): Promise<EspnProbe[]> {
   const out: EspnProbe[] = [];
   for (const row of ESPN_SCOREBOARD) {
-    const url = `https://site.web.api.espn.com/apis/site/v2/sports/${row.path}/scoreboard`;
+    const dates = nowEtDayKey().replace(/-/g, "");
+    const url = `https://site.web.api.espn.com/apis/site/v2/sports/${row.path}/scoreboard?dates=${dates}`;
     try {
       const res = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; SportsLock/1.0; +https://x.ai)" } });
       let events: number | undefined;

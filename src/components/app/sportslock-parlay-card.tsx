@@ -291,7 +291,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
         </div>
 
         <div className="text-ink font-display font-bold text-base mb-3 flex items-center gap-2 flex-wrap">
-          {legs.length}-Leg Parlay
+          {legs.length === 1 ? "Top Single Bet" : `${legs.length}-Leg Parlay`}
           {isGold ? (
             <span className="text-amber-900 dark:text-amber-300 text-[10px] font-mono uppercase tracking-wider bg-amber-400/20 dark:bg-amber-400/15 px-2 py-0.5 rounded border border-amber-400/40 font-bold">Gold ticket</span>
           ) : (
@@ -375,7 +375,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
               <div className="p-4 border-b border-line flex items-center justify-between bg-obsidian">
                 <div className="flex flex-col">
                   <h3 className="font-display font-bold text-xl text-ink">Deep Dive Analysis</h3>
-                  <span className="text-xs text-muted font-mono">{legs.length}-Leg Parlay &bull; {americanOdds}</span>
+                  <span className="text-xs text-muted font-mono">{legs.length === 1 ? "Top Single Bet" : `${legs.length}-Leg Parlay`} &bull; {americanOdds}</span>
                 </div>
                 <button onClick={() => setIsSheetOpen(false)} className="p-2 hover:bg-panel rounded-full transition-colors"><X className="size-6 text-muted" /></button>
               </div>

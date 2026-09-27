@@ -498,6 +498,9 @@ function TheLab() {
     return applySportFilter(allBets, sportFilter);
   }, [allBets, sportFilter]);
 
+  const architectRows = useMemo(() => applySportFilter(scan?.rows || [], sportFilter), [scan?.rows, sportFilter]);
+  const architectProps = useMemo(() => applySportFilter(cachedProps, sportFilter), [cachedProps, sportFilter]);
+
   // Available sports and counts across all bets
   const liveSports = useMemo(() =>
     [...new Set(allBets.map(b => b.sport).filter(Boolean))],
@@ -652,7 +655,7 @@ function TheLab() {
 
       {/* ── BUILD WITH AI CUSTOM PARLAY ARCHITECT ── */}
       <div className="mb-6">
-        <AiCustomArchitect rows={scan?.rows || []} cachedProps={cachedProps} />
+        <AiCustomArchitect rows={architectRows} cachedProps={architectProps} />
       </div>
 
       {/* Loading */}
@@ -667,63 +670,7 @@ function TheLab() {
         <div className="flex flex-col gap-3 pb-24">
           {/* Filter bar */}
           <div className="flex flex-col gap-2 sticky top-[calc(5.25rem+env(safe-area-inset-top,0px))] md:top-7 z-20 bg-background/95 backdrop-blur py-2 -mx-1 px-1">
-            {/* Row 0: Sport Selection in sticky bar */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-b border-line/40 pb-1.5">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider mr-1 shrink-0">Sport:</span>
-              <button
-                type="button"
-                onClick={() => setSportFilter("ALL")}
-                className={cn(
-                  "px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shrink-0 flex items-center gap-1.5",
-                  !sportFilter || sportFilter === "ALL"
-                    ? "bg-neon text-obsidian border-neon font-black shadow-sm"
-                    : "bg-panel border-line text-muted hover:text-ink hover:border-primary/40"
-                )}
-              >
-                <span>🌐 All Sports</span>
-                <span className={cn("text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold",
-                  !sportFilter || sportFilter === "ALL" ? "bg-obsidian/20 text-obsidian" : "bg-line text-muted"
-                )}>
-                  {allBets.length}
-                </span>
-              </button>
-              {liveSports.map((s) => {
-                const count = sportCounts[s] || 0;
-                const active = sportFilter === s;
-                const icon = s === "MLB" ? "⚾" : s === "NFL" ? "🏈" : s === "NCAAF" ? "🏈" : s === "NBA" ? "🏀" : s === "NHL" ? "🏒" : "🎯";
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSportFilter(s)}
-                    className={cn(
-                      "px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shrink-0 flex items-center gap-1.5",
-                      active
-                        ? "bg-neon text-obsidian border-neon font-black shadow-sm"
-                        : "bg-panel border-line text-muted hover:text-ink hover:border-primary/40"
-                    )}
-                  >
-                    <span>{icon} {s}</span>
-                    <span className={cn("text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold",
-                      active ? "bg-obsidian/20 text-obsidian" : "bg-line text-muted"
-                    )}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-              {sportFilter && sportFilter !== "ALL" && (
-                <button
-                  type="button"
-                  onClick={() => setSportFilter("ALL")}
-                  className="px-2 py-0.5 text-[9px] text-primary hover:underline font-mono shrink-0 ml-auto flex items-center gap-1"
-                >
-                  <span>Reset to All Sports ×</span>
-                </button>
-              )}
-            </div>
-
-            {/* Row 1: Bet type tabs + Today Only toggle */}
+            {/* Bet type tabs + Today Only toggle */}
             <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
               <div className="flex gap-1.5 shrink-0">
                 {TAB_LABELS.map(({ key, label }) => (

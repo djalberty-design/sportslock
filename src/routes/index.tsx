@@ -6,7 +6,7 @@ import { AiTopSingles } from "@/components/app/ai-top-singles";
 import { PublicScorecardHome } from "@/components/app/public-scorecard-home";
 import { getAllEnrichedPropsFn } from "@/lib/market/server";
 import { Sparkles, Activity, Calendar } from "lucide-react";
-import { MixFilterBar, SportFilter, SportSeasonNote } from "@/components/app/sport-filter";
+import { MixFilterBar, SportFilter, SportSeasonNote, applySportFilter } from "@/components/app/sport-filter";
 import { useDeskStore } from "@/lib/desk-store";
 import { cn, isTodayEt } from "@/lib/utils";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/lib/market/feed-mix";
 import { enumerateCrossParlays, enumerateSgp } from "@/lib/market/engine";
 import { fromParlay, buildRibbon } from "@/lib/market/picks";
+import type { ParlayCandidate } from "@/lib/market/types";
 
 export const Route = createFileRoute("/")({ component: SportsLockCommandCenter });
 
@@ -60,13 +61,12 @@ function SportsLockCommandCenter() {
   }, [feed, todayOnly, snapshot]);
 
   const singlesRows = useMemo(() => {
-    if (!todayOnly) return scan?.rows || [];
-    return (scan?.rows || []).filter(r => isTodayEt(r.start) || r.inPlay);
-  }, [scan?.rows, todayOnly]);
+    const raw = !todayOnly ? scan?.rows || [] : (scan?.rows || []).filter(r => isTodayEt(r.start) || r.inPlay);
+    return applySportFilter(raw, sportFilter);
+  }, [scan?.rows, todayOnly, sportFilter]);
 
   const singlesProps = useMemo(() => {
-    if (!todayOnly) return cachedProps;
-    return cachedProps.filter(p => {
+    const raw = !todayOnly ? cachedProps : cachedProps.filter(p => {
       const rawId = (p.eventId || "").replace(/^oddsapi-[A-Z]+-/, "");
       const start = p.start
         || (p.row as any)?.start
@@ -74,7 +74,8 @@ function SportsLockCommandCenter() {
         || (snapshot?.briefs?.find((b: any) => b.eventId === p.eventId || (rawId && b.eventId?.replace(/^oddsapi-[A-Z]+-/, "") === rawId)) as any)?.start;
       return isTodayEt(start) || p.inPlay;
     });
-  }, [cachedProps, todayOnly, snapshot]);
+    return applySportFilter(raw, sportFilter);
+  }, [cachedProps, todayOnly, snapshot, sportFilter]);
 
   const candidateTodayRows = useMemo(() => {
     const rows = [...singlesRows];
@@ -143,8 +144,63 @@ function SportsLockCommandCenter() {
     );
   }, [rawFeed, sportFilter, mixFilter]);
 
-  const gold = displayParlays.filter((p: any) => p.feedLane === "gold");
-  const catalog = displayParlays.filter((p: any) => p.feedLane !== "gold");
+  const fallbackGoldSingle = useMemo(() => {
+    if (displayParlays.some((p: any) => p.feedLane === "gold")) return null;
+    const pool = candidateTodayRows.filter(
+      (r) => !r.inPlay && r.tag !== "illegal_fl" && Number.isFinite(r.fairProb) && r.fairProb >= 0.4
+    );
+    const sorted = pool.length > 0
+      ? [...pool].sort((a, b) => ((b.evPct ?? 0) - (a.evPct ?? 0)) || ((b.fairProb ?? 0) - (a.fairProb ?? 0)))
+      : [...candidateTodayRows.filter((r) => !r.inPlay && r.tag !== "illegal_fl" && Number.isFinite(r.fairProb))].sort((a, b) => (b.fairProb ?? 0) - (a.fairProb ?? 0));
+    const top = sorted[0];
+    if (!top) return null;
+
+    const dec = Number.isFinite(top.price)
+      ? (top.price >= 0 ? top.price / 100 + 1 : 100 / Math.abs(top.price) + 1)
+      : 1.91;
+
+    const cand: ParlayCandidate = {
+      legs: [{
+        eventId: top.eventId,
+        sport: top.sport,
+        selection: top.selection,
+        marketType: top.marketType,
+        side: top.side,
+        price: top.price ?? -110,
+        fairProb: top.fairProb ?? 0.55,
+        simFair: top.simFair,
+        start: top.start,
+        home: top.home,
+        away: top.away,
+        player: top.player,
+        isProp: top.isProp,
+        point: top.point,
+      } as any],
+      combinedFair: top.fairProb ?? 0.55,
+      combinedEv: top.evPct ?? 0.05,
+      pricedAsEntertainment: false,
+      researchOnly: false,
+      sameGame: true,
+      title: "Top Single",
+      reason: "No multi-leg parlay passed strict Gold criteria today. This is the #1 single value play on the board.",
+      score: 100,
+      decimalPayout: dec,
+    };
+    const pick = fromParlay(cand, "popular");
+    return {
+      ...pick,
+      id: `gold-single-${top.eventId}-${top.selection}`,
+      feedLane: "gold" as const,
+    };
+  }, [displayParlays, candidateTodayRows]);
+
+  const gold = useMemo(() => {
+    const raw = displayParlays.filter((p: any) => p.feedLane === "gold");
+    if (raw.length > 0) return raw;
+    return fallbackGoldSingle ? [fallbackGoldSingle] : [];
+  }, [displayParlays, fallbackGoldSingle]);
+
+  const catalog = useMemo(() => displayParlays.filter((p: any) => p.feedLane !== "gold"), [displayParlays]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-full overflow-x-hidden pt-4 sm:pt-0">

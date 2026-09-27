@@ -44,6 +44,7 @@ export function DeskPage() {
   const grade = useDeskStore((s) => s.gradeTicket);
   const reopen = useDeskStore((s) => s.reopenTicket);
   const dismiss = useDeskStore((s) => s.dismissTicket);
+  const clearSettled = useDeskStore((s) => s.clearSettledTickets);
   const resetPaper = useDeskStore((s) => s.resetPaper);
   const setSelfExcluded = useDeskStore((s) => s.setSelfExcluded);
 
@@ -111,7 +112,7 @@ export function DeskPage() {
         </p>
         <h1 className="font-display mt-2 text-3xl text-ink">My tracked bets</h1>
         <p className="mt-2 text-sm text-ink/80">
-          Updates while the game is on. Settles when the official score is in.
+          Updates while the game is on. Settles when the official score is in. Tickets live on this device.
         </p>
       </header>
 
@@ -187,10 +188,20 @@ export function DeskPage() {
                 </span>
               )}
             </button>
+            {settled.length > 0 && (
+              <button
+                type="button"
+                onClick={() => clearSettled()}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                title="Remove all settled tickets from this device"
+              >
+                Clear settled
+              </button>
+            )}
           </div>
 
           <span className="text-xs text-muted hidden sm:inline">
-            Auto-checks ESPN final scores
+            Auto-checks ESPN final scores · Tickets live on this device.
           </span>
         </div>
 
