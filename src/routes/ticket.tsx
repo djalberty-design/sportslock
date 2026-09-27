@@ -3,8 +3,8 @@ import { DeskPage } from "@/components/app/desk-page";
 import { TicketPage } from "@/components/app/ticket-page";
 
 export const Route = createFileRoute("/ticket")({
-  validateSearch: (s: Record<string, unknown>): { id: string } => ({
-    id: ticketSearchId(s),
+  validateSearch: (s: Record<string, unknown>): { id?: string } => ({
+    id: ticketSearchId(s) || undefined,
   }),
   component: TicketRoute,
 });

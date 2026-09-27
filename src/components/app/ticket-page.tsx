@@ -250,7 +250,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
             Hard Rock sheet
           </Link>
         ) : (
-          <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
+          <Link to="/picks" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
             Open Parlay
           </Link>
         )}
@@ -302,7 +302,7 @@ function ParlayTicketView({
     const next = parlay.legs.filter((_, i) => i !== index);
     setParlayLegs(candidateToPicks({ ...parlay, legs: next }, scan.rows));
     if (next.length < 2) {
-      navigate({ to: "/parlay" });
+      navigate({ to: "/picks" });
       return;
     }
     navigate({ to: "/ticket", search: { id: parlayTicketIdFromLegs(next) } });
@@ -495,12 +495,12 @@ function ParlayTicketView({
 
       <div className="mt-6 flex flex-wrap gap-3 justify-center">
         <Link
-          to="/parlay"
+          to="/picks"
           className="inline-flex min-h-11 items-center rounded-md bg-wash px-4 text-sm font-medium text-ink"
         >
           Add a leg
         </Link>
-        <Link to="/parlay" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
+        <Link to="/picks" className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-500 underline-offset-4 hover:underline">
           Back to Parlay
         </Link>
       </div>
@@ -944,7 +944,7 @@ function bucketLabel(pick: DeskPick): string {
 function BackLink({ parlay = false }: { parlay?: boolean }) {
   return (
     <Link
-      to={parlay ? "/parlay" : "/today"}
+      to={parlay ? "/picks" : "/"}
       className="inline-flex min-h-11 items-center gap-1 text-sm text-emerald-500"
     >
       <ChevronLeft className="size-4" strokeWidth={1.75} />

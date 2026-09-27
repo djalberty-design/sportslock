@@ -62,7 +62,7 @@ export function BoardPage() {
 
       if (legs.length > 1) {
         setParlayLegs(legs);
-        navigate({ to: "/parlay" });
+        navigate({ to: "/picks" });
       } else {
         alert("Could not build combo: Found " + legs.length + " valid legs for " + comboLegs.length + " selected games.");
       }
@@ -254,7 +254,7 @@ export function BoardPage() {
 
       <p className="text-sm">
         Build a custom ticket on{" "}
-        <Link to="/parlay" className="font-medium text-neon underline-offset-4 hover:underline">
+        <Link to="/picks" className="font-medium text-neon underline-offset-4 hover:underline">
           Your parlay
         </Link>
         .

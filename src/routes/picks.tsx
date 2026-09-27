@@ -585,13 +585,13 @@ function TheLab() {
     });
 
     return sorted;
-  }, [sportFiltered, tab, modelFilter, minStars, searchQuery, sortMode]);
+  }, [todayFiltered, todayOnly, sportFiltered, tab, modelFilter, minStars, searchQuery, sortMode]);
 
   // Add-to-parlay handler
   const toggleLeg = useCallback((b: LabBet) => {
     const mkt = b.marketType || "unknown";
-    if (isLegSelected(sgpSlip, b.selection, mkt)) {
-      removeLeg(b.selection, mkt);
+    if (isLegSelected(sgpSlip, b.selection, mkt, b.eventId, b.player)) {
+      removeLeg(b.selection, mkt, b.eventId, b.player);
     } else {
       addLeg({
         eventId: b.eventId,
@@ -605,11 +605,16 @@ function TheLab() {
         home: b.home,
         away: b.away,
         player: b.player,
+        homeLogo: b.homeLogo,
+        awayLogo: b.awayLogo,
+        homeAbbr: b.homeAbbr,
+        awayAbbr: b.awayAbbr,
+        isProp: b.isProp,
       });
     }
   }, [sgpSlip, addLeg, removeLeg]);
 
-  const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown");
+  const isInSlip = (b: LabBet) => isLegSelected(sgpSlip, b.selection, b.marketType || "unknown", b.eventId, b.player);
 
   return (
     <div className="flex-1 w-full max-w-full overflow-x-hidden animate-in fade-in duration-500 pt-4 sm:pt-0">

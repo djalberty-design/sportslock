@@ -181,7 +181,7 @@ function ResultsPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-ink">Track Record</h1>
           <p className="text-xs sm:text-sm text-muted max-w-2xl mt-0.5">CLV uses a stored close_price when one exists. We do not invent a close from edge.</p>
-          <p className="text-xs text-muted max-w-2xl mt-1">This is the public model calibration tape. Your personal locked tickets live on <Link to="/ticket" className="text-primary underline-offset-2 hover:underline">Ticket</Link>.</p>
+          <p className="text-xs text-muted max-w-2xl mt-1">This is the public model calibration tape. Your personal locked tickets live on <Link to="/ticket" search={{ id: "" }} className="text-primary underline-offset-2 hover:underline">Ticket</Link>.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button type="button" onClick={() => handleExport("csv")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold font-mono bg-panel border border-line text-ink hover:border-primary/50 transition-colors">
