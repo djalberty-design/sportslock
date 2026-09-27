@@ -12,8 +12,8 @@ export type WeightProposal = {
  * → lean market. Inverse → allow a tiny sim bump. Never writes weights itself.
  */
 export function proposeWeightShift(card: PublicScorecard): WeightProposal {
-  if (WEIGHT_STEERING_FROZEN || !shouldSteerWeights(card.n, true)) {
-    return { apply: false, reason: "frozen or n < 50", marketDelta: 0 };
+  if (WEIGHT_STEERING_FROZEN || !shouldSteerWeights(card.n, false)) {
+    return { apply: false, reason: "frozen — propose only, live weights unchanged", marketDelta: 0 };
   }
   if (card.brierDelta != null && card.brierDelta > 0) {
     return { apply: true, reason: "model Brier worse than book", marketDelta: 0.02 };

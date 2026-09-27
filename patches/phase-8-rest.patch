@@ -1,0 +1,150 @@
+diff --git a/src/components/quant/distribution-chart.tsx b/src/components/quant/distribution-chart.tsx
+index 340abdb..9cbe59b 100644
+--- a/src/components/quant/distribution-chart.tsx
++++ b/src/components/quant/distribution-chart.tsx
+@@ -40,6 +40,56 @@ export interface DistributionChartProps {
+ 
+ /** Never invent last-10 logs. Only render L10 when the caller passes official game logs. */
+ 
++function isMoneylineMarket(marketType?: string) {
++  return /^(ml|moneyline|h2h)$/i.test(String(marketType || ""));
++}
++
++function isBinaryTdMarket(marketType?: string, title?: string) {
++  return /td|touchdown|anytime_td|first_td/i.test(`${marketType || ""} ${title || ""}`);
++}
++
++function ProbabilityGauge({
++  title,
++  kind,
++  fairProb,
++  marketProb,
++}: {
++  title?: string;
++  kind: "ml" | "td";
++  fairProb: number;
++  marketProb: number;
++}) {
++  const model = Math.round(Math.max(0, Math.min(1, fairProb)) * 100);
++  const book = Math.round(Math.round(Math.max(0, Math.min(1, marketProb)) * 100));
++  const edgePts = (fairProb - marketProb) * 100;
++  const edge = `${edgePts >= 0 ? "+" : ""}${edgePts.toFixed(1)} pts`;
++  const verdict =
++    kind === "ml"
++      ? edgePts >= 0
++        ? `Model win chance ${model}% vs the book's ${book}%. Price looks better than the book's implied chance.`
++        : `Likely to win (${model}%), but the book already prices ${book}%. Paying that price is a negative-value favorite.`
++      : `Yes or no — not a point total. Model ${model}% vs book ${book}% (${edge}).`;
++  return (
++    <div className="p-4 bg-obsidian/60 border border-line/60 rounded-xl space-y-3" data-testid="probability-gauge">
++      <div className="flex items-center justify-between gap-2 text-xs">
++        <span className="font-bold text-ink">{title || (kind === "ml" ? "Win chance vs the book" : "Touchdown chance vs this line")}</span>
++        <span className="font-mono text-primary font-bold">{edge}</span>
++      </div>
++      <div className="space-y-1.5">
++        <div className="flex justify-between text-[11px] font-mono">
++          <span className="text-emerald-400 font-bold">Model {model}%</span>
++          <span className="text-muted">Book {book}%</span>
++        </div>
++        <div className="h-2 w-full bg-line/40 rounded-full overflow-hidden">
++          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${model}%` }} />
++        </div>
++      </div>
++      <p className="text-[11px] text-muted">{verdict}</p>
++    </div>
++  );
++}
++
++
+ export function DistributionChart({
+   title,
+   subtitle,
+@@ -56,12 +106,22 @@ export function DistributionChart({
+ }: DistributionChartProps) {
+   const [activeTab, setActiveTab] = useState<"curve" | "l10">("curve");
+   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; val: number; dens: number } | null>(null);
++  if (isMoneylineMarket(marketType) || isBinaryTdMarket(marketType, title)) {
++    return (
++      <ProbabilityGauge
++        title={title}
++        kind={isMoneylineMarket(marketType) ? "ml" : "td"}
++        fairProb={fairProb}
++        marketProb={marketProb}
++      />
++    );
++  }
+ 
+   // Safe numerical fallbacks — never invent a 21.5 / 20.5 scoring line
+-  const safeLine = Number.isFinite(line) ? line : 0.5;
++  const safeLine = Number.isFinite(line) ? line : Number.NaN;
+   const safeMean = Number.isFinite(projectedMean)
+     ? projectedMean!
+-    : (isOver ? safeLine * 1.08 : safeLine * 0.92);
++    : (Number.isFinite(safeLine) ? safeLine : Number.NaN);
+   const safeStdDev = Number.isFinite(projectedStdDev) && (projectedStdDev ?? 0) > 0
+     ? projectedStdDev!
+     : Math.max(1, safeLine * 0.22);
+diff --git a/src/routes/admin/dashboard.tsx b/src/routes/admin/dashboard.tsx
+index b727c6f..bb0b53f 100644
+--- a/src/routes/admin/dashboard.tsx
++++ b/src/routes/admin/dashboard.tsx
+@@ -157,7 +157,9 @@ function Dashboard() {
+     mutationFn: () => calibrateWeightsFn(),
+     onSuccess: (res) => {
+       qc.invalidateQueries({ queryKey: ["brain-dynamic-weights"] });
+-      alert(`Dynamic blend weights calibrated across active sports based on 30-day performance.`);
++      alert(res?.frozen
++        ? "Weights frozen. Results were logged. Live blend was not changed."
++        : `Weights updated for: ${(res?.updated || []).join(", ") || "none"}.`);
+     },
+   });
+ 
+@@ -254,13 +256,13 @@ function Dashboard() {
+           <div className="flex items-center gap-2">
+             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+               <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
+-              OVERSEER MISSION CONTROL v4.2
++              OVERSEER — operator desk
+             </span>
+-            <span className="text-xs text-muted font-mono">100% AUTONOMOUS</span>
++            <span className="text-xs text-amber-400 font-mono">WEIGHTS FROZEN — grades only</span>
+           </div>
+           <h1 className="font-display text-3xl text-ink mt-2">Brain Status & Visual Architecture</h1>
+           <p className="text-sm text-muted mt-1">
+-            Real-time visual flight control for the sports prediction engine. Inspect every layer, calibrate weights, and interact directly with the Brain.
++            See graded results, pending scores, and draft suggestions. Live weights do not move until you unfreeze and approve.
+           </p>
+         </div>
+ 
+@@ -276,6 +278,12 @@ function Dashboard() {
+         </div>
+       </header>
+ 
++
++      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-sm">
++        <p className="font-bold text-amber-400">Engine: frozen — grades games, does not change weights</p>
++        <p className="text-xs text-muted mt-1">Autopsy notes and inbox drafts still run. Approve in Inbox does not write production weights while this freeze is on.</p>
++      </div>
++
+       {/* ── OVERSEER OPERATOR GUIDE & CONTROL MANUAL ── */}
+       <div className="bg-obsidian border border-primary/30 rounded-xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+diff --git a/src/routes/picks.tsx b/src/routes/picks.tsx
+index 343b829..d83c4fb 100644
+--- a/src/routes/picks.tsx
++++ b/src/routes/picks.tsx
+@@ -1045,12 +1045,12 @@ function TheLab() {
+                           <DistributionChart
+                             title={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "Touchdown chance vs this line" : `${displayName} — chance vs this line`}
+                             subtitle="Model chance versus the posted line. Last-10 only appears when we have official game logs."
+-                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : (/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? 0.5 : Number.NaN)}
++                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : Number.NaN}
+                             fairProb={b.fairProb}
+                             marketProb={b.chance}
+                             isOver={/over/i.test(b.selection) || !/under/i.test(b.selection)}
+                             unit={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "TD" : b.marketType === "total" ? "pts" : ""}
+-                            marketType={b.isProp ? "prop" : b.marketType}
++                            marketType={b.marketType}
+                             sport={b.sport}
+                           />
+                         </motion.div>

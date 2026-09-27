@@ -1045,12 +1045,12 @@ function TheLab() {
                           <DistributionChart
                             title={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "Touchdown chance vs this line" : `${displayName} — chance vs this line`}
                             subtitle="Model chance versus the posted line. Last-10 only appears when we have official game logs."
-                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : (/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? 0.5 : Number.NaN)}
+                            line={b.point != null && Number.isFinite(Number(b.point)) ? Number(b.point) : Number.NaN}
                             fairProb={b.fairProb}
                             marketProb={b.chance}
                             isOver={/over/i.test(b.selection) || !/under/i.test(b.selection)}
                             unit={/td|touchdown/i.test(`${b.marketType} ${b.selection}`) ? "TD" : b.marketType === "total" ? "pts" : ""}
-                            marketType={b.isProp ? "prop" : b.marketType}
+                            marketType={b.marketType}
                             sport={b.sport}
                           />
                         </motion.div>
