@@ -36,6 +36,8 @@ export type AutopsySummary = {
   error?: string;
 };
 
+const MAINS = "lower(coalesce(market_type, '')) in ('ml', 'spread', 'total', 'h2h', 'moneyline')";
+
 function implied(price: number): number {
   if (!Number.isFinite(price) || price === 0) return NaN;
   if (price >= 0) return 100 / (price + 100);
@@ -147,7 +149,6 @@ export async function runTapeAutopsy(): Promise<{ ok: boolean; tagged: number; e
       return { id: row.id, bucket, note };
     });
 
-    // Batch update in chunks of 50 to eliminate up to 4,000 round-trips over Neon egress
     const CHUNK_SIZE = 50;
     for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
       const chunk = updates.slice(i, i + CHUNK_SIZE);
@@ -182,13 +183,13 @@ export async function getAutopsySummary(): Promise<AutopsySummary> {
     const buckets = await sql.query<{ bucket: string; status: string; n: number }>(
       `select coalesce(bucket, 'unreviewed') as bucket, status, count(*)::int as n
        from market_tape
-       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true
+       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true and ${MAINS}
        group by 1, 2`,
     );
     const sports = await sql.query<{ sport: string; status: string; n: number }>(
       `select coalesce(sport, 'UNK') as sport, status, count(*)::int as n
        from market_tape
-       where status in ('WIN', 'LOSS') and recommended = true
+       where status in ('WIN', 'LOSS') and recommended = true and ${MAINS}
        group by 1, 2`,
     );
     const markets = await sql.query<{ market: string; status: string; n: number }>(
@@ -201,7 +202,7 @@ export async function getAutopsySummary(): Promise<AutopsySummary> {
       `select id, event_id, sport, home, away, market_type, side, selection, line, price,
               model_probability, edge, phase, status, bucket, autopsy_note, result_home, result_away, snapped_at
        from market_tape
-       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true
+       where status in ('WIN', 'LOSS', 'PUSH') and recommended = true and ${MAINS}
        order by graded_at desc nulls last, snapped_at desc
        limit 40`,
     );
