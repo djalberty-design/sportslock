@@ -3,7 +3,7 @@ import type { ScanRow, ParlayCandidate } from "@/lib/market/types";
 import { useParlaySlip, type ParlayLeg } from "@/lib/parlay-slip";
 import { formatAmerican } from "@/lib/market/hit-pct";
 import { evaluateParlay, decimalToAmerican } from "@/lib/market/engine";
-import { cn } from "@/lib/utils";
+import { cn, isTodayEt } from "@/lib/utils";
 import { TicketLegAvatar } from "./ticket-leg-avatar";
 import {
   Sparkles,
@@ -18,6 +18,7 @@ import {
   Flame,
   ArrowRight,
   RefreshCw,
+  Calendar,
 } from "lucide-react";
 
 interface AiCustomArchitectProps {
@@ -40,19 +41,17 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
   const [recipe, setRecipe] = useState<Recipe>("all_market");
   const [comboIndex, setComboIndex] = useState(0);
   const [addedSuccess, setAddedSuccess] = useState(false);
+  const [todayOnly, setTodayOnly] = useState(true);
 
   const { addLeg } = useParlaySlip();
 
-  // Reset combo rotation when changing recipe or leg count
   useEffect(() => {
     setComboIndex(0);
-  }, [recipe, legCount]);
+  }, [recipe, legCount, todayOnly]);
 
-  // Combine rows and cached props into candidate pool
   const candidatePool = useMemo(() => {
     const list: ScanRow[] = [...rows];
 
-    // Append cached props if not already in rows
     if (cachedProps && cachedProps.length > 0) {
       const existingIds = new Set(list.map((r) => `${r.eventId}|${r.selection}`));
       for (const p of cachedProps) {
@@ -66,7 +65,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
           list.push({
             eventId: p.eventId || "prop-cand",
             sport: p.sport || "MLB",
-            start: p.start || new Date().toISOString(),
+            start: p.start || "",
             home: p.home || "",
             away: p.away || "",
             marketType: p.marketType || "prop",
@@ -96,13 +95,12 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
         r.tag !== "illegal_fl" &&
         r.tag !== "unknown_market" &&
         Number.isFinite(r.fairProb) &&
-        r.fairProb >= 0.40,
+        r.fairProb >= 0.40 &&
+        (!todayOnly || isTodayEt(r.start)),
     );
-  }, [rows, cachedProps]);
+  }, [rows, cachedProps, todayOnly]);
 
-  // Build the ranked combinations for the selected recipe and leg count
   const allValidCandidates = useMemo(() => {
-    // 1. Filter by recipe
     let eligible = candidatePool.filter((r) => {
       if (recipe === "game_lines") return !r.isProp && ["ml", "spread", "total"].includes(r.marketType);
       if (recipe === "spreads_only") return r.marketType === "spread";
@@ -120,18 +118,15 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       }
     }
 
-    // Fallback if specific recipe pool is smaller than required legs
     if (eligible.length < legCount) {
       eligible = candidatePool;
     }
 
-    // Sort by individual EV & value
     eligible.sort((a, b) => (b.evPct ?? 0) - (a.evPct ?? 0));
     const seeds = eligible.slice(0, 16);
 
     if (seeds.length < legCount) return [];
 
-    // Helper for combinations
     function getCombos<T>(arr: T[], k: number): T[][] {
       const out: T[][] = [];
       const acc: T[] = [];
@@ -153,17 +148,14 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
     const validCandidates: ParlayCandidate[] = [];
 
     for (const combo of allCombos) {
-      // Must have unique events
       if (new Set(combo.map((l) => l.eventId)).size !== legCount) continue;
 
-      // For props_hybrid: require at least 1 prop and 1 game line when both exist in seeds
       if (recipe === "props_hybrid" && seeds.some(l => l.isProp) && seeds.some(l => !l.isProp)) {
         const hasProp = combo.some((l) => l.isProp);
         const hasGame = combo.some((l) => !l.isProp);
         if (!hasProp || !hasGame) continue;
       }
 
-      // Anti-hedge: Don't pick opposing sides from same matchup
       const matchups = combo.map((l) => [l.home || "", l.away || ""].sort().join(" vs "));
       if (new Set(matchups).size < legCount) {
         let hasConflict = false;
@@ -184,19 +176,15 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
 
       const evaluated = evaluateParlay(combo, undefined, "catalog");
       if ("ok" in evaluated && evaluated.ok === false) continue;
-
-      const cand = evaluated as ParlayCandidate;
-      validCandidates.push(cand);
+      validCandidates.push(evaluated as ParlayCandidate);
     }
 
-    // Sort valid candidates by overall score + EV
     validCandidates.sort((a, b) => {
       const scoreA = (a.score ?? 0) + (a.combinedEv ?? 0) * 10;
       const scoreB = (b.score ?? 0) + (b.combinedEv ?? 0) * 10;
       return scoreB - scoreA;
     });
 
-    // Deduplicate combinations that share identical leg selections
     const seenCombos = new Set<string>();
     const uniqueCandidates: ParlayCandidate[] = [];
     for (const c of validCandidates) {
@@ -207,7 +195,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       }
     }
 
-    // Direct fallback with top unique-event seeds if all combos were strictly pruned
     if (uniqueCandidates.length === 0 && seeds.length >= legCount) {
       const uniqueSeeds: ScanRow[] = [];
       const seenEvents = new Set<string>();
@@ -229,7 +216,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
     return uniqueCandidates;
   }, [candidatePool, legCount, recipe]);
 
-  // Selected candidate from rotation
   const selectedCandidate = useMemo(() => {
     if (allValidCandidates.length === 0) return null;
     return allValidCandidates[comboIndex % allValidCandidates.length];
@@ -258,7 +244,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
 
   return (
     <section className="bg-panel border border-line rounded-xl p-4 sm:p-6 space-y-5 shadow-sm">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -274,11 +259,20 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             Choose your desired number of legs and target betting style. The AI quant engine tests all multi-leg correlation structures and solves for the optimal combinations.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setTodayOnly((v) => !v)}
+          className={cn(
+            "shrink-0 px-3 py-1.5 text-xs font-bold rounded-full border flex items-center gap-1.5",
+            todayOnly ? "bg-primary text-obsidian border-primary" : "bg-obsidian text-muted border-line",
+          )}
+        >
+          <Calendar className="size-3" />
+          <span>{todayOnly ? "Today's games only" : "All upcoming games"}</span>
+        </button>
       </div>
 
-      {/* Controls: Leg Count & Recipe Selectors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Leg Count Selector */}
         <div>
           <label className="text-xs font-mono font-bold text-muted uppercase tracking-wider block mb-2">
             1. Select Number of Legs:
@@ -301,7 +295,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
           </div>
         </div>
 
-        {/* Recipe Preset Selector */}
         <div>
           <label className="text-xs font-mono font-bold text-muted uppercase tracking-wider block mb-2">
             2. Choose Construction Style:
@@ -326,10 +319,8 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
         </div>
       </div>
 
-      {/* Synthesis Display Box */}
       {selectedCandidate ? (
         <div className="bg-obsidian border border-line rounded-xl p-4 sm:p-5 space-y-4">
-          {/* Output Summary Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line/60 pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -350,7 +341,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
               </p>
             </div>
 
-            {/* Quick Metrics */}
             <div className="flex items-center gap-4 bg-panel border border-line p-3 rounded-xl shrink-0">
               <div className="text-center">
                 <div className="text-[9px] text-muted font-mono uppercase">Payout</div>
@@ -380,7 +370,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             </div>
           </div>
 
-          {/* Leg List Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {selectedCandidate.legs.map((leg, idx) => (
               <div
@@ -397,7 +386,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
                       {leg.selection}
                     </div>
                     <div className="text-[10px] text-muted truncate">
-                      {leg.home && leg.away ? `${leg.away} @ ${leg.home}` : leg.sport} · {leg.marketType.toUpperCase()}
+                      {leg.home && leg.away ? `${leg.away} @ ${leg.home}` : leg.sport} \u00b7 {leg.marketType.toUpperCase()}
                     </div>
                   </div>
                 </div>
@@ -414,7 +403,6 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
             ))}
           </div>
 
-          {/* Action Bar: Generate New Combo + Add All Button */}
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-mono text-muted">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-panel border border-line text-ink">
@@ -465,7 +453,7 @@ export function AiCustomArchitect({ rows, cachedProps = [] }: AiCustomArchitectP
       ) : (
         <div className="p-8 text-center border border-dashed border-line rounded-xl">
           <p className="text-xs text-muted">
-            No combination currently satisfies the "{RECIPES.find((r) => r.id === recipe)?.label}" recipe at {legCount} legs with positive expected value. Try another recipe or leg count.
+            No combination currently satisfies the "{RECIPES.find((r) => r.id === recipe)?.label}" recipe at {legCount} legs with today's games. Switch to All upcoming games, or pick another recipe.
           </p>
         </div>
       )}
