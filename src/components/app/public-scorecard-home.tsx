@@ -6,11 +6,20 @@ import { cn } from "@/lib/utils";
 export function PublicScorecardHome() {
   const [card, setCard] = useState<PublicScorecard>(() => buildPublicScorecard([]));
   useEffect(() => {
-    getPublicScorecardFn()
-      .then((res) => {
-        if (res.card) setCard(res.card);
-      })
-      .catch(() => {});
+    let alive = true;
+    const load = () => {
+      getPublicScorecardFn()
+        .then((res) => {
+          if (alive && res.card) setCard(res.card);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
   }, []);
   return (
     <section className="paper-card p-4" data-testid="public-scorecard">
@@ -19,16 +28,16 @@ export function PublicScorecardHome() {
         <div className="bg-panel border border-line/60 rounded-xl p-3">
           <p className="text-muted text-xs font-bold uppercase tracking-wider">Total graded</p>
           <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.n} picks</p>
-          <p className="text-[10px] text-muted mt-0.5">Audited single plays</p>
+          <p className="text-[10px] text-muted mt-0.5">Sides and totals only</p>
         </div>
         <div className="bg-panel border border-line/60 rounded-xl p-3">
           <p className="text-muted text-xs font-bold uppercase tracking-wider">Beat the close</p>
-          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.clvBeatRate == null ? "—" : `${card.clvBeatRate}%`}</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.clvBeatRate == null ? "\u2014" : `${card.clvBeatRate}%`}</p>
           <p className="text-[10px] text-muted mt-0.5">Only when we stored a real kickoff/close price</p>
         </div>
         <div className="bg-panel border border-line/60 rounded-xl p-3">
           <p className="text-muted text-xs font-bold uppercase tracking-wider">vs the book</p>
-          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.brierDelta == null ? "—" : card.brierDelta}</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.brierDelta == null ? "\u2014" : card.brierDelta}</p>
           <p className="text-[10px] text-muted mt-0.5">Negative = closer to results than the book</p>
         </div>
         <div className="bg-panel border border-line/60 rounded-xl p-3">
