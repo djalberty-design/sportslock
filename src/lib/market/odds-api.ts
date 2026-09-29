@@ -100,15 +100,24 @@ export function getActiveSports(): string[] {
   if (month >= 8 || month <= 1) active.push("americanfootball_ncaaf");
   if (month >= 3 && month <= 11) active.push("baseball_mlb");
   if (month >= 10 || month <= 6) active.push("basketball_nba");
-  if (month >= 10 || month <= 6) active.push("icehockey_nhl");
+  // 2026-27 NHL regular season opens Sept 29 — do not wait until October.
+  if (month >= 9 || month <= 6) active.push("icehockey_nhl");
   if (month >= 11 || month <= 4) active.push("basketball_ncaab");
   return active;
+}
+
+function sportHasPricedLines(mains: any[], sportKey: string): boolean {
+  const group = (mains || []).find((g: any) => g?.sport === sportKey);
+  if (!group || !Array.isArray(group.data)) return false;
+  return group.data.some((e: any) =>
+    Array.isArray(e?.bookmakers) && e.bookmakers.some((b: any) => Array.isArray(b?.markets) && b.markets.length > 0),
+  );
 }
 
 const SPORT_TO_ESPN_PATH: Record<string, string> = {
   americanfootball_nfl: "football/nfl",
   americanfootball_ncaaf: "football/college-football",
-  baseball_mlb: "baseball_mlb" === "baseball_mlb" ? "baseball/mlb" : "baseball/mlb",
+  baseball_mlb: "baseball/mlb",
   basketball_nba: "basketball/nba",
   icehockey_nhl: "hockey/nhl",
   basketball_ncaab: "basketball/mens-college-basketball",
@@ -126,9 +135,12 @@ export async function isSportInRegularOrPostseason(sportKey: string): Promise<bo
     if (!res.ok) return true;
     const json = await res.json();
     const seasonType = json?.season?.type ?? json?.leagues?.[0]?.season?.type?.type ?? json?.leagues?.[0]?.season?.type;
+    const eventCount = Array.isArray(json?.events) ? json.events.length : 0;
+    // A live slate today beats a stale preseason label.
+    if (eventCount > 0) return true;
     if (seasonType === 1) return false;
     if (seasonType === 2 || seasonType === 3) return true;
-    return Boolean(json?.events && json.events.length > 0 && seasonType !== 1);
+    return false;
   } catch {
     return true;
   }
@@ -147,7 +159,7 @@ function normalizeEventBooks(event: any, mode: "mains" | "props" = "mains") {
   for (const b of books) {
     if (b && (b.key === "hardrockbet_fl" || b.key === "hardrockbet")) b.key = "hardrock";
   }
-  const allowedBooks = new Set(["hardrock", "draftkings", "fanduel"]);
+  const allowedBooks = new Set(["hardrock", "draftkings", "fanduel", "betmgm"]);
   const filteredBooks = books.filter((b: any) => b && allowedBooks.has(b.key)).map((b: any) => ({
     key: b.key,
     title: b.title || b.key,
@@ -240,14 +252,16 @@ export async function fetchOddsApiMains(force = false, bypassDailyGuard = false)
   const currentEtDay = nowEtDayKey();
 
   if (!force && globalCache.mains && Array.isArray(globalCache.mains) && globalCache.mains.length > 0 && now - globalCache.mainsLastFetch < 60_000 && globalCache.mainsEtDay === currentEtDay) {
-    return await fillMissingEvents(globalCache.mains, ODDS_API_KEY, getActiveSports());
+    const missing = getActiveSports().filter((sport) => !sportHasPricedLines(globalCache.mains, sport));
+    if (!missing.length) return await fillMissingEvents(globalCache.mains, ODDS_API_KEY, getActiveSports());
   }
 
   const cached = await readDbCache("mains");
   if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
     const cachedEtDay = etDayKey(cached.fetchedAt);
     const alreadyPulledToday = cachedEtDay === currentEtDay;
-    if (alreadyPulledToday && !force && !bypassDailyGuard) {
+    const missing = getActiveSports().filter((sport) => !sportHasPricedLines(cached.data, sport));
+    if (alreadyPulledToday && !force && !bypassDailyGuard && !missing.length) {
       const filled = await fillMissingEvents(cached.data, ODDS_API_KEY, getActiveSports());
       globalCache.mains = filled;
       globalCache.mainsLastFetch = now;
