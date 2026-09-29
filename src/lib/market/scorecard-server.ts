@@ -3,7 +3,7 @@ import { getSql } from "../db.ts";
 import { backfillClosePrices } from "./backfill-close.ts";
 import { buildPublicScorecard, type ScorecardPick } from "./scorecard.ts";
 
-export const getPublicScorecardFn = createServerFn({ method: "GET" }).handler(async () => {
+export const getPublicScorecardFn = createServerFn({ method: "POST" }).handler(async () => {
   try {
     await backfillClosePrices();
     const sql = await getSql();
@@ -11,12 +11,14 @@ export const getPublicScorecardFn = createServerFn({ method: "GET" }).handler(as
       SELECT recommended, market_type, status, model_probability, price, close_price
       FROM market_tape
       WHERE status IN ('WIN', 'LOSS')
+        AND lower(coalesce(market_type, '')) IN ('ml', 'spread', 'total', 'h2h', 'moneyline')
       ORDER BY COALESCE(graded_at, snapped_at) ASC
-      LIMIT 500
+      LIMIT 2000
     `;
     const picks: ScorecardPick[] = (rows as any[]).map((r) => ({
       recommended: r.recommended !== false,
-      oneSided: String(r.market_type || "") !== "parlay",
+      oneSided: true,
+      marketType: String(r.market_type || ""),
       status: String(r.status || ""),
       modelProb: r.model_probability != null ? Number(r.model_probability) : null,
       marketPrice: r.price != null ? Number(r.price) : null,

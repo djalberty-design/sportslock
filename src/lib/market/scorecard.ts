@@ -4,6 +4,7 @@ import { americanToDecimal, impliedFromAmerican } from "./book-price.ts";
 export type ScorecardPick = {
   recommended?: boolean;
   oneSided?: boolean;
+  marketType?: string;
   status: "WIN" | "LOSS" | string;
   modelProb: number | null;
   marketPrice: number | null;
@@ -25,9 +26,15 @@ export type PublicScorecard = {
   caveat: string;
 };
 
+export function isMainMarketType(marketType?: string): boolean {
+  const t = String(marketType || "").toLowerCase();
+  return t === "ml" || t === "spread" || t === "total" || t === "h2h" || t === "moneyline";
+}
+
 export function isScorecardEligible(pick: ScorecardPick): boolean {
   if (pick.recommended === false) return false;
   if (pick.oneSided === false) return false;
+  if (!isMainMarketType(pick.marketType)) return false;
   return pick.status === "WIN" || pick.status === "LOSS";
 }
 
@@ -89,7 +96,7 @@ export function buildPublicScorecard(picks: ScorecardPick[]): PublicScorecard {
     losingStretch: stretch,
     caveat:
       clvRows.length === 0
-        ? "CLV is blank until a real closing price exists. We do not invent one from edge."
-        : "Recommended graded singles only. Losing stretches stay visible.",
+        ? "Sides and totals only. CLV stays blank until a real close is stored. Props are graded separately."
+        : "Sides and totals only — moneyline, spread, over/under. Player props are not in this tape.",
   };
 }
