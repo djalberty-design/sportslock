@@ -39,28 +39,28 @@ export const CHIP_LINE: Record<ChipId, { title: string; line: string }> = {
     line: "Thin data. Treat as research.",
   },
   "photo-from": {
-    title: "Price from your photo",
-    line: "The odds came from the Hard Rock screenshot you uploaded.",
+    title: "Manual odds entry",
+    line: "The odds were entered or confirmed from your sportsbook.",
   },
   "photo-needed": {
-    title: "Photo to lock this price",
-    line: "The % is research on a delayed number until you photograph Hard Rock.",
+    title: "Confirm live price",
+    line: "The % is research on a consensus number until confirmed on your sportsbook.",
   },
   "tape-hr": {
-    title: "Hard Rock number",
-    line: "A Hard Rock price we already have — not from your photo on this ticket.",
+    title: "Sportsbook number",
+    line: "A market price from our live odds consensus feed.",
   },
   research: {
-    title: "Research only — photo still needed for the live price",
-    line: "This number is research. Photograph Hard Rock before you treat the dollars as live.",
+    title: "Research only — verify live line",
+    line: "This number is research. Check your sportsbook for live odds before tracking.",
   },
   "edge-up": {
     title: "Better than the book",
-    line: "Our chance is higher than the chance baked into Hard Rock’s price.",
+    line: "Our chance is higher than the chance baked into the book's price.",
   },
   "edge-down": {
     title: "Worse than the book",
-    line: "Our chance is lower than the chance baked into Hard Rock’s price.",
+    line: "Our chance is lower than the chance baked into the book's price.",
   },
   "the-call": {
     title: "The Call",
@@ -80,15 +80,15 @@ export const CHIP_LINE: Record<ChipId, { title: string; line: string }> = {
   },
   "early-mover": {
     title: "Early Mover Advantage",
-    line: "Kalshi or Polymarket moved more than 5 points ahead of Hard Rock. Research, never a Florida fill. Photograph Hard Rock before the book reprices.",
+    line: "Prediction markets moved ahead of sportsbooks. Check your sportsbook before the line reprices.",
   },
   fee: {
     title: "Sportsbook Fee",
     line: "The cut the sportsbook takes. Higher fee = worse deal for you.",
   },
   "lock-now": {
-    title: "Lock This Now",
-    line: "Smart money is moving this number. Photograph Hard Rock before the key number disappears. Not a guarantee it hits.",
+    title: "Beat the Line Move",
+    line: "Smart money is moving this number. Check your sportsbook before the key number moves. Not a guarantee it hits.",
   },
   wait: {
     title: "Wait for Better Price",
@@ -97,15 +97,15 @@ export const CHIP_LINE: Record<ChipId, { title: string; line: string }> = {
 };
 
 export const HOW_IT_WORKS = [
-  { n: "01", title: "Set money", body: "Type what you can spend on Start." },
+  { n: "01", title: "Set bankroll", body: "Type what you can spend on Start." },
   { n: "02", title: "Pick a ticket", body: "AI Picks names one. Tap the card." },
-  { n: "03", title: "Photograph Hard Rock", body: "We read the live price from your screenshot." },
-  { n: "04", title: "Mark it on Log", body: "After the game, tap Hit or Miss." },
+  { n: "03", title: "Track on Ticket", body: "Add your bet to track it on your ledger." },
+  { n: "04", title: "Auto-graded", body: "After the game, bets settle automatically." },
 ] as const;
 
 export const WORDS_WE_USE: { id: string; word: string; line: string }[] = [
   { id: "chance", word: "Chance it hits", line: "How often we think this ticket wins." },
-  { id: "book", word: "Book", line: "Chance baked into Hard Rock’s price." },
+  { id: "book", word: "Book", line: "Chance baked into the sportsbook's price." },
   { id: "edge", word: "Edge", line: "Our chance minus the book’s chance." },
   {
     id: "look",
@@ -114,8 +114,8 @@ export const WORDS_WE_USE: { id: string; word: string; line: string }[] = [
   },
   {
     id: "photo",
-    word: "Photo to lock this price",
-    line: "Until you photograph Hard Rock, the dollars may be off.",
+    word: "Check live odds",
+    line: "Always check your sportsbook for the latest lines.",
   },
   { id: "call", word: "The Call", line: "The gold-ribbon single of the day. Highest-conviction gated play. Not a guarantee." },
   { id: "best-value", word: "Best Value", line: "The column of smart extra vs the sportsbook fee. Not the gold ribbon." },
@@ -131,27 +131,27 @@ export const WORDS_WE_USE: { id: string; word: string; line: string }[] = [
   { id: "push", word: "Tie / Refund", line: "The game landed on the exact number. You get your original money back." },
   { id: "luck", word: "Game Luck vs. Strategy", line: "Normal good or bad bounces (fumbles, referee calls) that happen in sports." },
   { id: "live", word: "Live", line: "The game already started." },
-  { id: "log", word: "Log", line: "Where photographed tickets wait, then you tap Hit or Miss." },
-  { id: "never-bet", word: "This site never places a bet", line: "You place it at Hard Rock Bet Florida if you want." },
+  { id: "log", word: "Ticket Tab", line: "Where your tracked bets wait, settling automatically or manually." },
+  { id: "never-bet", word: "This site never places a bet", line: "You place it at your sportsbook if you want." },
 ];
 
 export const MORE_LINKS = [
-  { to: "/more", hash: "how", label: "How this site works", note: "Four steps. Then you photograph Hard Rock." },
+  { to: "/more", hash: "how", label: "How this site works", note: "Four simple steps to track your action." },
   { to: "/more", hash: "desks", label: "Desks and pin", note: "Every desk and the live constants." },
   { to: "/more", hash: "never", label: "What this site will never do", note: "Hard lines. A later feature cannot cross them." },
-  { to: "/more", hash: "words", label: "Words we use", note: "Chance, look, photo, The Call, Best Value." },
+  { to: "/more", hash: "words", label: "Words we use", note: "Chance, look, The Call, Best Value." },
   { to: "/more", hash: "money", label: "My money", note: "Core 85% and Fun 15%. What you typed on Start." },
   { to: "/gameday", hash: "", label: "Game day", note: "Kickoff, the pick, the dollars. One screen." },
   { to: "/parlay", hash: "", label: "Combos", note: "2-, 3-, and 4-pick tickets. Same-game included." },
   { to: "/learn", hash: "", label: "Learn", note: "Short lessons." },
   { to: "/guide", hash: "", label: "Guide", note: "The full walkthrough." },
-  { to: "/slate", hash: "", label: "Fantasy", note: "DraftKings Fantasy — salary cap, not a Hard Rock ticket." },
+  { to: "/slate", hash: "", label: "Fantasy", note: "DraftKings Fantasy — salary cap, not a sportsbook ticket." },
   { to: "/alerts", hash: "", label: "Reminders / honesty", note: "Delays. No auto-bet. This site never places a bet." },
   { to: "/admin", hash: "", label: "Admin", note: "Allowlist, algorithm knobs, master ledger, feed health." },
 ] as const;
 
 export const PHOTO_BANNER =
-  "Photograph the Hard Rock Bet Florida screen. We read the live price. Then you confirm it on Log.";
+  "Check your sportsbook for live odds, then track your bets on the Ticket tab.";
 
 export function lookChipId(band: "high" | "medium" | "low"): ChipId {
   if (band === "high") return "look-strong";
