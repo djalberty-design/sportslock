@@ -45,19 +45,19 @@ export function computeQuantFactorWaterfall(
     favorable: true,
   });
 
-  // Factor 2: 10k Monte Carlo Simulation Differential
+  // Factor 2: Probability Model Simulation Differential
   const homeProb = brief?.espnHomeWin ?? brief?.chanceHome ?? 0.5;
   const simProb = row.simFair ?? (row.side === "home" ? homeProb : 1 - homeProb) ?? modelProb;
   const simDiff = simProb - marketAnchorProb;
   const simImpactBp = Math.round(simDiff * 10000 * (wSim / (wSim + wPool || 0.2)));
   factors.push({
-    name: "10,000 Monte Carlo Sim",
+    name: "Probability Model Sim",
     category: "sim",
     impactBp: simImpactBp,
     weightPct: Math.round(wSim * 100),
     detail: simDiff >= 0
-      ? `Simulations favor ${row.selection} (+${(simDiff * 100).toFixed(1)}% vs Vegas line)`
-      : `Simulations lean defensive (-${(Math.abs(simDiff) * 100).toFixed(1)}% vs Vegas line)`,
+      ? `Model simulation favors ${row.selection} (+${(simDiff * 100).toFixed(1)}% vs Vegas line)`
+      : `Model simulation leans defensive (-${(Math.abs(simDiff) * 100).toFixed(1)}% vs Vegas line)`,
     favorable: simImpactBp >= 0,
   });
 

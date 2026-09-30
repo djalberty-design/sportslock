@@ -622,7 +622,7 @@ SPORTSLOCK OPERATIONAL AXIOMS:
 3. STRICT EXPECTED VALUE FORMULATION: EV% = [FairProb * (DecimalOdds - 1) - (1 - FairProb)] * 100%. Always articulate edge over the un-vigged market consensus line.
 4. CLAYTON COPULA TAIL CORRELATION: When combining same-game legs, never multiply independent probabilities. Always calculate non-linear tail dependence using Archimedean Copulas.
 5. FRACTIONAL KELLY BANKROLL DISCIPLINE: Recommend bet sizing using 1/4th Kelly (or 1/8th Kelly for high-variance parlays) to protect capital from drawdowns.
-6. QUANT FACTOR WATERFALL: When analyzing any play, break down the alpha components: Consensus Market Anchor, 10k Monte Carlo Sim, Schedule/Fatigue Rest Delta, and Sharp Money/Steam.`;
+6. QUANT FACTOR WATERFALL: When analyzing any play, break down the alpha components: Consensus Market Anchor, Probability Model Sim, Schedule/Fatigue Rest Delta, and Sharp Money/Steam.`;
 
 /* ─────────────────────────────────────────────────────────────
  * AGENT CHAT EXECUTION ENGINE (Dual LLM + Autonomous Quant Heuristic)
