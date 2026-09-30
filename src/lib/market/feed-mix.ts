@@ -4,12 +4,12 @@ import { etDayKey, filterSlateGames, nextEtDayKey, nowEtDayKey, type SlateGame }
 export type MixFilter = "ALL" | "SGP" | "SAME_SPORT" | "CROSS" | "LEG2" | "LEG3";
 
 export const MIX_OPTIONS: { id: MixFilter; label: string }[] = [
-  { id: "ALL", label: "All mixes" },
-  { id: "SGP", label: "Same game" },
-  { id: "SAME_SPORT", label: "Same sport" },
-  { id: "CROSS", label: "Cross sport" },
-  { id: "LEG2", label: "2-leg" },
-  { id: "LEG3", label: "3-leg" },
+  { id: "ALL", label: "All Types" },
+  { id: "SGP", label: "Same Game" },
+  { id: "SAME_SPORT", label: "Single Sport" },
+  { id: "CROSS", label: "Multi-Sport" },
+  { id: "LEG2", label: "2-Leg" },
+  { id: "LEG3", label: "3-Leg" },
 ];
 
 export function ribbonLegs(pick: any): any[] {

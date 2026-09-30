@@ -279,6 +279,56 @@ function Dashboard() {
       </header>
 
 
+      {/* ── OVERSEER PLAIN-ENGLISH STATUS SUMMARY ── */}
+      <div className="bg-obsidian border border-line rounded-xl p-4 sm:p-5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between pb-2 border-b border-line/60">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-400" />
+            <h2 className="text-sm font-bold text-ink font-mono uppercase tracking-wider">Executive Status Summary</h2>
+          </div>
+          <span className="text-[11px] font-mono text-muted">Plain English Overview</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs pt-1">
+          <div className="bg-panel border border-line/60 rounded-lg p-3">
+            <p className="text-muted text-[10px] font-bold uppercase tracking-wider">Today's Graded Games</p>
+            <p className="font-mono text-ink text-base font-bold mt-1">
+              {(stats.dailyDigest?.todayWins ?? 0) + (stats.dailyDigest?.todayLosses ?? 0)} graded
+            </p>
+            <p className="text-[11px] text-muted mt-0.5">
+              <span className="text-emerald-400 font-bold">{stats.dailyDigest?.todayWins ?? 0} right</span>,{" "}
+              <span className="text-red-400 font-bold">{stats.dailyDigest?.todayLosses ?? 0} wrong</span>
+            </p>
+          </div>
+          <div className="bg-panel border border-line/60 rounded-lg p-3">
+            <p className="text-muted text-[10px] font-bold uppercase tracking-wider">This Week (7-Day)</p>
+            <p className="font-mono text-ink text-base font-bold mt-1">
+              {stats.dailyDigest?.week?.pct != null ? `${stats.dailyDigest.week.pct}% win rate` : "—"}
+            </p>
+            <p className="text-[11px] text-muted mt-0.5">
+              {stats.dailyDigest?.week?.wins ?? 0}W – {stats.dailyDigest?.week?.losses ?? 0}L on recommended
+            </p>
+          </div>
+          <div className="bg-panel border border-line/60 rounded-lg p-3">
+            <p className="text-muted text-[10px] font-bold uppercase tracking-wider">Model Weights</p>
+            <p className="font-mono text-amber-400 text-base font-bold mt-1">
+              Frozen (learning mode)
+            </p>
+            <p className="text-[11px] text-muted mt-0.5">
+              Weights cannot drift; proposals require review
+            </p>
+          </div>
+          <div className="bg-panel border border-line/60 rounded-lg p-3">
+            <p className="text-muted text-[10px] font-bold uppercase tracking-wider">Action Needed</p>
+            <p className="font-mono text-emerald-400 text-base font-bold mt-1">
+              {stats.pending > 0 ? `${stats.pending} pending grade` : "None"}
+            </p>
+            <p className="text-[11px] text-muted mt-0.5">
+              {stats.pending > 0 ? "Sweep running automatically" : "All background crons healthy"}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-sm">
         <p className="font-bold text-amber-400">Engine: frozen — grades games, does not change weights</p>
         <p className="text-xs text-muted mt-1">Autopsy notes and inbox drafts still run. Approve in Inbox does not write production weights while this freeze is on.</p>
@@ -329,7 +379,7 @@ function Dashboard() {
                 <span className="size-2 rounded-full bg-indigo-400" /> 2. Circuit Breakers & Weights
               </div>
               <p className="text-[11px] leading-relaxed">
-                The engine anchors &ge;70% to sharp consensus. If any sport hits a cold streak (&lt;48% win rate over 20+ picks), an automated circuit breaker clamps 90% weight onto sharp books to protect your bankroll.
+                The engine anchors &ge;70% to sharp consensus. If any sport hits a cold streak (&lt;48% win rate over 20+ picks), an automated circuit breaker clamps 80% weight onto sharp books to protect your bankroll.
               </p>
             </div>
             <div className="bg-panel/70 border border-line/60 rounded-lg p-3 space-y-1">
@@ -373,7 +423,7 @@ function Dashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-muted">
           <span><strong className="text-ink font-mono">{stats.total} Locked AI Tickets:</strong> High-conviction tickets & slips in <code className="text-primary font-mono">prediction_logs</code>.</span>
-          <span><strong className="text-ink font-mono">{stats.marketTapeStats?.total ?? 2648} Market Lines Scored:</strong> Full quantitative tape of all monitored game lines in <code className="text-primary font-mono">market_tape</code>.</span>
+          <span><strong className="text-ink font-mono">{stats.marketTapeStats?.total ?? "—"} Market Lines Scored:</strong> Full quantitative tape of all monitored game lines in <code className="text-primary font-mono">market_tape</code>.</span>
         </div>
       </div>
 
@@ -391,7 +441,7 @@ function Dashboard() {
           icon={<Activity className="size-4" />}
           label="Market Tape Lines"
           sublabel="market_tape universe"
-          value={stats.marketTapeStats?.total ?? 2648}
+          value={stats.marketTapeStats?.total ?? "—"}
           color="text-blue-400"
           tooltip="Every individual betting line (spreads, totals, MLs, props) evaluated across all monitored sports"
         />
@@ -675,10 +725,10 @@ function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-ink">
-              <Layers className="size-4 text-primary" /> Live Factor Waterfall Decomposition
+              <Layers className="size-4 text-primary" /> Example Factor Waterfall (Demo Data)
             </div>
             <p className="text-xs text-muted mt-1">
-              Real-time factor attribution. Decomposes raw betting edge into 5 components: Consensus Anchor (&ge; 70%), Probability Model, Rest & Fatigue, Sharp Money / Flow, and Venue Environment.
+              Example factor attribution using demo matchup data. Decomposes raw betting edge into 5 components: Consensus Anchor (&ge; 70%), Probability Model, Rest & Fatigue, Sharp Money / Flow, and Venue Environment.
             </p>
           </div>
           <div className="flex items-center gap-1.5 bg-obsidian border border-line p-1 rounded-lg">
@@ -705,7 +755,7 @@ function Dashboard() {
             <Info className="size-3.5 text-primary" /> What you are looking at & how to use this section:
           </div>
           <p className="text-[11px] leading-relaxed">
-            The Waterfall decomposes the model's exact edge into 5 factor layers above the baseline vig: <strong>Consensus Anchor</strong> (&ge;70% base from sharp bookmakers), <strong>Probability Model</strong> (simulation distribution shift), <strong>Rest & Fatigue</strong> (schedule and rest advantage), <strong>Sharp Money Flow</strong> (reverse line movement and professional handle), and <strong>Venue Environment</strong> (park factors & weather conditions). <strong>Click any sport button above (MLB, NBA, NFL, etc.)</strong> to inspect the live factor attribution model for that sport.
+            The Waterfall decomposes the model's exact edge into 5 factor layers above the baseline vig: <strong>Consensus Anchor</strong> (&ge;70% base from sharp bookmakers), <strong>Probability Model</strong> (simulation distribution shift), <strong>Rest & Fatigue</strong> (schedule and rest advantage), <strong>Sharp Money Flow</strong> (reverse line movement and professional handle), and <strong>Venue Environment</strong> (park factors & weather conditions). <strong>Click any sport button above (MLB, NBA, NFL, etc.)</strong> to inspect the factor attribution model for that sport using example data.
           </p>
         </div>
 
@@ -749,8 +799,8 @@ function Dashboard() {
           return (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-muted font-mono bg-obsidian/60 px-3 py-2 rounded-lg border border-line/40">
-                <span>Inspecting Active Alpha Attribution for: <strong className="text-ink">{selectedWaterfallSport} Moneyline</strong></span>
-                <span className="text-primary font-bold">Dynamic Weights Active</span>
+                <span>Example Waterfall (demo data): <strong className="text-ink">{selectedWaterfallSport} Moneyline</strong></span>
+                <span className="text-amber-400 font-bold">Demo Projection</span>
               </div>
               <QuantFactorWaterfall waterfall={wf} compact={false} />
             </div>
@@ -1150,19 +1200,19 @@ function Dashboard() {
 
         {/* Data Health */}
         <section className="bg-panel border border-line rounded-xl p-4">
-          <SectionHeader icon={<Server />} title="System Health"
-            description="Status of data sources feeding the brain. All green confirms 100% full autonomous operation." />
+          <SectionHeader icon={<Server />} title="System Health (Status checks not wired yet)"
+            description="Status indicators for data sources feeding the brain. Live ping probes not wired yet." />
           <div className="mt-4 space-y-2">
-            <HealthRow label="Consensus Feeds & Sharp Books" status="active"
-              detail="The Odds API + Pinnacle/Circa sharp line scraper" />
-            <HealthRow label="Probability Engine" status="active"
-              detail="Poisson distribution & possession tempo models" />
-            <HealthRow label="Feature Ensembles" status="active"
-              detail="EWMA recency, park factors, and travel fatigue" />
-            <HealthRow label="Dynamic Weights Calibrator" status="active"
-              detail="Rolling 30-day performance calibration" />
+            <HealthRow label="Consensus Feeds & Sharp Books" status="unwired"
+              detail="The Odds API + Pinnacle/Circa sharp line scraper (live check not wired yet)" />
+            <HealthRow label="Probability Engine" status="unwired"
+              detail="Poisson distribution & possession tempo models (live check not wired yet)" />
+            <HealthRow label="Feature Ensembles" status="unwired"
+              detail="EWMA recency, park factors, and travel fatigue (live check not wired yet)" />
+            <HealthRow label="Dynamic Weights Calibrator" status="unwired"
+              detail="Rolling 30-day performance calibration (live check not wired yet)" />
             <HealthRow label="Autonomous Grading Cron" status="active"
-              detail="10m background sweep via ESPN historical API" />
+              detail="10m background sweep via ESPN historical API (active via Vercel cron)" />
           </div>
         </section>
       </div>
@@ -1218,18 +1268,19 @@ function SectionHeader({ icon, title, description }: { icon: React.ReactNode; ti
   );
 }
 
-function HealthRow({ label, status, detail }: { label: string; status: "active" | "idle" | "error"; detail: string }) {
+function HealthRow({ label, status, detail }: { label: string; status: "active" | "idle" | "error" | "unwired"; detail: string }) {
   return (
     <div className="flex items-center gap-3 py-1">
-      <CheckCircle2 className={cn("size-4 shrink-0", status === "active" ? "text-emerald-400" : status === "idle" ? "text-amber-400" : "text-red-400")} />
+      <CheckCircle2 className={cn("size-4 shrink-0", status === "active" ? "text-emerald-400" : status === "idle" ? "text-amber-400" : status === "unwired" ? "text-muted" : "text-red-400")} />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-bold text-ink">{label}</span>
         <p className="text-[10px] text-muted truncate">{detail}</p>
       </div>
       <span className={cn("text-[10px] uppercase font-bold px-2 py-0.5 rounded",
         status === "active" ? "bg-emerald-500/10 text-emerald-400" :
-        status === "idle" ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400"
-      )}>{status}</span>
+        status === "idle" ? "bg-amber-500/10 text-amber-400" :
+        status === "unwired" ? "bg-panel border border-line text-muted" : "bg-red-500/10 text-red-400"
+      )}>{status === "unwired" ? "not wired" : status}</span>
     </div>
   );
 }

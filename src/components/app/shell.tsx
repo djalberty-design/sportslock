@@ -190,7 +190,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className={cn("mx-auto max-w-5xl px-4 pt-7 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden sm:pt-6", slipOpen ? "pb-24" : "pb-4")}>
+        <div className="mx-auto max-w-5xl px-4 pt-7 md:p-6 lg:p-8 w-full max-w-full overflow-x-hidden sm:pt-6 pb-4">
           {children}
           {isAdmin && (
             <div className="md:hidden mt-8 mb-16 pt-4 border-t border-line/40 flex items-center justify-between px-2 text-xs text-muted">

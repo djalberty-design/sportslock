@@ -14,7 +14,7 @@ export function SportFilter({ sports }: { sports: string[] }) {
   const options = ["ALL", ...ORDER, ...extras];
 
   return (
-    <div className="flex flex-wrap gap-2 pb-1" role="tablist" aria-label="Filter by sport">
+    <div className="flex overflow-x-auto whitespace-nowrap gap-2 pb-1 no-scrollbar -mx-1 px-1" role="tablist" aria-label="Filter by sport">
       {options.map((s) => {
         const active = value === s || (s === "ALL" && (!value || value === "ALL"));
         const soon = s !== "ALL" && !live.has(s);
@@ -26,7 +26,7 @@ export function SportFilter({ sports }: { sports: string[] }) {
             aria-selected={active}
             onClick={() => set(s)}
             className={cn(
-              "min-h-11 rounded-md px-3 text-sm font-medium",
+              "min-h-11 rounded-md px-3 text-sm font-medium shrink-0",
               active ? "bg-neon text-obsidian" : "bg-panel text-muted hover:text-ink",
             )}
           >
@@ -48,7 +48,7 @@ export function MixFilterBar({
   onChange: (v: MixFilter) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 pb-1" role="tablist" aria-label="Filter by mix">
+    <div className="flex overflow-x-auto whitespace-nowrap gap-2 pb-1 no-scrollbar -mx-1 px-1" role="tablist" aria-label="Filter by mix">
       {MIX_OPTIONS.map((opt) => {
         const active = value === opt.id;
         return (
@@ -59,7 +59,7 @@ export function MixFilterBar({
             aria-selected={active}
             onClick={() => onChange(opt.id)}
             className={cn(
-              "min-h-11 rounded-md px-3 text-sm font-medium",
+              "min-h-11 rounded-md px-3 text-sm font-medium shrink-0",
               active ? "bg-neon text-obsidian" : "bg-panel text-muted hover:text-ink",
             )}
           >

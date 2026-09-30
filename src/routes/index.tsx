@@ -211,7 +211,6 @@ function SportsLockCommandCenter() {
         </h1>
         <p className="text-muted text-xs sm:text-sm">Top value picks ranked by probability, payout, and edge. Gold is the best bet on the board. Research, not a lock.</p>
       </div>
-      <PublicScorecardHome />
       <div className="space-y-2">
         <SportFilter sports={liveSports} />
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -329,6 +328,7 @@ function SportsLockCommandCenter() {
           </section>
         </>
       )}
+      <PublicScorecardHome />
     </div>
   );
 }
