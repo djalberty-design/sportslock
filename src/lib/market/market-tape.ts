@@ -403,23 +403,25 @@ export async function writePropTape(props: any[]): Promise<{ wrote: number }> {
       const model = clipProb(p.aiProb);
       const price = Number.isFinite(p.price) ? Math.round(p.price) : null;
       const implied = p.fairProb ?? 0.5;
-      const edge = model != null ? +(model - implied).toFixed(4) : null;
+      const edge = model != null ? +((model - implied) * 100).toFixed(2) : null;
+      const start = p.start || p.commence_time ? new Date(p.start || p.commence_time).toISOString() : null;
 
       await sql.query(
         `insert into market_tape (
-          event_id, sport, home, away, market_type, side, selection,
+          event_id, sport, home, away, start, market_type, side, selection,
           line, price, model_probability, edge, phase, in_play, complete,
           snapshot, recommended, player
         ) values (
-          $1,$2,$3,$4,$5,$6,$7,
-          $8,$9,$10,$11,$12,$13,$14,
-          $15::jsonb,$16,$17
+          $1,$2,$3,$4,$5,$6,$7,$8,
+          $9,$10,$11,$12,$13,$14,$15,
+          $16::jsonb,$17,$18
         )`,
         [
           p.eventId,
           p.sport ?? null,
           p.home ?? null,
           p.away ?? null,
+          start,
           p.marketType || "prop",
           p.aiLean || (/over/i.test(p.selection || "") ? "over" : /under/i.test(p.selection || "") ? "under" : /yes/i.test(p.selection || "") ? "yes" : "over"),
           p.selection,
@@ -442,7 +444,7 @@ export async function writePropTape(props: any[]): Promise<{ wrote: number }> {
             position: p.position,
             source: "odds_api_props",
           }),
-          edge != null && edge > 0.02,
+          edge != null && edge > 2.0,
           p.player ?? null,
         ],
       );

@@ -111,19 +111,41 @@ export async function buildSuggestions(): Promise<{ ok: boolean; created: number
   try {
     await ensureSuggestionsTable();
     const sql = await getSql();
-    const slices = await sql.query<{ sport: string; market: string; wins: number; losses: number; decided: number; miss: number; echoed: number; variance: number }>(
-      `select coalesce(sport,'UNK') as sport,
-              coalesce(market_type,'unk') as market,
-              count(*) filter (where status = 'WIN')::int as wins,
-              count(*) filter (where status = 'LOSS')::int as losses,
-              count(*) filter (where status in ('WIN','LOSS'))::int as decided,
-              count(*) filter (where bucket = 'model_miss')::int as miss,
-              count(*) filter (where bucket = 'echoed_book')::int as echoed,
-              count(*) filter (where bucket = 'high_variance')::int as variance
-       from market_tape
-       where status in ('WIN','LOSS','PUSH') and recommended = true
-       group by 1, 2`,
-    );
+
+    try {
+      await sql.query(`alter table market_tape add column if not exists bucket text`);
+    } catch {}
+
+    let slices: Array<{ sport: string; market: string; wins: number; losses: number; decided: number; miss: number; echoed: number; variance: number }> = [];
+    try {
+      slices = await sql.query<{ sport: string; market: string; wins: number; losses: number; decided: number; miss: number; echoed: number; variance: number }>(
+        `select coalesce(sport,'UNK') as sport,
+                coalesce(market_type,'unk') as market,
+                count(*) filter (where status = 'WIN')::int as wins,
+                count(*) filter (where status = 'LOSS')::int as losses,
+                count(*) filter (where status in ('WIN','LOSS'))::int as decided,
+                count(*) filter (where bucket = 'model_miss')::int as miss,
+                count(*) filter (where bucket = 'echoed_book')::int as echoed,
+                count(*) filter (where bucket = 'high_variance')::int as variance
+         from market_tape
+         where status in ('WIN','LOSS','PUSH') and recommended = true
+         group by 1, 2`,
+      );
+    } catch {
+      slices = await sql.query<{ sport: string; market: string; wins: number; losses: number; decided: number; miss: number; echoed: number; variance: number }>(
+        `select coalesce(sport,'UNK') as sport,
+                coalesce(market_type,'unk') as market,
+                count(*) filter (where status = 'WIN')::int as wins,
+                count(*) filter (where status = 'LOSS')::int as losses,
+                count(*) filter (where status in ('WIN','LOSS'))::int as decided,
+                0 as miss,
+                0 as echoed,
+                0 as variance
+         from market_tape
+         where status in ('WIN','LOSS','PUSH') and recommended = true
+         group by 1, 2`,
+      );
+    }
     const totals = slices.reduce(
       (acc, s) => {
         acc.decided += Number(s.decided || 0);
