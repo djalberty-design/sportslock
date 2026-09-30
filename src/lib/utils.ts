@@ -198,7 +198,7 @@ export function getEasternQuotaBreakdown(quota: number | null, now = new Date())
   if (month >= 8 || month <= 1) activeSportNames.push("NCAAF");
   if (month >= 3 && month <= 11) activeSportNames.push("MLB");
   if (month >= 10 || month <= 6) activeSportNames.push("NBA");
-  if (month >= 10 || month <= 6) activeSportNames.push("NHL");
+  if (month >= 9 || month <= 6) activeSportNames.push("NHL");
   if (month >= 11 || month <= 4) activeSportNames.push("NCAAB");
 
   const activeSports = activeSportNames.length;

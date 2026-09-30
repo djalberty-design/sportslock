@@ -66,6 +66,8 @@ export function extractPlayerStat(boxscore: any, playerName: string, propType: s
   if (!boxscore?.players) return null;
   
   const pt = propType.toLowerCase();
+  let tdAccum = 0;
+  let tdFound = false;
 
   for (const teamStats of boxscore.players) {
     for (const statGroup of teamStats.statistics) {
@@ -90,16 +92,11 @@ export function extractPlayerStat(boxscore: any, playerName: string, propType: s
       else if (pt.includes('rush_td')) key = "rushingTouchdowns";
       else if (pt.includes('rec_td')) key = "receivingTouchdowns";
       else if (pt.includes('anytime_td')) {
-        let tds = 0;
-        let foundAny = false;
-        const pIdx = statGroup.keys.indexOf("passingTouchdowns"); // ESPN sometimes credits QB rushing vs passing TDs in weird ways but we sum all non-passing TDs typically, wait no anytime TD does NOT include passing TD usually.
-        // Actually anytime TD means rushing or receiving TD or return TD. 
-        // For safety, sum rushing and receiving.
         const rushIndex = statGroup.keys.indexOf("rushingTouchdowns");
         const recIndex = statGroup.keys.indexOf("receivingTouchdowns");
-        if (rushIndex >= 0) { tds += Number(ath.stats[rushIndex] || 0); foundAny = true; }
-        if (recIndex >= 0) { tds += Number(ath.stats[recIndex] || 0); foundAny = true; }
-        if (foundAny) return tds;
+        if (rushIndex >= 0) { tdAccum += Number(ath.stats[rushIndex] || 0); tdFound = true; }
+        if (recIndex >= 0) { tdAccum += Number(ath.stats[recIndex] || 0); tdFound = true; }
+        // Do not return early — continue checking other stat groups (e.g. receiving)
       }
       else if (pt.includes('points') && !pt.includes('points_rebounds_assists') && statGroup.keys.includes('points')) key = "points";
       else if (pt.includes('rebounds')) key = "rebounds";
@@ -149,6 +146,8 @@ export function extractPlayerStat(boxscore: any, playerName: string, propType: s
       }
     }
   }
+
+  if (pt.includes('anytime_td') && tdFound) return tdAccum;
   
   return null;
 }
@@ -212,7 +211,13 @@ export async function gradeProps() {
       continue;
     }
 
-    const playerName = row.player || row.selection.split(/(over|under|o\/u|anytime|\d)/i)[0].trim();
+    let playerName = row.player || row.selection.split(/(over|under|o\/u|anytime|\d)/i)[0].trim();
+    if (!playerName || playerName.length < 2) {
+      // Try extracting player name from after the line number
+      const afterLine = row.selection.replace(/^.*?[-–]\s*/, "").trim();
+      playerName = afterLine || row.selection;
+    }
+    if (!playerName || playerName.length < 2) { unmatched++; continue; }
     // Default to the selection string if market_type is generic 'prop'
     const propType = (row.market_type === 'prop' || !row.market_type) ? row.selection : row.market_type;
     

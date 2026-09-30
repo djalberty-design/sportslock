@@ -23,12 +23,23 @@ test("calculateDynamicWager clamps between 0.25x and 4.00x base unit", () => {
   const baseUnit = 25.00;
   const bankroll = 1000.00;
 
-  // Tiny edge or no edge: clamped to 0.25x base unit = $6.25
-  const low = calculateDynamicWager({
+  // No edge: returns $0 (no bet)
+  const noEdge = calculateDynamicWager({
     totalBankroll: bankroll,
     baseUnitSize: baseUnit,
     riskMode: "balanced",
     fairProb: 0.50,
+    bookOdds: -110,
+  });
+  assert.equal(noEdge.wagerDollars, 0);
+  assert.equal(noEdge.unitCount, 0);
+
+  // Tiny positive edge: clamped to 0.25x base unit = $6.25
+  const low = calculateDynamicWager({
+    totalBankroll: bankroll,
+    baseUnitSize: baseUnit,
+    riskMode: "balanced",
+    fairProb: 0.53,
     bookOdds: -110,
   });
   assert.equal(low.wagerDollars, 6.25);

@@ -163,7 +163,7 @@ function TheMatrix() {
     });
   }
 
-  function LineBox({ label, sub, hit, selected, onToggle }: { label: string; sub?: string; hit: number | null; selected?: boolean; onToggle?: () => void }) {
+  function LineBox({ label, sub, hit, selected, onToggle, teamAbbr }: { label: string; sub?: string; hit: number | null; selected?: boolean; onToggle?: () => void; teamAbbr?: string }) {
     const empty = !label || label === "-";
     return (
       <button
@@ -171,10 +171,11 @@ function TheMatrix() {
         disabled={empty || !onToggle}
         onClick={onToggle}
         className={cn(
-          "min-h-14 flex flex-col items-center justify-center rounded border px-1 py-1.5 w-full",
+          "min-h-14 flex flex-col items-center justify-center rounded border px-1 py-1.5 w-full relative",
           empty || !onToggle ? "bg-obsidian border-line cursor-default" : selected ? "bg-primary/15 border-primary cursor-pointer" : "bg-obsidian border-line hover:border-primary/60 cursor-pointer",
         )}
       >
+        {teamAbbr && <span className="text-[9px] text-muted font-mono md:hidden leading-none mb-0.5">{teamAbbr}</span>}
         <span className="text-sm font-bold text-ink leading-none">{empty ? "-" : label}</span>
         {sub ? <span className="text-[10px] font-bold text-muted mt-0.5">{sub}</span> : null}
         <div className="mt-1 w-full h-1 rounded-full bg-line/40 overflow-hidden">
@@ -318,18 +319,18 @@ function TheMatrix() {
                 <div className="w-full md:w-[60%] flex gap-2 md:pl-4">
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Spread</div>
-                    <LineBox label={g.markets?.awaySpread?.point != null ? `${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}` : "-"} sub={g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : undefined} hit={lineHit(g, "spread", "away", g.markets?.awaySpread?.price)} selected={isLegSelected(slipLegs, `${g.away} ${g.markets?.awaySpread?.point > 0 ? "+" : ""}${g.markets?.awaySpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.awaySpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "away", selection: `${g.away} ${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}`, price: g.markets.awaySpread.price, point: g.markets.awaySpread.point })} />
-                    <LineBox label={g.markets?.homeSpread?.point != null ? `${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}` : "-"} sub={g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : undefined} hit={lineHit(g, "spread", "home", g.markets?.homeSpread?.price)} selected={isLegSelected(slipLegs, `${g.home} ${g.markets?.homeSpread?.point > 0 ? "+" : ""}${g.markets?.homeSpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.homeSpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "home", selection: `${g.home} ${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}`, price: g.markets.homeSpread.price, point: g.markets.homeSpread.point })} />
+                    <LineBox teamAbbr={g.awayAbbr || (g.away || "").substring(0, 3)} label={g.markets?.awaySpread?.point != null ? `${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}` : "-"} sub={g.markets?.awaySpread?.price ? formatAm(g.markets.awaySpread.price) : undefined} hit={lineHit(g, "spread", "away", g.markets?.awaySpread?.price)} selected={isLegSelected(slipLegs, `${g.away} ${g.markets?.awaySpread?.point > 0 ? "+" : ""}${g.markets?.awaySpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.awaySpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "away", selection: `${g.away} ${g.markets.awaySpread.point > 0 ? "+" : ""}${g.markets.awaySpread.point}`, price: g.markets.awaySpread.price, point: g.markets.awaySpread.point })} />
+                    <LineBox teamAbbr={g.homeAbbr || (g.home || "").substring(0, 3)} label={g.markets?.homeSpread?.point != null ? `${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}` : "-"} sub={g.markets?.homeSpread?.price ? formatAm(g.markets.homeSpread.price) : undefined} hit={lineHit(g, "spread", "home", g.markets?.homeSpread?.price)} selected={isLegSelected(slipLegs, `${g.home} ${g.markets?.homeSpread?.point > 0 ? "+" : ""}${g.markets?.homeSpread?.point ?? ""}`, "spread", g.eventId)} onToggle={() => g.markets?.homeSpread?.price != null && toggleMatchupLeg(g, { marketType: "spread", side: "home", selection: `${g.home} ${g.markets.homeSpread.point > 0 ? "+" : ""}${g.markets.homeSpread.point}`, price: g.markets.homeSpread.price, point: g.markets.homeSpread.point })} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Total</div>
-                    <LineBox label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} selected={isLegSelected(slipLegs, `Over ${g.markets?.over?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.over?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "over", selection: `Over ${g.markets.over.point}`, price: g.markets.over.price, point: g.markets.over.point })} />
-                    <LineBox label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under?.price)} selected={isLegSelected(slipLegs, `Under ${g.markets?.under?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.under?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "under", selection: `Under ${g.markets.under.point}`, price: g.markets.under.price, point: g.markets.under.point })} />
+                    <LineBox teamAbbr="OVER" label={g.markets?.over?.point != null ? `O ${g.markets.over.point}` : "-"} sub={g.markets?.over?.price ? formatAm(g.markets.over.price) : undefined} hit={lineHit(g, "total", "over", g.markets?.over?.price)} selected={isLegSelected(slipLegs, `Over ${g.markets?.over?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.over?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "over", selection: `Over ${g.markets.over.point}`, price: g.markets.over.price, point: g.markets.over.point })} />
+                    <LineBox teamAbbr="UNDER" label={g.markets?.under?.point != null ? `U ${g.markets.under.point}` : "-"} sub={g.markets?.under?.price ? formatAm(g.markets.under.price) : undefined} hit={lineHit(g, "total", "under", g.markets?.under?.price)} selected={isLegSelected(slipLegs, `Under ${g.markets?.under?.point ?? ""}`, "total", g.eventId)} onToggle={() => g.markets?.under?.price != null && toggleMatchupLeg(g, { marketType: "total", side: "under", selection: `Under ${g.markets.under.point}`, price: g.markets.under.price, point: g.markets.under.point })} />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="text-[10px] font-bold text-muted uppercase tracking-wider text-center mb-1">Winner</div>
-                    <LineBox label={g.markets?.awayML ? formatAm(g.markets.awayML) : "-"} hit={lineHit(g, "ml", "away", g.markets?.awayML)} selected={isLegSelected(slipLegs, g.away, "ml", g.eventId)} onToggle={() => g.markets?.awayML != null && toggleMatchupLeg(g, { marketType: "ml", side: "away", selection: g.away, price: g.markets.awayML })} />
-                    <LineBox label={g.markets?.homeML ? formatAm(g.markets.homeML) : "-"} hit={lineHit(g, "ml", "home", g.markets?.homeML)} selected={isLegSelected(slipLegs, g.home, "ml", g.eventId)} onToggle={() => g.markets?.homeML != null && toggleMatchupLeg(g, { marketType: "ml", side: "home", selection: g.home, price: g.markets.homeML })} />
+                    <LineBox teamAbbr={g.awayAbbr || (g.away || "").substring(0, 3)} label={g.markets?.awayML ? formatAm(g.markets.awayML) : "-"} hit={lineHit(g, "ml", "away", g.markets?.awayML)} selected={isLegSelected(slipLegs, g.away, "ml", g.eventId)} onToggle={() => g.markets?.awayML != null && toggleMatchupLeg(g, { marketType: "ml", side: "away", selection: g.away, price: g.markets.awayML })} />
+                    <LineBox teamAbbr={g.homeAbbr || (g.home || "").substring(0, 3)} label={g.markets?.homeML ? formatAm(g.markets.homeML) : "-"} hit={lineHit(g, "ml", "home", g.markets?.homeML)} selected={isLegSelected(slipLegs, g.home, "ml", g.eventId)} onToggle={() => g.markets?.homeML != null && toggleMatchupLeg(g, { marketType: "ml", side: "home", selection: g.home, price: g.markets.homeML })} />
                   </div>
                 </div>
               </div>
@@ -342,7 +343,7 @@ function TheMatrix() {
                         {fetchingEvent === g.eventId ? "Pulling..." : cachedEvents.has(g.eventId) ? "Props \u2713" : "Fetch Props"}
                       </button>
                     )}
-                   <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Open Game Ticket <ChevronRight className="size-3 ml-1" /></Link>
+                   <Link to="/game/$eventId" params={{ eventId: g.eventId }} className="flex items-center text-primary text-xs font-bold hover:underline">Game Details <ChevronRight className="size-3 ml-1" /></Link>
                  </div>
               </div>
             </div>

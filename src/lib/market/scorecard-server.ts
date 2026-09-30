@@ -16,7 +16,7 @@ export const getPublicScorecardFn = createServerFn({ method: "POST" }).handler(a
       LIMIT 2000
     `;
     const picks: ScorecardPick[] = (rows as any[]).map((r) => ({
-      recommended: r.recommended !== false,
+      recommended: r.recommended === true,
       oneSided: true,
       marketType: String(r.market_type || ""),
       status: String(r.status || ""),

@@ -41,14 +41,14 @@ const PIPELINE_STAGES = [
   {
     step: 2,
     id: "simulation",
-    name: "2. 10k Monte Carlo",
+    name: "2. Probability Model",
     icon: Cpu,
-    badge: "10,000 Runs",
+    badge: "Statistical Sim",
     short: "Poisson & Possession Sim",
     details: {
       input: "Pace of play, offensive/defensive efficiency ratings, and possession distributions per sport.",
       order: "Step 2 of 6 in Pipeline",
-      operation: "Simulates 10,000 full game iterations to generate score percentiles, tail variance, and median margin.",
+      operation: "Calculates win/cover/total probabilities to generate score percentiles, tail variance, and median margin.",
       status: "Simulations calibrated per sport tempo"
     }
   },
@@ -559,7 +559,7 @@ function Dashboard() {
               <Sliders className="size-4 text-primary" /> Live Dynamic Blend Weights by Sport
             </div>
             <p className="text-xs text-muted mt-1">
-              The calibrated mix of Consensus Market, 10k Monte Carlo, and Feature Ensembles. Consensus stays dominant (≥70%) to preserve the proven ~60% win rate.
+              The calibrated mix of Consensus Market, Probability Model, and Feature Ensembles. Consensus stays dominant (≥70%) to preserve the proven ~60% win rate.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -589,11 +589,11 @@ function Dashboard() {
             <Info className="size-3.5 text-primary" /> What you are looking at & what these controls do:
           </div>
           <p className="text-[11px] leading-relaxed">
-            Each card shows the active probability blend weights for a sport: <strong className="text-indigo-400">Market Consensus (70–90%)</strong>, <strong className="text-emerald-400">Monte Carlo Sim (5–20%)</strong>, and <strong className="text-amber-400">Feature Pool (5–20%)</strong>.
+            Each card shows the active probability blend weights for a sport: <strong className="text-indigo-400">Market Consensus (70–90%)</strong>, <strong className="text-emerald-400">Probability Model (5–20%)</strong>, and <strong className="text-amber-400">Feature Pool (5–20%)</strong>.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] border-t border-line/40 pt-1.5">
             <div>
-              <strong className="text-ink">• Audit Circuit Breakers:</strong> Scans rolling 30-day win rates. If any sport experiences a dip below 48% over 20+ picks, a fail-safe breaker activates to clamp 90% weight onto sharp books to halt drawdown.
+              <strong className="text-ink">• Audit Circuit Breakers:</strong> Scans rolling 30-day win rates. If any sport experiences a dip below 48% over 20+ picks, a fail-safe breaker activates to clamp 80% weight onto sharp books to halt drawdown.
             </div>
             <div>
               <strong className="text-ink">• Calibrate Weights (30d):</strong> Runs rolling Brier score optimization over the past 30 days of ESPN official results, automatically increasing weights for whichever sub-models were most accurate.
@@ -634,7 +634,7 @@ function Dashboard() {
                     <div style={{ width: `${mktPct}%` }} className="bg-indigo-600 flex items-center justify-center truncate px-0.5" title={`Market Consensus: ${mktPct}%`}>
                       {mktPct}%
                     </div>
-                    <div style={{ width: `${simPct}%` }} className="bg-emerald-500 flex items-center justify-center truncate px-0.5" title={`Monte Carlo Sim: ${simPct}%`}>
+                    <div style={{ width: `${simPct}%` }} className="bg-emerald-500 flex items-center justify-center truncate px-0.5" title={`Probability Model: ${simPct}%`}>
                       {simPct}%
                     </div>
                     <div style={{ width: `${poolPct}%` }} className="bg-amber-500 flex items-center justify-center truncate px-0.5" title={`Feature Pool: ${poolPct}%`}>
@@ -643,7 +643,7 @@ function Dashboard() {
                   </div>
                   <div className="flex justify-between text-[9px] text-muted pt-0.5">
                     <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-indigo-500" /> Mkt {mktPct}%</span>
-                    <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-emerald-400" /> Sim {simPct}%</span>
+                    <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-emerald-400" /> Model {simPct}%</span>
                     <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-amber-400" /> Pool {poolPct}%</span>
                   </div>
                 </div>
@@ -675,10 +675,10 @@ function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-ink">
-              <Layers className="size-4 text-primary" /> Live Quant Factor Waterfall Decomposition
+              <Layers className="size-4 text-primary" /> Live Factor Waterfall Decomposition
             </div>
             <p className="text-xs text-muted mt-1">
-              Real-time orthogonal alpha attribution. Decomposes raw betting edge into 5 orthogonal components: Consensus Anchor (&ge; 70%), 10k Monte Carlo, Rest & Fatigue, Sharp Money / Flow, and Venue Environment.
+              Real-time factor attribution. Decomposes raw betting edge into 5 components: Consensus Anchor (&ge; 70%), Probability Model, Rest & Fatigue, Sharp Money / Flow, and Venue Environment.
             </p>
           </div>
           <div className="flex items-center gap-1.5 bg-obsidian border border-line p-1 rounded-lg">
@@ -705,7 +705,7 @@ function Dashboard() {
             <Info className="size-3.5 text-primary" /> What you are looking at & how to use this section:
           </div>
           <p className="text-[11px] leading-relaxed">
-            The Waterfall decomposes the model's exact edge into 5 orthogonal factor layers above the baseline vig: <strong>Consensus Anchor</strong> (&ge;70% base from sharp bookmakers), <strong>10k Monte Carlo</strong> (simulation distribution shift), <strong>Rest & Fatigue</strong> (schedule and rest advantage), <strong>Sharp Money Flow</strong> (reverse line movement and professional handle), and <strong>Venue Environment</strong> (park factors & weather conditions). <strong>Click any sport button above (MLB, NBA, NFL, etc.)</strong> to inspect the live factor attribution model for that sport.
+            The Waterfall decomposes the model's exact edge into 5 factor layers above the baseline vig: <strong>Consensus Anchor</strong> (&ge;70% base from sharp bookmakers), <strong>Probability Model</strong> (simulation distribution shift), <strong>Rest & Fatigue</strong> (schedule and rest advantage), <strong>Sharp Money Flow</strong> (reverse line movement and professional handle), and <strong>Venue Environment</strong> (park factors & weather conditions). <strong>Click any sport button above (MLB, NBA, NFL, etc.)</strong> to inspect the live factor attribution model for that sport.
           </p>
         </div>
 
@@ -1155,7 +1155,7 @@ function Dashboard() {
           <div className="mt-4 space-y-2">
             <HealthRow label="Consensus Feeds & Sharp Books" status="active"
               detail="The Odds API + Pinnacle/Circa sharp line scraper" />
-            <HealthRow label="10k Monte Carlo Engine" status="active"
+            <HealthRow label="Probability Engine" status="active"
               detail="Poisson distribution & possession tempo models" />
             <HealthRow label="Feature Ensembles" status="active"
               detail="EWMA recency, park factors, and travel fatigue" />

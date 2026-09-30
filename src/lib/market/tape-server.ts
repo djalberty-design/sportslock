@@ -95,6 +95,7 @@ export const calibrateWeightsFn = createServerFn({ method: "POST" }).handler(asy
 export const updateSportWeightsFn = createServerFn({ method: "POST" })
   .validator((d: { sport: string; wSim: number; wPool: number; wMarket: number; notes?: string }) => d)
   .handler(async ({ data }) => {
+    if (WEIGHT_STEERING_FROZEN) return { error: "frozen" } as any;
     const { updateSportWeights } = await import("./dynamic-weights");
     return updateSportWeights(data);
   });
@@ -112,6 +113,9 @@ export const submitHypothesisFn = createServerFn({ method: "POST" })
   });
 
 export const checkCircuitBreakersFn = createServerFn({ method: "POST" }).handler(async () => {
+  if (WEIGHT_STEERING_FROZEN) {
+    return { tripped: [] as string[], summary: {} as Record<string, string>, recovered: [] as string[], frozen: true };
+  }
   const { checkCircuitBreakers } = await import("./dynamic-weights");
   return checkCircuitBreakers();
 });
@@ -119,6 +123,7 @@ export const checkCircuitBreakersFn = createServerFn({ method: "POST" }).handler
 export const resetCircuitBreakerFn = createServerFn({ method: "POST" })
   .validator((d: { sport: string }) => d)
   .handler(async ({ data }) => {
+    if (WEIGHT_STEERING_FROZEN) return { ok: false, error: "frozen", frozen: true } as any;
     const { resetCircuitBreaker } = await import("./dynamic-weights");
     return resetCircuitBreaker(data.sport);
   });

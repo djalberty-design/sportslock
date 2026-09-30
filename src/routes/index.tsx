@@ -246,7 +246,7 @@ function SportsLockCommandCenter() {
           <p className="text-muted text-sm mt-1">
             {todayOnly
               ? "Toggle off 'Today's Games Only' to see upcoming slates, or clear the sport filter."
-              : "Wait for more pregame mains, or clear the sport filter."}
+              : "More picks coming when today's lines are posted, or clear the sport filter."}
           </p>
           {sportFilter && sportFilter !== "ALL" ? (
             <div className="mt-4 max-w-lg text-left">
@@ -264,7 +264,7 @@ function SportsLockCommandCenter() {
                     <span className="text-amber-400">★</span> Gold Ticket
                   </h2>
                   <span className="text-[10px] font-mono uppercase bg-amber-400/15 text-amber-900 dark:text-amber-300 border border-amber-400/40 px-2.5 py-0.5 rounded-full font-bold">
-                    Highest Quant Standard
+                    Best Pick
                   </span>
                 </div>
                 <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
@@ -291,15 +291,15 @@ function SportsLockCommandCenter() {
                   </div>
                   <div className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>No Extreme Chalk</strong>: No individual leg or parlay heavier than -400.</span>
+                    <span><strong>No Heavy Favorites</strong>: No individual leg or parlay heavier than -400.</span>
                   </div>
                   <div className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>Balanced Hit Window (35%–85%)</strong>: No low-probability lottery bets or zero-edge juice traps.</span>
+                    <span><strong>Realistic Win Range (35%–85%)</strong>: No low-probability lottery bets or zero-edge juice traps.</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-muted/80 italic pt-1 border-t border-line/40">
-                  When the current slate has no ticket meeting every standard, the AI deliberately shows none rather than recommending a subpar bet. Check the Catalog below or check back as lineups and odds update!
+                  When the current slate has no ticket meeting every standard, the AI deliberately shows none rather than recommending a subpar bet. Check More Parlays below or check back as lineups and odds update!
                 </p>
               </div>
             ) : (
@@ -312,9 +312,9 @@ function SportsLockCommandCenter() {
           </section>
           <section className="space-y-3 pt-2">
             <div>
-              <h2 className="text-lg font-display font-bold text-ink tracking-tight">Catalog{catalog.length ? ` · ${catalog.length}` : ""}</h2>
+              <h2 className="text-lg font-display font-bold text-ink tracking-tight">More Parlays{catalog.length ? ` · ${catalog.length}` : ""}</h2>
               <p className="text-[11px] text-muted leading-snug mt-0.5 max-w-xl">
-                Every other ranked 2- and 3-leg on this mix. Weaker floors than gold. Photograph Hard Rock before you fill.
+                Every other ranked 2- and 3-leg on this mix. Weaker floors than gold. Compare odds on Hard Rock Bet before placing.
               </p>
             </div>
             {catalog.length === 0 ? (

@@ -58,16 +58,16 @@ export function QuantFactorWaterfall({ waterfall, compact = false }: QuantFactor
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-ink leading-tight">
-                {compact ? "Alpha Waterfall" : "Quant Factor Waterfall"}
+                {compact ? "Edge Breakdown" : "Factor Breakdown"}
               </span>
               {!compact && (
                 <span className="text-[10px] font-mono uppercase bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
-                  Institutional Alpha
+                  AI Edge
                 </span>
               )}
             </div>
             {!compact && (
-              <p className="text-[10px] text-muted">Orthogonal decomposition of model edge & win probability</p>
+              <p className="text-[10px] text-muted">How the AI built this pick & win probability</p>
             )}
           </div>
         </div>
@@ -83,8 +83,7 @@ export function QuantFactorWaterfall({ waterfall, compact = false }: QuantFactor
                   : "bg-wash text-muted border-line"
             )}
           >
-            {isPositive ? `+${edgeBp} bp` : `${edgeBp} bp`}
-            {!compact && ` (${(edgeBp / 100).toFixed(1)}% EV)`}
+            {isPositive ? `+${(edgeBp / 100).toFixed(1)}%` : `${(edgeBp / 100).toFixed(1)}%`}
           </span>
           {compact && (
             <div className="size-5 rounded flex items-center justify-center hover:bg-line text-muted">
@@ -141,7 +140,7 @@ export function QuantFactorWaterfall({ waterfall, compact = false }: QuantFactor
                             : "text-rose-400 bg-rose-500/10 border border-rose-500/20"
                         )}
                       >
-                        {f.impactBp > 0 ? `+${f.impactBp} bp` : `${f.impactBp} bp`}
+                        {f.impactBp > 0 ? `+${(f.impactBp / 100).toFixed(1)}%` : `${(f.impactBp / 100).toFixed(1)}%`}
                       </span>
                     ) : (
                       <span className="font-mono text-[10px] text-muted px-1.5 py-0.5 rounded bg-wash border border-line/40 whitespace-nowrap">

@@ -460,7 +460,7 @@ export function AiAnalystDrawer({
                                   </div>
                                   <div className="bg-panel p-1 rounded">
                                     <div className="text-muted">Smart $</div>
-                                    <div className="text-primary font-bold">+{bet.waterfall.smartMoneyBp}bp</div>
+                                    <div className="text-primary font-bold">+{((bet.waterfall.smartMoneyBp || 0) / 100).toFixed(1)}%</div>
                                   </div>
                                 </div>
                               )}
@@ -492,7 +492,7 @@ export function AiAnalystDrawer({
           {loading && (
             <div className="flex items-center gap-2 p-3 rounded-2xl bg-panel border border-line text-xs text-muted w-fit animate-pulse">
               <RefreshCw className="size-4 animate-spin text-primary" />
-              <span>Simulating 10,000 Monte Carlo paths & Clayton Copula dependence...</span>
+              <span>Calculating probability model...</span>
             </div>
           )}
 

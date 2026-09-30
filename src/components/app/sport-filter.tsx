@@ -78,16 +78,16 @@ export function applySportFilter<T extends { sport: string }>(rows: T[], sportFi
 
 export function SportSeasonNote({ sport }: { sport: string }) {
   const copy: Record<string, string> = {
-    NBA: "NBA preseason typically tips in early October. When ESPN lists the games they show here — even before a number is posted. Photograph a Hard Rock Bet Florida ticket anytime and we grade it the same way as football.",
-    NHL: "NHL preseason typically starts mid-September. Games stay on this board once ESPN lists them. Photograph the book when the number drops.",
-    NCAAB: "College basketball opens in early November. Team bets (who wins, spread, over/under) are allowed in Florida. College player bets are not. Photograph a ticket anytime.",
+    NBA: "NBA preseason typically tips in early October. When ESPN lists the games they show here — even before a number is posted. Track your bets on the Ticket tab anytime.",
+    NHL: "NHL preseason typically starts mid-September. Games stay on this board once ESPN lists them. Check your sportsbook for the latest lines.",
+    NCAAB: "College basketball opens in early November. Team bets (who wins, spread, over/under) are allowed in Florida. College player bets are not. Track your bets on the Ticket tab.",
     NCAAF: "College football is on the board through the fall. Team bets only for player stats — no college athlete props in Florida.",
     MLB: "MLB posts most days in season. If tonight is empty, the slate may be off or already final.",
-    NFL: "NFL Sundays, plus Monday and Thursday nights. Photograph the Hard Rock number before you confirm.",
+    NFL: "NFL Sundays, plus Monday and Thursday nights. Check your sportsbook for the latest lines before placing.",
   };
   return (
     <p className="rounded-md bg-panel px-4 py-3 text-sm text-ink/80">
-      {copy[sport] ?? "No games in this filter yet. Photograph a ticket and we will still grade it."}
+      {copy[sport] ?? "No games in this filter yet. Track your bet on the Ticket tab."}
     </p>
   );
 }

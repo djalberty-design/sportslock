@@ -473,9 +473,15 @@ export const useDeskStore = create<DeskState>()(
           liveBankroll: Math.max(0, Math.round((s.liveBankroll - winCredit) * 100) / 100),
         });
       },
-      dismissTicket: (id) =>
-        set({
-          paperTickets: get().paperTickets.filter((x) => x.id !== id),
+      dismissTicket: (id: string) =>
+        set((s) => {
+          const ticket = s.paperTickets.find((t) => t.id === id);
+          const refund = ticket && ticket.status === "open" ? ticket.stake : 0;
+          return {
+            paperTickets: s.paperTickets.filter((t) => t.id !== id),
+            liveBankroll: s.liveBankroll + refund,
+            paperCash: s.paperCash + refund,
+          };
         }),
       clearSettledTickets: () =>
         set({

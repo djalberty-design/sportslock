@@ -222,7 +222,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
 
   const wager = customWager !== null ? customWager : String(dynWager.wagerDollars || 10);
   const numWager = parseFloat(wager || "0");
-  const rawInsight = pick?.why || parlayCand?.reason || "AI Simulation favors this combination based on heavily correlated game scripts and player usage rates.";
+  const rawInsight = pick?.why || parlayCand?.reason || "AI model favors this combination based on game scripts and player usage rates.";
   const aiInsight = rawInsight.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
 
   const firstLeg = legs[0];
@@ -281,7 +281,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
         <div className="mb-4 bg-obsidian rounded-lg p-2.5 border border-line/30 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
             <span className="flex items-center gap-1"><BarChart2 className={cn("size-3", isGold ? "text-amber-600 dark:text-amber-300" : "text-primary")} /> % to Hit</span>
-            <span className={isGold ? "text-amber-800 dark:text-amber-300 font-bold" : "text-primary"}>{combinedProb}% HIT PROB</span>
+            <span className={isGold ? "text-amber-800 dark:text-amber-300 font-bold" : "text-primary"}>{combinedProb}% Win Chance</span>
           </div>
           <div className="h-1.5 w-full bg-line/50 rounded-full overflow-hidden">
             <div className={cn("h-full rounded-full relative", isGold ? "bg-amber-500 dark:bg-amber-400" : "bg-primary")} style={{ width: `${combinedProb}%` }}>
@@ -299,7 +299,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
           )}
           <span className="text-muted text-[10px] font-mono uppercase tracking-wider bg-obsidian px-1.5 py-0.5 rounded border border-line">{mix.label}</span>
           <span className={cn("text-xs font-mono px-1.5 py-0.5 rounded border font-bold", isGold ? "text-amber-900 dark:text-amber-300 bg-amber-400/15 dark:bg-amber-400/10 border-amber-400/30" : "text-primary bg-primary/10 border-primary/20")}>
-            +{Math.round(combinedEv * 100)}% EDGE
+            +{Math.round(combinedEv * 100)}% Value
           </span>
         </div>
 
@@ -309,6 +309,8 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
             const legQuote = hit.quote;
             const teams = resolveLegTeam(leg, legQuote);
             const isSharp = (legQuote?.handlePct || 0) - (legQuote?.ticketPct || 0) >= 15;
+            const mTypeLower = String(leg.marketType || "").toLowerCase();
+            const formattedMarket = mTypeLower === "ml" || mTypeLower === "moneyline" ? "Moneyline" : mTypeLower === "total" ? "Over/Under" : mTypeLower === "spread" ? "Spread" : leg.marketType;
             return (
               <div key={i} className="flex items-start gap-3 relative">
                 {isSharp && (
@@ -322,7 +324,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                 <div className="flex flex-col w-full min-w-0">
                   <div className="text-sm flex items-start justify-between w-full gap-2">
                     <span className="font-bold text-ink leading-tight">{displaySelection(leg, teams)}</span>
-                    <span className="text-muted text-xs uppercase tracking-wider font-bold shrink-0">{leg.marketType} </span>
+                    <span className="text-muted text-xs tracking-wider font-bold shrink-0">{formattedMarket}</span>
                   </div>
                   <div className="text-muted text-[11px] mt-0.5 leading-tight">{teams.matchup}</div>
                 </div>
@@ -353,9 +355,9 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
             isGold ? "bg-amber-500 hover:bg-amber-400 text-black dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-zinc-950" : "bg-primary hover:bg-primary/90 text-primary-foreground",
           )}
         >
-          <span>Lock It In</span>
+          <span>Track This Bet</span>
           <span className="font-mono text-sm group-hover:scale-105 transition-transform">
-            ${wager} pays ${(numWager * decPayout).toFixed(2)}
+            ${wager} to win ${(numWager * Math.max(0, decPayout - 1)).toFixed(2)}
           </span>
         </button>
         </div>
@@ -510,7 +512,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                                 <div className="flex items-center justify-between text-[11px] text-muted pt-2.5 px-1 flex-wrap gap-2">
                                   {simFair != null && (
                                     <span className="font-mono">
-                                      ⚡ 10k Sim: <strong className="text-ink font-semibold">{Math.round(simFair * 100)}%</strong>
+                                      ⚡ Model: <strong className="text-ink font-semibold">{Math.round(simFair * 100)}%</strong>
                                     </span>
                                   )}
                                   {hit.brief?.venue && (
@@ -524,8 +526,8 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                                 {/* Quant Factor Waterfall Attribution */}
                                 <div className="mt-3 pt-2.5 border-t border-line/50 space-y-1.5">
                                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted px-0.5">
-                                    <span>Quant Alpha Attribution</span>
-                                    <span className="text-[9px] font-mono text-primary font-normal">Orthogonal Factors</span>
+                                    <span>Edge Sources</span>
+                                    <span className="text-[9px] font-mono text-primary font-normal">Edge Breakdown</span>
                                   </div>
                                   <QuantFactorWaterfall
                                     waterfall={computeQuantFactorWaterfall(
@@ -560,7 +562,7 @@ export function SportsLockParlayCard({ parlay, snapshot }: { parlay: any; snapsh
                   }}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-lg"
                 >
-                  <ShieldCheck className="size-5" /> Proceed to Lock In
+                  <ShieldCheck className="size-5" /> Add to My Bets
                 </button>
               </div>
             </motion.div>

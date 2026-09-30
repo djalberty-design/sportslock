@@ -299,14 +299,14 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-xs font-mono font-bold text-primary uppercase tracking-wider">
-              <Sparkles className="size-3.5" /> High-Conviction Single Plays
+              <Sparkles className="size-3.5" /> Today's Best Picks
             </span>
           </div>
           <h2 className="text-lg font-display font-bold text-ink tracking-tight mt-0.5">
             Top AI Single Bets by Market
           </h2>
           <p className="text-[11px] text-muted">
-            The mathematical #1 play across each core market category, selected by 10k simulations, Bayesian line consensus, and expected value.
+            The mathematical #1 play across each core market category, selected by our probability model and edge analysis.
           </p>
         </div>
       </div>
@@ -326,7 +326,7 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                   </span>
                 </div>
                 <div className="text-center py-4">
-                  <p className="text-xs text-muted">No qualified play meets the edge floor right now.</p>
+                  <p className="text-xs text-muted">No strong picks available right now.</p>
                 </div>
               </div>
             );
@@ -467,8 +467,8 @@ export function AiTopSingles({ rows, cachedProps = [] }: AiTopSinglesProps) {
                 {/* Quant Factor Attribution Waterfall */}
                 <div className="mb-3 space-y-1 w-full max-w-full overflow-hidden">
                   <div className="flex items-center justify-between text-[9px] uppercase font-bold tracking-wider text-muted px-0.5">
-                    <span>Quant Factor Decomposition</span>
-                    <span className="text-[8px] font-mono text-primary font-normal">Base &rarr; Sim &rarr; Edges</span>
+                    <span>Why We Like This</span>
+                    <span className="text-[8px] font-mono text-primary font-normal">Base &rarr; Model &rarr; Edges</span>
                   </div>
                   <QuantFactorWaterfall
                     waterfall={r.waterfall || computeQuantFactorWaterfall(r)}

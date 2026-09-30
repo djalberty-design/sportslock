@@ -217,6 +217,7 @@ export async function calibrateWeights(): Promise<{ ok: boolean; updated: string
         coalesce(avg(edge), 0)::float as avg_edge
       from market_tape
       where status in ('WIN', 'LOSS')
+        and lower(coalesce(market_type, '')) in ('ml', 'spread', 'total', 'h2h', 'moneyline')
         and coalesce(start, snapped_at) >= now() - interval '30 days'
       group by upper(sport)
       having count(*) >= 10

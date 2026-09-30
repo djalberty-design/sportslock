@@ -615,7 +615,7 @@ export function GamePage({ eventId }: { eventId: string }) {
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2 mt-2">
               <DistributionChart
                 title={playerName ? `${playerName} Quant Distribution` : `${q.selection} Distribution`}
-                subtitle="10,000 Monte Carlo path simulations vs Market Line & Historical Form"
+                subtitle="Probability model vs Market Line & Historical Form"
                 line={typeof q.point === "number" && Number.isFinite(q.point) ? q.point : parseFloat(String(q.point || "")) || 20.5}
                 fairProb={probPct / 100}
                 marketProb={vProb}
@@ -639,7 +639,7 @@ export function GamePage({ eventId }: { eventId: string }) {
       return (
         <div className="space-y-4 pt-2">
           <div className="p-3 bg-panel/70 border border-line rounded-xl text-xs text-muted">
-            <span className="font-bold text-ink">Institutional Factor Attribution:</span> Inspect how the consensus market base, 10,000 Monte Carlo simulation runs, rest differentials, sharp money flow, and venue environment combine to create model edge.
+            <span className="font-bold text-ink">Why We Like This Pick:</span> Inspect how the consensus market base, probability model, rest differentials, sharp money flow, and venue environment combine to create model edge.
           </div>
           {candidates.length === 0 ? (
             <div className="text-center p-8 text-muted text-sm border border-dashed border-line rounded-xl">

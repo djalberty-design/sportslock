@@ -502,7 +502,7 @@ export function toolSearchBestBets(
           restFatigueBp: 45,
           smartMoneyBp: 70,
         },
-        reasoning: "10k Monte Carlo simulations yield 55.8% cover probability against 51.9% market consensus, backed by +2 rest advantage and positive net rating differential.",
+        reasoning: "Statistical model yields 55.8% cover probability against 51.9% market consensus, backed by +2 rest advantage and positive net rating differential.",
       },
       {
         eventId: "sample_nba_2",
@@ -743,7 +743,7 @@ export async function executeAgentChat(
 
   if (parlaySummary && parlaySummary.legs.length > 0) {
     reply = `### Institutional Parlay Assessment (${parlaySummary.legs.length} Legs)\n\n` +
-      `We evaluated this parlay across our **10,000 Monte Carlo simulation runs** and calibrated joint dependence using the **Clayton Archimedean Copula** engine:\n\n` +
+      `We evaluated this parlay across our **probability model** and calibrated joint dependence using the **Clayton Archimedean Copula** engine:\n\n` +
       `- **Combined Book Odds**: **${formatAmerican(parlaySummary.combinedAmericanOdds)}** (${parlaySummary.combinedDecimalOdds.toFixed(2)}x payout)\n` +
       `- **Copula Joint Hit %**: **${(parlaySummary.copulaJointProb * 100).toFixed(1)}%** ` +
       `(${parlaySummary.correlationBoostPct >= 0 ? "+" : ""}${parlaySummary.correlationBoostPct.toFixed(1)}% non-linear tail boost over the ${(parlaySummary.independentProb * 100).toFixed(1)}% naive product)\n` +
@@ -771,7 +771,7 @@ export async function executeAgentChat(
     reply += `*Axiomatic Reminder*: SportsLock operates under strict bankroll preservation. Size each position according to Fractional Kelly to maximize long-term compound growth.`;
   } else {
     reply = `### SportsLock Quantitative Desk Status\n\n` +
-      `Our algorithms continuously audit live spreads, moneylines, totals, and player props against de-vigged consensus lines and 10k Monte Carlo simulations.\n\n` +
+      `Our algorithms continuously audit live spreads, moneylines, totals, and player props against de-vigged consensus lines and probability models.\n\n` +
       `How can I assist your quantitative research today?\n` +
       `- Prompt me to build a **correlated multi-leg SGP** with exact Clayton Copula joint probability.\n` +
       `- Search for **high-edge player props** filtered by sport and market type.\n` +

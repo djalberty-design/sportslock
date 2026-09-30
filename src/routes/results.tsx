@@ -34,12 +34,12 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
     sql`
       SELECT id, sport, market_type as market, selection, home, away, price, close_price, model_probability as model_prob, edge, status, graded_at, snapped_at, line, result_home, result_away
       FROM (
-        SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away), market_type)
+        SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away || '|' || COALESCE(snapped_at::date::text, graded_at::date::text, '')), market_type)
           id, sport, market_type, selection, home, away, price, close_price, model_probability, edge, status, graded_at, snapped_at, line, result_home, result_away
         FROM market_tape
         WHERE status IN ('WIN', 'LOSS')
           AND (recommended = true OR (recommended IS NULL AND edge > 0))
-        ORDER BY COALESCE(event_id, home || '|' || away), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
+        ORDER BY COALESCE(event_id, home || '|' || away || '|' || COALESCE(snapped_at::date::text, graded_at::date::text, '')), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
       ) sub
       ORDER BY graded_at DESC
       LIMIT 500
@@ -58,12 +58,12 @@ export const getGradedResultsFn = createServerFn({ method: "POST" })
             END
           ), 0)::numeric, 2) as career_units
         FROM (
-          SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away), market_type)
+          SELECT DISTINCT ON (COALESCE(event_id, home || '|' || away || '|' || COALESCE(snapped_at::date::text, graded_at::date::text, '')), market_type)
             price, status
           FROM market_tape
           WHERE status IN ('WIN', 'LOSS')
             AND (recommended = true OR (recommended IS NULL AND edge > 0))
-          ORDER BY COALESCE(event_id, home || '|' || away), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
+          ORDER BY COALESCE(event_id, home || '|' || away || '|' || COALESCE(snapped_at::date::text, graded_at::date::text, '')), market_type, recommended DESC NULLS LAST, edge DESC NULLS LAST, model_probability DESC, graded_at DESC
         ) sub
       `,
     ]);
@@ -216,7 +216,7 @@ function ResultsPage() {
     return points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, "");
   }, [points]);
   const zeroY = svgHeight - padY - ((0 - minUnits) / unitsSpan) * plotHeight;
-  const hwmY = svgHeight - padY - ((stats.highWaterMarkUnits - minUnits) / unitsSpan) * plotHeight;
+  const hwmY = svgHeight - padY - ((pagePeak - minUnits) / unitsSpan) * plotHeight;
 
   return (
     <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in duration-500 space-y-6">
@@ -309,7 +309,7 @@ function ResultsPage() {
               <Activity className="size-4 text-primary" />
               <h3 className="text-sm font-bold text-ink font-display">Cumulative units</h3>
             </div>
-            <p className="text-[11px] text-muted">Latest 500 graded picks. Career totals are above. Units, not dollars. If your unit is $100, −80u is about −$8,000.</p>
+            <p className="text-[11px] text-muted">Latest 500 graded picks. Career totals are above. 1 unit = your standard bet size.</p>
             <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto">
               <text x="8" y={zeroY + 3} fill="#a1a1aa" fontSize="10" fontFamily="ui-monospace, monospace">0u break-even</text>
               <text x="8" y={Math.min(svgHeight - 8, (svgHeight - padY) + 3)} fill="#a1a1aa" fontSize="10" fontFamily="ui-monospace, monospace">{`${Math.round(minUnits)}u`}</text>

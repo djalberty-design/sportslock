@@ -15,7 +15,6 @@ import { DESK_VERSION } from "@/lib/market/rules";
 import { BankrollTracker } from "./bankroll-tracker";
 import { useDeskDecision } from "@/lib/market/use-board";
 import { ClvBadge } from "./competitive-widgets";
-import { getHardRockUrl } from "@/lib/market/hard-rock-links";
 import { TicketLegAvatar } from "./ticket-leg-avatar";
 import { teamsMatch } from "@/lib/market/live-scores";
 import { formatMarketName, cleanDescription } from "@/lib/market/logos";
@@ -94,10 +93,8 @@ export function DeskPage() {
     };
 
     runAutoSettle();
-    const interval = setInterval(runAutoSettle, 30_000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
   }, [open.length, grade]);
 
@@ -268,12 +265,12 @@ export function DeskPage() {
       {/* Upload Custom Parlay Screenshot option */}
       <details className="paper-card p-4">
         <summary className="cursor-pointer text-sm font-semibold text-emerald-500 hover:text-emerald-400">
-          + Ingest Custom Hard Rock / DraftKings Slip
+          + Add a Bet
         </summary>
         <div className="mt-3 rounded-lg border border-panel-border bg-obsidian p-4">
-          <ScreenshotIngest kind="ticket" heading="Upload Slip Screenshot" embedded />
+          <ScreenshotIngest kind="ticket" heading="Add a Bet" embedded />
           <p className="mt-2 text-xs text-muted">
-            Upload a screenshot of any custom ticket from Hard Rock Bet to automatically transcribe and track it.
+            Add or upload details of any custom ticket to track it on your ledger.
           </p>
         </div>
       </details>
@@ -286,9 +283,15 @@ export function DeskPage() {
           variant="outline"
           onClick={() => downloadLedger(paperTickets.map(paperToLedger))}
         >
-          Download Action Ledger (JSON)
+          Download Bet History
         </Button>
-        <Button variant="outline" onClick={resetPaper}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (!confirm("This will delete all your tracked bets. Are you sure?")) return;
+            resetPaper();
+          }}
+        >
           Reset Action Log
         </Button>
         <Button variant="danger" onClick={() => setSelfExcluded(!selfExcluded)}>
@@ -366,8 +369,6 @@ function HardRockTicketCard({
   }
 
   const isSgp = isParlay && legs.length > 1 && legs.some((l, i) => legs.slice(i + 1).some((l2) => l.eventId && l.eventId === l2.eventId));
-
-  const hardRockLink = getHardRockUrl(ticket.sport || legs[0]?.sport);
 
   return (
     <div
@@ -684,17 +685,8 @@ function HardRockTicketCard({
           </div>
         )}
 
-        {/* Footer Actions: Hard Rock Bet deep link & optional subtle override */}
-        <div className="flex items-center justify-between pt-1">
-          <a
-            href={hardRockLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
-          >
-            Hard Rock Bet <ExternalLink className="size-3" />
-          </a>
-
+        {/* Footer Actions: subtle options override */}
+        <div className="flex items-center justify-end pt-1">
           <div className="relative">
             <button
               onClick={() => setShowOverride(!showOverride)}

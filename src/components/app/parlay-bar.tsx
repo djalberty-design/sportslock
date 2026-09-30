@@ -1,11 +1,10 @@
 import { useParlaySlip, combinedOdds } from "@/lib/parlay-slip";
 import { cn } from "@/lib/utils";
-import { X, Trash2, ChevronUp, ChevronDown, Lock, ExternalLink, Copy } from "lucide-react";
+import { X, Trash2, ChevronUp, ChevronDown, Lock, Copy } from "lucide-react";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useDeskStore } from "@/lib/desk-store";
 import { lockPredictionFn } from "@/lib/market/server";
-import { getHardRockUrl } from "@/lib/market/hard-rock-links";
 import { slipCopyText } from "@/lib/market/slip-copy";
 import { calculateDynamicWager } from "@/lib/kelly";
 import { formatMarketName } from "@/lib/market/logos";
@@ -25,7 +24,7 @@ export function ParlayBar() {
   const { american, decPayout, combinedProb, isCorrelated } = combinedOdds(legs);
   const probPct = Math.round(combinedProb * 100);
   const isSingle = legs.length === 1;
-  const label = isSingle ? "BET" : `${legs.length}L`;
+  const label = isSingle ? "BET" : `${legs.length}-Leg`;
 
   const numericOdds = typeof american === "number" ? american : parseInt(american, 10) || -110;
   const finalOddsNum = customOdds ? (parseInt(customOdds, 10) || numericOdds) : numericOdds;
@@ -49,7 +48,7 @@ export function ParlayBar() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Ticket copied for Hard Rock");
+      toast.success("Ticket copied");
     } catch {
       toast.error("Could not copy ticket");
     }
@@ -153,7 +152,7 @@ export function ParlayBar() {
             <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-line/60 text-[11px]">
               <div className="flex items-center gap-1.5">
                 <span className="text-muted">
-                  Kelly ({riskProfileMode}): <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
+                  Suggested Bet: <strong className="text-primary font-mono">${dynWager.wagerDollars} ({dynWager.unitCount}u)</strong>
                 </span>
                 <button
                   type="button"
@@ -164,14 +163,14 @@ export function ParlayBar() {
                 </button>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-muted text-[10px] uppercase font-bold">Hard Rock Line:</span>
+                <span className="text-muted text-[10px] uppercase font-bold">Sportsbook Line:</span>
                 <input
                   type="text"
                   placeholder={String(american)}
                   value={customOdds}
                   onChange={(e) => setCustomOdds(e.target.value)}
                   className="w-16 bg-panel border border-line rounded px-1.5 py-0.5 text-[11px] font-mono font-bold text-primary focus:outline-none focus:border-primary text-center"
-                  title="Manually adjust final odds if Hard Rock offers a different line"
+                  title="Manually adjust final odds if sportsbook offers a different line"
                 />
               </div>
             </div>
@@ -188,9 +187,10 @@ export function ParlayBar() {
                   </span>
                   <button
                     onClick={() => removeLeg(leg.selection, leg.marketType, leg.eventId, leg.player)}
-                    className="size-5 rounded-full bg-line hover:bg-red-500/20 flex items-center justify-center text-muted hover:text-red-400"
+                    className="size-8 p-1.5 rounded-full bg-line hover:bg-red-500/20 flex items-center justify-center text-muted hover:text-red-400"
+                    title="Remove leg"
                   >
-                    <X className="size-2.5" />
+                    <X className="size-3.5" />
                   </button>
                 </div>
               </div>
@@ -216,10 +216,10 @@ export function ParlayBar() {
           </button>
 
           <div className="flex items-center gap-2.5">
-            <span className={cn("text-[10px] font-mono font-bold",
+            <span className={cn("text-[10px] font-mono font-bold whitespace-nowrap",
               probPct >= 55 ? "text-emerald-400" : probPct >= 40 ? "text-amber-400" : "text-red-400"
             )}>
-              {probPct}%
+              {probPct}% chance
             </span>
 
             <div className="flex items-center gap-1 bg-panel border border-line rounded px-1.5 py-0.5" title={`Recommended: $${dynWager.wagerDollars} (${dynWager.unitCount}u)`}>
@@ -231,7 +231,7 @@ export function ParlayBar() {
                 placeholder={String(dynWager.wagerDollars)}
                 value={customStake}
                 onChange={(e) => setCustomStake(e.target.value)}
-                className="w-12 bg-transparent text-[10px] font-mono font-bold text-ink focus:outline-none text-left"
+                className="w-16 bg-transparent text-xs font-mono font-bold text-ink focus:outline-none text-left"
               />
               <span className="text-[10px] font-mono text-emerald-400 font-bold" title="Potential Payout">
                 →${potentialPayout}
@@ -242,22 +242,11 @@ export function ParlayBar() {
               type="button"
               onClick={handleCopyTicket}
               className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-all shrink-0"
-              title="Copy ticket for Hard Rock"
+              title="Copy ticket"
             >
               <Copy className="size-2.5" />
               <span className="hidden sm:inline">Copy</span>
             </button>
-
-            <a
-              href={getHardRockUrl(legs[0]?.sport)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-all shrink-0"
-              title="Open Hard Rock lobby"
-            >
-              <span>HR</span>
-              <ExternalLink className="size-2.5" />
-            </a>
 
             <button
               onClick={handleLockIn}
@@ -271,15 +260,15 @@ export function ParlayBar() {
               )}
             >
               <Lock className="size-3" />
-              {saved ? "Locked!" : saving ? "..." : "Lock In"}
+              {saved ? "Tracked!" : saving ? "..." : "Track Bet"}
             </button>
 
             <button
               onClick={clearAll}
-              className="size-5 rounded bg-line/50 hover:bg-red-500/15 flex items-center justify-center text-muted hover:text-red-400"
+              className="size-8 p-1.5 rounded bg-line/50 hover:bg-red-500/15 flex items-center justify-center text-muted hover:text-red-400"
               title="Clear all"
             >
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </button>
           </div>
         </div>

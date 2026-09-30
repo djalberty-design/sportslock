@@ -28,17 +28,21 @@ export function PublicScorecardHome() {
         <div className="bg-panel border border-line/60 rounded-xl p-3">
           <p className="text-muted text-xs font-bold uppercase tracking-wider">Total graded</p>
           <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.n} picks</p>
-          <p className="text-[10px] text-muted mt-0.5">Sides and totals only</p>
+          <p className="text-[10px] text-muted mt-0.5">Spreads, moneylines, and over/unders</p>
+        </div>
+        <div className="bg-panel border border-line/60 rounded-xl p-3" title={card.clvBeatRate === 0 && (card.clvSample ?? 0) > 0 ? "Not enough closing line data yet." : undefined}>
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">Beat closing odds</p>
+          <p className="font-mono text-ink text-xl font-bold mt-0.5">
+            {card.clvBeatRate == null || (card.clvBeatRate === 0 && (card.clvSample ?? 0) > 0) ? "\u2014" : `${card.clvBeatRate}%`}
+          </p>
+          <p className="text-[10px] text-muted mt-0.5">
+            {card.clvBeatRate === 0 && (card.clvSample ?? 0) > 0 ? "Not enough closing line data yet." : "Only when we stored a real kickoff/close price"}
+          </p>
         </div>
         <div className="bg-panel border border-line/60 rounded-xl p-3">
-          <p className="text-muted text-xs font-bold uppercase tracking-wider">Beat the close</p>
-          <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.clvBeatRate == null ? "\u2014" : `${card.clvBeatRate}%`}</p>
-          <p className="text-[10px] text-muted mt-0.5">Only when we stored a real kickoff/close price</p>
-        </div>
-        <div className="bg-panel border border-line/60 rounded-xl p-3">
-          <p className="text-muted text-xs font-bold uppercase tracking-wider">vs the book</p>
+          <p className="text-muted text-xs font-bold uppercase tracking-wider">Model accuracy</p>
           <p className="font-mono text-ink text-xl font-bold mt-0.5">{card.brierDelta == null ? "\u2014" : card.brierDelta}</p>
-          <p className="text-[10px] text-muted mt-0.5">Negative = closer to results than the book</p>
+          <p className="text-[10px] text-muted mt-0.5">Negative = more accurate than sportsbook closing odds</p>
         </div>
         <div className="bg-panel border border-line/60 rounded-xl p-3">
           <p className="text-muted text-xs font-bold uppercase tracking-wider">Last 30</p>
@@ -49,7 +53,7 @@ export function PublicScorecardHome() {
         </div>
       </div>
       {card.losingStretch > 0 ? (
-        <p className="mt-2 text-xs text-red-400">Current losing stretch: {card.losingStretch}</p>
+        <p className="mt-2 text-xs text-muted">Current losing streak: {card.losingStretch} games</p>
       ) : null}
       <p className="mt-2 text-xs text-muted">{card.caveat}</p>
     </section>

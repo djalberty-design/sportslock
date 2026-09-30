@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { upsertOverride } from "@/lib/market/overrides";
 import { logActivity } from "@/lib/market/activity";
+import { WEIGHT_STEERING_FROZEN } from "@/lib/market/weight-freeze";
 
 export const Route = createFileRoute("/api/cron/brain-learn")({
   server: {
@@ -173,18 +174,20 @@ async function handleBrainLearn() {
       // Only auto-tune small corrections (<= 3% haircut) with high confidence
       if (gap > 0.05 && gap <= 0.08 && row.n >= 30) {
         const haircut = Math.round(gap * 0.5 * 100) / 100; // half the gap
-        await upsertOverride({
-          fingerprint: `brain-learn|${row.sport}`,
-          sport: row.sport,
-          market: "all",
-          chanceHaircut: haircut,
-          sit: false,
-          note: `Brain auto-tune: ${row.sport} overconfident by ${Math.round(gap * 100)}% (n=${row.n}). Haircut ${Math.round(haircut * 100)}%.`,
-        });
+        if (!WEIGHT_STEERING_FROZEN) {
+          await upsertOverride({
+            fingerprint: `brain-learn|${row.sport}`,
+            sport: row.sport,
+            market: "all",
+            chanceHaircut: haircut,
+            sit: false,
+            note: `Brain auto-tune: ${row.sport} overconfident by ${Math.round(gap * 100)}% (n=${row.n}). Haircut ${Math.round(haircut * 100)}%.`,
+          });
+        }
         await sql.query(
           `insert into desk_brain_insights (insight_type, scope, sport, metric_name, metric_value, details, period)
            values ('auto_tune', 'sport', $1, 'haircut_applied', $2, $3::jsonb, 'all_time')`,
-          [row.sport, haircut, JSON.stringify({ sport: row.sport, gap: Math.round(gap * 100), n: row.n, haircut: Math.round(haircut * 100) })],
+          [row.sport, haircut, JSON.stringify({ sport: row.sport, gap: Math.round(gap * 100), n: row.n, haircut: Math.round(haircut * 100), frozen: WEIGHT_STEERING_FROZEN })],
         );
         autoTuned++;
         insightsCreated++;

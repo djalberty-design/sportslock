@@ -35,7 +35,7 @@ const TAB_LABELS: { key: BetTab; label: string }[] = [
 
 const MODEL_FILTERS: { key: ModelFilter; label: string; icon: string }[] = [
   { key: "all", label: "All Models", icon: "🧠" },
-  { key: "sim", label: "SIM (10k Sim)", icon: "⚡" },
+  { key: "sim", label: "Model", icon: "⚡" },
   { key: "prop", label: "PROP (Player Labs)", icon: "👤" },
   { key: "sharp", label: "Sharp money", icon: "📈" },
   { key: "period", label: "PERIOD (1H/1P)", icon: "⏱️" },
@@ -644,7 +644,7 @@ function TheLab() {
           </div>
         </div>
         <p className="text-xs sm:text-sm text-muted">
-          Every pregame bet ranked by Expected Value and Edge %. Filter by AI Model: 10k Monte Carlo Simulation, Player Prop Labs, Sharp Steam, or Periods.
+          Every pregame bet ranked by Expected Value and Edge %. Filter by AI Model: Probability Model, Player Prop Labs, Sharp Steam, or Periods.
         </p>
       </div>
 
@@ -909,7 +909,7 @@ function TheLab() {
                         )}
                         {b.modelType === "sim" && (
                           <span className="text-[8px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5 font-bold shrink-0">
-                            ⚡ 10K SIM
+                            ⚡ MODEL
                           </span>
                         )}
 

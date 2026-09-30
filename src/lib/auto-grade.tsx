@@ -74,7 +74,7 @@ function gradeMoneyline(ticket: PaperTicket, q: QuoteLine): "win" | "loss" | "vo
     if (ticketLine == null) {
       // MLB runline fallback
       const isFav = ticket.price != null && ticket.price < -180;
-      ticketLine = isFav ? 1.5 : -1.5;
+      ticketLine = isFav ? -1.5 : 1.5;
     }
     const margin = pickedHome ? (hs - as) : (as - hs);
     const covered = margin + Number(ticketLine);
@@ -199,6 +199,11 @@ export function useAutoGrade(snapshot: DeskSnapshot | undefined) {
     for (const ticket of open) {
       if (gradedRef.current.has(ticket.id)) continue;
       if (ticket.start && new Date(ticket.start).getTime() > Date.now()) continue;
+
+      // Skip if this is a parlay — multi-leg tickets are settled leg-by-leg via settlePaperTicketsFn
+      if (ticket.legs && ticket.legs.length > 1) {
+        continue;
+      }
 
       const quote = findMatchingQuote(ticket, snapshot.quotes);
       if (!quote) continue;

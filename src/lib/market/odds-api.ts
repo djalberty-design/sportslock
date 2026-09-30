@@ -186,7 +186,7 @@ function normalizeEventBooks(event: any, mode: "mains" | "props" = "mains") {
 }
 
 function normalizeSportGroup(data: any) {
-  if (Array.isArray(data)) return data.map(normalizeEventBooks);
+  if (Array.isArray(data)) return data.map((ev: any) => normalizeEventBooks(ev));
   return normalizeEventBooks(data);
 }
 

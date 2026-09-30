@@ -179,6 +179,10 @@ function fromEspnBoard(json: any, sport: string): LiveScore[] {
   for (const ev of json?.events ?? []) {
     const comp = ev.competitions?.[0];
     if (!comp) continue;
+    const detail = String(comp.status?.type?.shortDetail || comp.status?.type?.detail || "").toLowerCase();
+    if (detail.includes("postponed") || detail.includes("canceled") || detail.includes("cancelled") || detail.includes("suspended")) {
+      continue; // skip — not a real final
+    }
     const state = String(comp.status?.type?.state || "");
     const inPlay = state === "in";
     const complete = state === "post" || Boolean(comp.status?.type?.completed);

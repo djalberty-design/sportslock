@@ -88,9 +88,9 @@ export function calculateDynamicWager({
 
   if (fairProb == null || bookOdds == null || !Number.isFinite(fairProb) || !Number.isFinite(bookOdds)) {
     return {
-      wagerDollars: safeBaseUnit,
-      unitCount: 1.0,
-      formatted: `$${safeBaseUnit.toFixed(2)} (1.0u)`,
+      wagerDollars: 0,
+      unitCount: 0,
+      formatted: "No bet",
       kellyFraction: 0,
     };
   }
@@ -99,13 +99,15 @@ export function calculateDynamicWager({
   const fProfile = fStar * profile.kellyMultiplier;
 
   const rawWager = safeBankroll * fProfile;
-  const clampedWager = Math.max(minClamp, Math.min(maxClamp, Math.round(rawWager * 100) / 100));
-  const units = Math.round((clampedWager / safeBaseUnit) * 100) / 100;
+  const clampedWager = fStar <= 0
+    ? 0 // No edge = no bet
+    : Math.max(minClamp, Math.min(maxClamp, Math.round(rawWager * 100) / 100));
+  const units = clampedWager === 0 ? 0 : Math.round((clampedWager / safeBaseUnit) * 100) / 100;
 
   return {
     wagerDollars: clampedWager,
     unitCount: units,
-    formatted: `$${clampedWager.toFixed(2)} (${units.toFixed(2).replace(/\.00$/, "")}u)`,
+    formatted: clampedWager === 0 ? "No bet" : `$${clampedWager.toFixed(2)} (${units.toFixed(2).replace(/\.00$/, "")}u)`,
     kellyFraction: fProfile,
   };
 }

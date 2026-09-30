@@ -147,6 +147,15 @@ async function gradeWithScores(
       unmatched++;
       continue;
     }
+    const statusText = String(hit.statusText || "").toLowerCase();
+    if (
+      (hit.homeScore === 0 && hit.awayScore === 0 && (statusText.includes("postponed") || statusText.includes("canceled") || statusText.includes("suspended"))) ||
+      statusText.includes("postponed") ||
+      statusText.includes("canceled")
+    ) {
+      unmatched++;
+      continue;
+    }
     const outcome = gradeMarket({
       marketType: row.market_type,
       side: row.side,
